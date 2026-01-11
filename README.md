@@ -1,50 +1,129 @@
-# Welcome to your Expo app 👋
+# BDI LMS - React Native Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A beautiful, modern mobile learning management system for iOS and Android with a burgundy theme.
 
-## Get started
+## Features
 
-1. Install dependencies
+- 🎨 Beautiful burgundy-themed UI/UX
+- 📱 Native iOS and Android support
+- 📚 Course browsing and enrollment
+- 🎥 Video lesson playback
+- 📖 Text-based lessons
+- 📥 Offline video downloads
+- 🔐 Secure authentication with Supabase
+- 📊 Progress tracking
 
-   ```bash
-   npm install
-   ```
+## Getting Started
 
-2. Start the app
+### Prerequisites
 
-   ```bash
-   npx expo start
-   ```
+- Node.js 18+ and npm
+- Expo CLI (`npm install -g expo-cli`)
+- iOS Simulator (for iOS) or Android Emulator (for Android)
+- Supabase account and project
 
-In the output, you'll find options to open the app in a
+### Installation
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+1. Install dependencies:
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Set up environment variables:
+Create a `.env` file in the root directory:
+```
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Learn more
+3. Start the development server:
+```bash
+npm start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+4. Run on your platform:
+   - Press `i` for iOS simulator
+   - Press `a` for Android emulator
+   - Scan QR code with Expo Go app on your device
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project Structure
 
-## Join the community
+```
+bdi-react-native/
+├── app/                    # Expo Router pages
+│   ├── (auth)/            # Authentication screens
+│   ├── (student)/         # Student dashboard and screens
+│   └── course/            # Course detail and player
+├── src/
+│   ├── components/        # Reusable UI components
+│   ├── features/          # Feature modules
+│   │   ├── auth/          # Authentication context
+│   │   ├── courses/       # Course services
+│   │   └── offline/       # Offline download manager
+│   ├── lib/               # Utilities and constants
+│   └── types/             # TypeScript types
+└── assets/                # Images and fonts
+```
 
-Join our community of developers creating universal apps.
+## Key Features
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Authentication
+- Magic link email authentication
+- Session persistence
+- Automatic token refresh
+
+### Course Management
+- Browse enrolled courses
+- View course progress
+- Access course content (videos, text, quizzes)
+
+### Offline Support
+- Download video lessons for offline viewing
+- Cache course content
+- Track download progress
+
+## Design System
+
+### Colors
+- **Primary (Burgundy)**: `#800020`
+- **Secondary (Gold)**: `#C5A059`
+- **Background**: `#F5F5F7`
+- **Surface**: `#FFFFFF`
+
+### Typography
+- System fonts with fallbacks
+- Responsive font sizes
+- Clear hierarchy
+
+## Building for Production
+
+### iOS
+```bash
+eas build --platform ios
+```
+
+### Android
+```bash
+eas build --platform android
+```
+
+## Integration with Admin Dashboard
+
+This mobile app connects to the same Supabase backend as the web admin dashboard (`bdi-lms`). Both share:
+- Same authentication system
+- Same database schema
+- Same API endpoints
+
+Changes made in the admin dashboard (courses, users) are immediately reflected in the mobile app.
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Supabase connection errors**: Verify your environment variables
+2. **Build errors**: Clear cache with `expo start -c`
+3. **Video playback issues**: Ensure video URLs are accessible
+
+## License
+
+Private - BDI LMS
