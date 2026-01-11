@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
     ActivityIndicator, 
     Alert, 
@@ -19,84 +19,53 @@ import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
 import { Enrollment } from '../../src/types';
 
-export default function CoursesScreen() {
-    const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const { session } = useAuth();
-    const router = useRouter();
-    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+// Course Card Component
+interface CourseCardProps {
+    item: Enrollment;
+    index: number;
+    onPress: () => void;
+}
 
-    const loadData = async () => {
-        try {
-            setLoading(true);
-            const data = await fetchMyEnrollments();
-            setEnrollments(data || []);
-            
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-            }).start();
-        } catch (error: any) {
-            console.error('Error loading enrollments:', error);
-            Alert.alert('Error', error.message || 'Failed to load courses.');
-            setEnrollments([]);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
+const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
+    const cardAnim = useRef(new Animated.Value(0)).current;
+    const progress = Math.round(item.progress || 0);
+    const course = typeof item.course === 'object' ? item.course : null;
 
     useEffect(() => {
-        loadData();
+        Animated.spring(cardAnim, {
+            toValue: 1,
+            delay: index * 80,
+            tension: 50,
+            friction: 7,
+            useNativeDriver: true,
+        }).start();
     }, []);
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        loadData();
-    };
+    const scale = cardAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.96, 1],
+    });
 
-    const renderCourseCard = ({ item, index }: { item: Enrollment; index: number }) => {
-        const progress = Math.round(item.progress || 0);
-        const course = typeof item.course === 'object' ? item.course : null;
-        const cardAnim = React.useRef(new Animated.Value(0)).current;
-        
-        React.useEffect(() => {
-            Animated.spring(cardAnim, {
-                toValue: 1,
-                delay: index * 80,
-                tension: 50,
-                friction: 7,
-                useNativeDriver: true,
-            }).start();
-        }, []);
-        
-        const scale = cardAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0.96, 1],
-        });
-        
-        const opacity = cardAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1],
-        });
-        
-        return (
-            <Animated.View
-                style={[
-                    styles.courseCardWrapper,
-                    {
-                        transform: [{ scale }],
-                        opacity,
-                    },
-                ]}
+    const opacity = cardAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+    });
+
+    return (
+        <Animated.View
+            style={[
+                styles.courseCardWrapper,
+                {
+                    transform: [{ scale }],
+                    opacity,
+                },
+            ]}
+        >
+            <TouchableOpacity 
+                onPress={onPress}
+                activeOpacity={0.92}
+                style={styles.courseCard}
             >
-                <TouchableOpacity 
-                    onPress={() => router.push(`/course/${item.course_id}`)}
-                    activeOpacity={0.92}
-                    style={styles.courseCard}
-                >
                     <View style={styles.thumbnailContainer}>
                         {course?.thumbnail_url ? (
                             <Image
@@ -147,8 +116,50 @@ export default function CoursesScreen() {
                     </View>
                 </TouchableOpacity>
             </Animated.View>
-        );
+    );
+};
+
+export default function CoursesScreen() {
+    const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const { session } = useAuth();
+    const router = useRouter();
+    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const data = await fetchMyEnrollments();
+            setEnrollments(data || []);
+            
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+            }).start();
+        } catch (error: any) {
+            console.error('Error loading enrollments:', error);
+            Alert.alert('Error', error.message || 'Failed to load courses.');
+            setEnrollments([]);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadData();
+    };
+
+    const renderCourseCard = ({ item, index }: { item: Enrollment; index: number }) => (
+        <CourseCard item={item} index={index} onPress={() => router.push(`/course/${item.course_id}`)} />
+    );
 
     if (loading && !refreshing) {
         return (

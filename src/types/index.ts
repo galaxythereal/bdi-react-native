@@ -28,12 +28,16 @@ export interface Lesson {
     id: string;
     title: string;
     slug: string;
-    content_type: 'video' | 'text' | 'quiz';
+    content_type: 'video' | 'text' | 'quiz' | 'image' | 'file';
     video_url: string | null;
+    video_provider?: 'youtube' | 'vimeo' | 'wistia' | 'direct';
     content_html: string | null;
     duration: number | null;
     is_preview: boolean;
     order_index: number;
+    description?: string | null;
+    quiz_data?: any;
+    blocks?: any[];
 }
 
 export interface Module {
