@@ -312,3 +312,168 @@ export const isDownloading = (lessonId: string): boolean => {
 export const getActiveDownloadCount = (): number => {
     return activeDownloads.size;
 };
+// Download a file to a specific location
+export const downloadFile = async (
+    url: string,
+    localPath: string,
+    onProgress?: (progress: number) => void
+): Promise<string> => {
+    await ensureDirExists();
+    
+    const downloadResumable = FileSystem.createDownloadResumable(
+        url,
+        localPath,
+        {},
+        (downloadProgress) => {
+            const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+            if (onProgress) onProgress(Math.min(progress, 1));
+        }
+    );
+
+    try {
+        const result = await downloadResumable.downloadAsync();
+        if (!result || !result.uri) {
+            throw new Error('Download failed - no result returned');
+        }
+        return result.uri;
+    } catch (error: any) {
+        // Clean up partial download
+        try {
+            await FileSystem.deleteAsync(localPath, { idempotent: true });
+        } catch {}
+        throw error;
+    }
+};
+
+// Download entire lesson content including all blocks
+export interface LessonDownloadResult {
+    lessonId: string;
+    files: {
+        type: string;
+        url: string;
+        localUri: string;
+        success: boolean;
+        error?: string;
+    }[];
+    totalSize: number;
+}
+
+export const downloadLessonContent = async (
+    lessonId: string,
+    lesson: {
+        video_url?: string;
+        blocks?: {
+            type: string;
+            content?: {
+                url?: string;
+                filename?: string;
+            };
+        }[];
+    },
+    onProgress?: (progress: number, currentFile: string) => void
+): Promise<LessonDownloadResult> => {
+    await ensureDirExists();
+    
+    const result: LessonDownloadResult = {
+        lessonId,
+        files: [],
+        totalSize: 0,
+    };
+
+    // Collect all downloadable URLs
+    const downloadables: { type: string; url: string; filename: string }[] = [];
+    
+    // Add main video if exists
+    if (lesson.video_url) {
+        downloadables.push({
+            type: 'video',
+            url: lesson.video_url,
+            filename: `${lessonId}_video.mp4`,
+        });
+    }
+    
+    // Add block content
+    if (lesson.blocks) {
+        lesson.blocks.forEach((block, index) => {
+            if (block.content?.url) {
+                let ext = 'file';
+                if (block.type === 'video') ext = 'mp4';
+                else if (block.type === 'audio') ext = 'mp3';
+                else if (block.type === 'image') ext = 'jpg';
+                else if (block.type === 'file') {
+                    const urlExt = block.content.url.split('.').pop()?.split('?')[0];
+                    ext = urlExt || 'file';
+                }
+                
+                downloadables.push({
+                    type: block.type,
+                    url: block.content.url,
+                    filename: block.content.filename || `${lessonId}_block_${index}.${ext}`,
+                });
+            }
+        });
+    }
+
+    if (downloadables.length === 0) {
+        return result;
+    }
+
+    // Download each file
+    let completedCount = 0;
+    
+    for (const item of downloadables) {
+        const localPath = LESSON_DIR + item.filename;
+        
+        try {
+            onProgress?.(completedCount / downloadables.length, item.filename);
+            
+            await downloadFile(item.url, localPath, (fileProgress) => {
+                const totalProgress = (completedCount + fileProgress) / downloadables.length;
+                onProgress?.(totalProgress, item.filename);
+            });
+            
+            // Get file size
+            // @ts-ignore
+            const fileInfo = await FileSystem.getInfoAsync(localPath, { size: true } as any);
+            const fileSize = fileInfo.exists && 'size' in fileInfo ? (fileInfo as any).size : 0;
+            
+            result.files.push({
+                type: item.type,
+                url: item.url,
+                localUri: localPath,
+                success: true,
+            });
+            result.totalSize += fileSize;
+            
+            completedCount++;
+        } catch (error: any) {
+            result.files.push({
+                type: item.type,
+                url: item.url,
+                localUri: localPath,
+                success: false,
+                error: error.message,
+            });
+            completedCount++;
+        }
+    }
+
+    onProgress?.(1, 'Complete');
+    return result;
+};
+
+// Get local path for a file
+export const getLocalFilePath = (filename: string): string => {
+    return LESSON_DIR + filename;
+};
+
+// Check if a specific file exists locally
+export const isFileDownloaded = async (filename: string): Promise<boolean> => {
+    try {
+        const uri = LESSON_DIR + filename;
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        return fileInfo.exists;
+    } catch (error) {
+        return false;
+    }
+};

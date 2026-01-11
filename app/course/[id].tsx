@@ -4,6 +4,7 @@ import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Animated,
     Dimensions,
     FlatList,
@@ -21,10 +22,12 @@ import { WebView } from 'react-native-webview';
 import RenderHtml from 'react-native-render-html';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QuizComponent, QuizData, QuizResult } from '../../src/components/QuizComponent';
+import { AudioPlayer } from '../../src/components/AudioPlayer';
 import { fetchCourseContentWithOfflineSupport } from '../../src/features/courses/courseService';
 import {
     deleteLessonDownload,
     downloadLessonVideo,
+    downloadLessonContent,
     getLocalLessonUri,
     isLessonDownloaded,
 } from '../../src/features/offline/downloadManager';
@@ -290,6 +293,102 @@ export default function CoursePlayerScreen() {
         }
     };
 
+    // Handle file download (for file blocks)
+    const handleFileDownload = async (url: string, filename: string) => {
+        try {
+            Alert.alert(
+                'Download File',
+                `Do you want to download "${filename}"?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Download',
+                        onPress: async () => {
+                            try {
+                                Alert.alert('Downloading', 'Download started...');
+                                // TODO: Implement actual file download with progress
+                                console.log('Downloading file:', url, filename);
+                            } catch (err: any) {
+                                Alert.alert('Error', err.message || 'Download failed');
+                            }
+                        },
+                    },
+                ]
+            );
+        } catch (err) {
+            console.error('File download error:', err);
+        }
+    };
+
+    // Handle downloading entire lesson with all blocks
+    const handleDownloadLesson = async () => {
+        if (!currentLesson) return;
+        
+        const lessonId = currentLesson.id;
+        
+        // Check if already downloading
+        const state = downloadStates.get(lessonId);
+        if (state?.isDownloading) return;
+        
+        Alert.alert(
+            'Download Lesson',
+            `Download "${currentLesson.title}" for offline viewing? This will download the video and all associated content.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Download',
+                    onPress: async () => {
+                        setDownloadStates(prev => {
+                            const newMap = new Map(prev);
+                            newMap.set(lessonId, { isDownloaded: false, isDownloading: true, progress: 0 });
+                            return newMap;
+                        });
+
+                        try {
+                            const result = await downloadLessonContent(
+                                lessonId,
+                                {
+                                    video_url: currentLesson.video_url || undefined,
+                                    blocks: currentLesson.blocks,
+                                },
+                                (progress, currentFile) => {
+                                    console.log(`Downloading: ${currentFile} (${Math.round(progress * 100)}%)`);
+                                    setDownloadStates(prev => {
+                                        const newMap = new Map(prev);
+                                        newMap.set(lessonId, { isDownloaded: false, isDownloading: true, progress });
+                                        return newMap;
+                                    });
+                                }
+                            );
+
+                            const successCount = result.files.filter(f => f.success).length;
+                            const totalCount = result.files.length;
+
+                            setDownloadStates(prev => {
+                                const newMap = new Map(prev);
+                                newMap.set(lessonId, { isDownloaded: successCount > 0, isDownloading: false, progress: 1 });
+                                return newMap;
+                            });
+
+                            Alert.alert(
+                                'Download Complete',
+                                `Downloaded ${successCount}/${totalCount} files (${Math.round(result.totalSize / 1024 / 1024 * 100) / 100} MB)`
+                            );
+                        } catch (err: any) {
+                            console.error('Lesson download error:', err);
+                            setDownloadStates(prev => {
+                                const newMap = new Map(prev);
+                                newMap.set(lessonId, { isDownloaded: false, isDownloading: false, progress: 0 });
+                                return newMap;
+                            });
+                            Alert.alert('Download Error', err.message || 'Failed to download lesson');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const getVideoSource = () => {
         if (!currentLesson) return null;
         const state = downloadStates.get(currentLesson.id);
@@ -368,14 +467,39 @@ export default function CoursePlayerScreen() {
         );
     }
 
-    const videoSource = getVideoSource();
     const downloadState = currentLesson ? downloadStates.get(currentLesson.id) : null;
     const progressPercent = videoDuration > 0 ? (videoProgress / videoDuration) * 100 : 0;
     
     // Get embed URL for YouTube/Vimeo/Wistia or direct URL
     const videoProvider = currentLesson?.video_provider || 'direct';
-    const embedUrl = currentLesson?.video_url ? getEmbedUrl(currentLesson.video_url, videoProvider) : null;
     const useEmbeddedPlayer = isEmbeddedVideo(videoProvider);
+    
+    // For direct videos, check if downloaded first, then use original URL
+    const getDirectVideoSource = () => {
+        if (!currentLesson?.video_url) return null;
+        const state = downloadStates.get(currentLesson.id);
+        if (state?.isDownloaded) {
+            return { uri: getLocalLessonUri(currentLesson.id) };
+        }
+        return { uri: currentLesson.video_url };
+    };
+    
+    // Get the appropriate video URL
+    const embedUrl = useEmbeddedPlayer && currentLesson?.video_url 
+        ? getEmbedUrl(currentLesson.video_url, videoProvider) 
+        : null;
+    const directVideoSource = !useEmbeddedPlayer ? getDirectVideoSource() : null;
+    
+    // Debug logging for video issues
+    console.log('Video Debug:', {
+        lessonTitle: currentLesson?.title,
+        contentType: currentLesson?.content_type,
+        videoUrl: currentLesson?.video_url,
+        videoProvider,
+        useEmbeddedPlayer,
+        embedUrl,
+        directVideoSource,
+    });
 
     return (
         <View style={styles.container}>
@@ -383,8 +507,8 @@ export default function CoursePlayerScreen() {
 
             {/* Video/Content Area */}
             <View style={[styles.mediaContainer, { paddingTop: insets.top }]}>
-                {currentLesson?.content_type === 'video' && embedUrl ? (
-                    useEmbeddedPlayer ? (
+                {currentLesson?.content_type === 'video' && currentLesson?.video_url ? (
+                    useEmbeddedPlayer && embedUrl ? (
                         /* Embedded video player (YouTube, Vimeo, Wistia) */
                         <View style={styles.videoWrapper}>
                             <WebView
@@ -412,7 +536,7 @@ export default function CoursePlayerScreen() {
                                 </TouchableOpacity>
                             </View>
                         </View>
-                    ) : videoSource ? (
+                    ) : directVideoSource ? (
                         /* Native video player (direct URLs) */
                         <Pressable 
                             style={styles.videoWrapper}
@@ -420,12 +544,13 @@ export default function CoursePlayerScreen() {
                         >
                             <Video
                                 ref={videoRef}
-                                source={videoSource}
+                                source={directVideoSource}
                                 style={styles.video}
                                 resizeMode={ResizeMode.CONTAIN}
                                 onPlaybackStatusUpdate={handleVideoPlaybackStatus}
                                 shouldPlay={false}
                                 useNativeControls={false}
+                                onError={(error) => console.error('Video playback error:', error)}
                             />
 
                             {/* Buffering indicator */}
@@ -734,7 +859,10 @@ export default function CoursePlayerScreen() {
                                         )}
                                         
                                         {block.type === 'file' && block.content?.url && (
-                                            <TouchableOpacity style={styles.fileBlock}>
+                                            <TouchableOpacity 
+                                                style={styles.fileBlock}
+                                                onPress={() => handleFileDownload(block.content.url, block.content.filename || block.title || 'file')}
+                                            >
                                                 <Ionicons name="document-attach" size={24} color={COLORS.primary} />
                                                 <View style={styles.fileInfo}>
                                                     <Text style={styles.fileName}>{block.content.filename || block.title || 'Download File'}</Text>
@@ -742,6 +870,17 @@ export default function CoursePlayerScreen() {
                                                 </View>
                                                 <Ionicons name="cloud-download-outline" size={20} color={COLORS.textSecondary} />
                                             </TouchableOpacity>
+                                        )}
+                                        
+                                        {/* Audio block with custom player */}
+                                        {block.type === 'audio' && block.content?.url && (
+                                            <View style={styles.audioBlock}>
+                                                <Text style={styles.blockTitle}>{block.title || 'Audio'}</Text>
+                                                <AudioPlayer 
+                                                    uri={block.content.url}
+                                                    title={block.title || 'Audio'}
+                                                />
+                                            </View>
                                         )}
                                     </View>
                                 );
@@ -1302,6 +1441,9 @@ const styles = StyleSheet.create({
     },
     blockItem: {
         marginBottom: SPACING.md,
+    },
+    audioBlock: {
+        marginVertical: SPACING.md,
     },
 
     // Navigation Footer

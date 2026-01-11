@@ -553,21 +553,35 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                 currentQuestion.options?.map((option, index) => {
                                     // Handle both string and object options
                                     const optionText = typeof option === 'object' ? option.text : option;
+                                    const isSelected = currentAnswer === index;
+                                    const isCorrectOption = index === Number(currentQuestion.correct_answer);
+                                    const showCorrect = isCurrentChecked && isCorrectOption;
+                                    const showWrong = isCurrentChecked && isSelected && !isCorrectOption;
+                                    
                                     return (
                                         <TouchableOpacity
                                             key={index}
                                             style={[
                                                 styles.optionButton,
-                                                currentAnswer === index && styles.optionSelected,
+                                                isSelected && !isCurrentChecked && styles.optionSelected,
+                                                showCorrect && styles.optionCorrect,
+                                                showWrong && styles.optionWrong,
                                             ]}
                                             onPress={() => selectAnswer(index)}
-                                            activeOpacity={0.8}
+                                            activeOpacity={isCurrentChecked ? 1 : 0.8}
+                                            disabled={isCurrentChecked}
                                         >
                                             <View style={[
                                                 styles.optionIndicator,
-                                                currentAnswer === index && styles.optionIndicatorSelected,
+                                                isSelected && !isCurrentChecked && styles.optionIndicatorSelected,
+                                                showCorrect && styles.optionIndicatorCorrect,
+                                                showWrong && styles.optionIndicatorWrong,
                                             ]}>
-                                                {currentAnswer === index ? (
+                                                {showCorrect ? (
+                                                    <Ionicons name="checkmark" size={14} color={COLORS.surface} />
+                                                ) : showWrong ? (
+                                                    <Ionicons name="close" size={14} color={COLORS.surface} />
+                                                ) : isSelected ? (
                                                     <Ionicons name="checkmark" size={14} color={COLORS.surface} />
                                                 ) : (
                                                     <Text style={styles.optionLetter}>
@@ -577,55 +591,60 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                             </View>
                                             <Text style={[
                                                 styles.optionText,
-                                                currentAnswer === index && styles.optionTextSelected,
+                                                isSelected && !isCurrentChecked && styles.optionTextSelected,
+                                                showCorrect && styles.optionTextCorrect,
+                                                showWrong && styles.optionTextWrong,
                                             ]}>
                                                 {optionText}
                                             </Text>
+                                            {showCorrect && (
+                                                <View style={styles.correctBadge}>
+                                                    <Text style={styles.correctBadgeText}>Correct</Text>
+                                                </View>
+                                            )}
                                         </TouchableOpacity>
                                     );
                                 })}
 
                             {currentQuestion.type === 'true_false' && (
                                 <View style={styles.trueFalseContainer}>
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.trueFalseButton,
-                                            currentAnswer === 'true' && styles.trueFalseSelected,
-                                        ]}
-                                        onPress={() => selectAnswer('true')}
-                                    >
-                                        <Ionicons
-                                            name="checkmark-circle"
-                                            size={32}
-                                            color={currentAnswer === 'true' ? COLORS.surface : COLORS.success}
-                                        />
-                                        <Text style={[
-                                            styles.trueFalseText,
-                                            currentAnswer === 'true' && styles.trueFalseTextSelected,
-                                        ]}>
-                                            True
-                                        </Text>
-                                    </TouchableOpacity>
-                                    
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.trueFalseButton,
-                                            currentAnswer === 'false' && styles.trueFalseSelectedFalse,
-                                        ]}
-                                        onPress={() => selectAnswer('false')}
-                                    >
-                                        <Ionicons
-                                            name="close-circle"
-                                            size={32}
-                                            color={currentAnswer === 'false' ? COLORS.surface : COLORS.error}
-                                        />
-                                        <Text style={[
-                                            styles.trueFalseText,
-                                            currentAnswer === 'false' && styles.trueFalseTextSelected,
-                                        ]}>
-                                            False
-                                        </Text>
-                                    </TouchableOpacity>
+                                    {['true', 'false'].map((value) => {
+                                        const isSelected = currentAnswer === value;
+                                        const isCorrectOption = value === String(currentQuestion.correct_answer);
+                                        const showCorrect = isCurrentChecked && isCorrectOption;
+                                        const showWrong = isCurrentChecked && isSelected && !isCorrectOption;
+                                        
+                                        return (
+                                            <TouchableOpacity
+                                                key={value}
+                                                style={[
+                                                    styles.trueFalseButton,
+                                                    isSelected && !isCurrentChecked && (value === 'true' ? styles.trueFalseSelected : styles.trueFalseSelectedFalse),
+                                                    showCorrect && styles.trueFalseCorrect,
+                                                    showWrong && styles.trueFalseWrong,
+                                                ]}
+                                                onPress={() => selectAnswer(value)}
+                                                disabled={isCurrentChecked}
+                                            >
+                                                <Ionicons
+                                                    name={value === 'true' ? "checkmark-circle" : "close-circle"}
+                                                    size={32}
+                                                    color={
+                                                        showCorrect ? COLORS.surface :
+                                                        showWrong ? COLORS.surface :
+                                                        isSelected ? COLORS.surface :
+                                                        value === 'true' ? COLORS.success : COLORS.error
+                                                    }
+                                                />
+                                                <Text style={[
+                                                    styles.trueFalseText,
+                                                    (isSelected || showCorrect || showWrong) && styles.trueFalseTextSelected,
+                                                ]}>
+                                                    {value === 'true' ? 'True' : 'False'}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
                                 </View>
                             )}
 
@@ -633,7 +652,10 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                             {currentQuestion.type === 'short_answer' && (
                                 <View style={styles.shortAnswerContainer}>
                                     <TextInput
-                                        style={styles.shortAnswerInput}
+                                        style={[
+                                            styles.shortAnswerInput,
+                                            isCurrentChecked && styles.shortAnswerInputDisabled,
+                                        ]}
                                         placeholder="Type your answer here..."
                                         placeholderTextColor={COLORS.textTertiary}
                                         value={currentAnswer?.toString() || ''}
@@ -641,19 +663,51 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                         multiline={true}
                                         numberOfLines={4}
                                         textAlignVertical="top"
+                                        editable={!isCurrentChecked}
                                     />
+                                    {isCurrentChecked && (
+                                        <View style={styles.shortAnswerFeedback}>
+                                            <Text style={styles.correctAnswerLabel}>Correct answer:</Text>
+                                            <Text style={styles.correctAnswerText}>{String(currentQuestion.correct_answer)}</Text>
+                                        </View>
+                                    )}
                                 </View>
                             )}
                         </View>
                         
-                        {/* Instant Feedback - Show explanation after answering */}
-                        {isCurrentAnswered && currentQuestion.explanation && (
-                            <View style={styles.instantFeedback}>
+                        {/* Check Answer Button - Shows above the feedback */}
+                        {isCurrentAnswered && !isCurrentChecked && (
+                            <TouchableOpacity 
+                                style={styles.checkAnswerButton}
+                                onPress={checkCurrentAnswer}
+                            >
+                                <Ionicons name="checkmark-circle" size={20} color={COLORS.surface} />
+                                <Text style={styles.checkAnswerButtonText}>Check Answer</Text>
+                            </TouchableOpacity>
+                        )}
+                        
+                        {/* Feedback - Show after checking answer */}
+                        {isCurrentChecked && (
+                            <View style={[
+                                styles.answerFeedback,
+                                currentQuestionResult ? styles.answerFeedbackCorrect : styles.answerFeedbackWrong,
+                            ]}>
                                 <View style={styles.feedbackHeader}>
-                                    <Ionicons name="bulb-outline" size={20} color={COLORS.warning} />
-                                    <Text style={styles.feedbackTitle}>Explanation</Text>
+                                    <Ionicons 
+                                        name={currentQuestionResult ? "checkmark-circle" : "close-circle"} 
+                                        size={24} 
+                                        color={currentQuestionResult ? COLORS.success : COLORS.error} 
+                                    />
+                                    <Text style={[
+                                        styles.feedbackTitle,
+                                        { color: currentQuestionResult ? COLORS.success : COLORS.error }
+                                    ]}>
+                                        {currentQuestionResult ? 'Correct!' : 'Incorrect'}
+                                    </Text>
                                 </View>
-                                <Text style={styles.feedbackText}>{currentQuestion.explanation}</Text>
+                                {currentQuestion.explanation && (
+                                    <Text style={styles.feedbackText}>{currentQuestion.explanation}</Text>
+                                )}
                             </View>
                         )}
                     </View>
@@ -672,20 +726,24 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                 >
                     {quiz.questions.map((_, index) => {
                         const isAnswered = answers[index]?.answer !== null && answers[index]?.answer !== undefined;
+                        const isChecked = checkedQuestions.has(index);
+                        const isCorrect = questionResults.get(index);
                         const isCurrent = index === currentQuestionIndex;
                         return (
                             <TouchableOpacity
                                 key={index}
                                 style={[
                                     styles.navDot,
-                                    isAnswered && styles.navDotAnswered,
+                                    isAnswered && !isChecked && styles.navDotAnswered,
+                                    isChecked && isCorrect && styles.navDotCorrect,
+                                    isChecked && !isCorrect && styles.navDotWrong,
                                     isCurrent && styles.navDotCurrent,
                                 ]}
                                 onPress={() => goToQuestion(index)}
                             >
                                 <Text style={[
                                     styles.navDotText,
-                                    (isAnswered || isCurrent) && styles.navDotTextActive,
+                                    (isAnswered || isCurrent || isChecked) && styles.navDotTextActive,
                                 ]}>
                                     {index + 1}
                                 </Text>
@@ -715,34 +773,40 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                     </Text>
                 </TouchableOpacity>
 
+                <View style={styles.footerCenter}>
+                    <Text style={styles.footerProgress}>
+                        {checkedQuestions.size}/{totalQuestions} checked
+                    </Text>
+                </View>
+
                 <View style={styles.footerButtons}>
-                    {currentQuestionIndex < totalQuestions - 1 && (
+                    {currentQuestionIndex < totalQuestions - 1 ? (
                         <TouchableOpacity style={styles.nextButton} onPress={goToNextQuestion}>
                             <Text style={styles.nextButtonText}>Next</Text>
                             <Ionicons name="chevron-forward" size={20} color={COLORS.surface} />
                         </TouchableOpacity>
+                    ) : checkedQuestions.size === totalQuestions ? (
+                        <TouchableOpacity
+                            style={styles.finishButton}
+                            onPress={handleSubmit}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <ActivityIndicator color={COLORS.surface} />
+                            ) : (
+                                <>
+                                    <Text style={styles.finishButtonText}>See Results</Text>
+                                    <Ionicons name="trophy" size={20} color={COLORS.surface} />
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.finishHint}>
+                            <Text style={styles.finishHintText}>
+                                Check all answers to finish
+                            </Text>
+                        </View>
                     )}
-                    
-                    <TouchableOpacity
-                        style={[
-                            styles.submitButton, 
-                            isSubmitting && styles.submitButtonDisabled,
-                            answeredCount < totalQuestions && styles.submitButtonPartial,
-                        ]}
-                        onPress={handleSubmit}
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? (
-                            <ActivityIndicator color={COLORS.surface} />
-                        ) : (
-                            <>
-                                <Text style={styles.submitButtonText}>
-                                    Submit ({answeredCount}/{totalQuestions})
-                                </Text>
-                                <Ionicons name="checkmark-done" size={20} color={COLORS.surface} />
-                            </>
-                        )}
-                    </TouchableOpacity>
                 </View>
             </View>
         </View>
@@ -941,6 +1005,14 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primary,
     },
+    optionIndicatorCorrect: {
+        backgroundColor: COLORS.success,
+        borderColor: COLORS.success,
+    },
+    optionIndicatorWrong: {
+        backgroundColor: COLORS.error,
+        borderColor: COLORS.error,
+    },
     optionLetter: {
         fontSize: FONT_SIZE.sm,
         fontWeight: FONT_WEIGHT.bold,
@@ -955,6 +1027,34 @@ const styles = StyleSheet.create({
     optionTextSelected: {
         color: COLORS.primary,
         fontWeight: FONT_WEIGHT.medium,
+    },
+    optionTextCorrect: {
+        color: COLORS.success,
+        fontWeight: FONT_WEIGHT.medium,
+    },
+    optionTextWrong: {
+        color: COLORS.error,
+        fontWeight: FONT_WEIGHT.medium,
+    },
+    optionCorrect: {
+        backgroundColor: COLORS.success + '15',
+        borderColor: COLORS.success,
+    },
+    optionWrong: {
+        backgroundColor: COLORS.error + '15',
+        borderColor: COLORS.error,
+    },
+    correctBadge: {
+        backgroundColor: COLORS.success,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: 2,
+        borderRadius: BORDER_RADIUS.sm,
+        marginLeft: SPACING.sm,
+    },
+    correctBadgeText: {
+        color: COLORS.surface,
+        fontSize: FONT_SIZE.xs,
+        fontWeight: FONT_WEIGHT.bold,
     },
     trueFalseContainer: {
         flexDirection: 'row',
@@ -975,6 +1075,14 @@ const styles = StyleSheet.create({
         borderColor: COLORS.success,
     },
     trueFalseSelectedFalse: {
+        backgroundColor: COLORS.error,
+        borderColor: COLORS.error,
+    },
+    trueFalseCorrect: {
+        backgroundColor: COLORS.success,
+        borderColor: COLORS.success,
+    },
+    trueFalseWrong: {
         backgroundColor: COLORS.error,
         borderColor: COLORS.error,
     },
@@ -1000,6 +1108,57 @@ const styles = StyleSheet.create({
         color: COLORS.text,
         minHeight: 120,
         textAlignVertical: 'top',
+    },
+    shortAnswerInputDisabled: {
+        backgroundColor: COLORS.border,
+        opacity: 0.7,
+    },
+    shortAnswerFeedback: {
+        marginTop: SPACING.md,
+        padding: SPACING.md,
+        backgroundColor: COLORS.success + '15',
+        borderRadius: BORDER_RADIUS.md,
+    },
+    correctAnswerLabel: {
+        fontSize: FONT_SIZE.sm,
+        color: COLORS.textSecondary,
+        marginBottom: SPACING.xs,
+    },
+    correctAnswerText: {
+        fontSize: FONT_SIZE.md,
+        color: COLORS.success,
+        fontWeight: FONT_WEIGHT.bold,
+    },
+    checkAnswerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: SPACING.sm,
+        backgroundColor: COLORS.primary,
+        paddingVertical: SPACING.md,
+        paddingHorizontal: SPACING.xl,
+        borderRadius: BORDER_RADIUS.lg,
+        marginTop: SPACING.lg,
+        ...SHADOWS.md,
+    },
+    checkAnswerButtonText: {
+        fontSize: FONT_SIZE.md,
+        fontWeight: FONT_WEIGHT.bold,
+        color: COLORS.surface,
+    },
+    answerFeedback: {
+        marginTop: SPACING.lg,
+        padding: SPACING.md,
+        borderRadius: BORDER_RADIUS.lg,
+        borderLeftWidth: 4,
+    },
+    answerFeedbackCorrect: {
+        backgroundColor: COLORS.success + '15',
+        borderLeftColor: COLORS.success,
+    },
+    answerFeedbackWrong: {
+        backgroundColor: COLORS.error + '15',
+        borderLeftColor: COLORS.error,
     },
     instantFeedback: {
         marginTop: SPACING.lg,
@@ -1059,11 +1218,17 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     navDotAnswered: {
-        backgroundColor: COLORS.success + '30',
+        backgroundColor: COLORS.warning + '30',
+    },
+    navDotCorrect: {
+        backgroundColor: COLORS.success,
+    },
+    navDotWrong: {
+        backgroundColor: COLORS.error,
     },
     navDotCurrent: {
         borderColor: COLORS.primary,
-        backgroundColor: COLORS.primary,
+        borderWidth: 3,
     },
     navDotText: {
         fontSize: FONT_SIZE.sm,
@@ -1081,6 +1246,15 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surface,
         borderTopWidth: 1,
         borderTopColor: COLORS.border,
+    },
+    footerCenter: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    footerProgress: {
+        fontSize: FONT_SIZE.sm,
+        color: COLORS.textSecondary,
+        fontWeight: FONT_WEIGHT.medium,
     },
     footerButtons: {
         flexDirection: 'row',
@@ -1117,6 +1291,29 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.sm,
         fontWeight: FONT_WEIGHT.bold,
         color: COLORS.surface,
+    },
+    finishButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.xs,
+        backgroundColor: COLORS.success,
+        paddingVertical: SPACING.sm,
+        paddingHorizontal: SPACING.lg,
+        borderRadius: BORDER_RADIUS.lg,
+    },
+    finishButtonText: {
+        fontSize: FONT_SIZE.sm,
+        fontWeight: FONT_WEIGHT.bold,
+        color: COLORS.surface,
+    },
+    finishHint: {
+        paddingVertical: SPACING.sm,
+        paddingHorizontal: SPACING.md,
+    },
+    finishHintText: {
+        fontSize: FONT_SIZE.xs,
+        color: COLORS.textTertiary,
+        fontStyle: 'italic',
     },
     submitButton: {
         flexDirection: 'row',
