@@ -6,13 +6,15 @@ import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
+import { Mail, Lock, UserPlus } from 'lucide-react-native';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [usePassword, setUsePassword] = useState(false);
+    const [fullName, setFullName] = useState('');
+    const [isSignUp, setIsSignUp] = useState(false);
     const [loading, setLoading] = useState(false);
-    const { signInWithEmail, signInWithPassword, session, isLoading } = useAuth();
+    const { signInWithPassword, signUp, session, isLoading } = useAuth();
     const router = useRouter();
 
     // Navigate to dashboard when session is available
@@ -22,46 +24,49 @@ export default function LoginScreen() {
         }
     }, [session, isLoading, router]);
 
-    const handleLogin = async () => {
-        if (!email) {
-            Alert.alert('Error', 'Please enter your email address');
+    const handleSubmit = async () => {
+        if (!email || !password) {
+            Alert.alert('Error', 'Please enter both email and password');
             return;
         }
 
-        if (usePassword && !password) {
-            Alert.alert('Error', 'Please enter your password');
+        if (isSignUp && !fullName.trim()) {
+            Alert.alert('Error', 'Please enter your full name');
             return;
         }
 
         setLoading(true);
         try {
-            if (usePassword) {
+            if (isSignUp) {
+                await signUp(email, password, fullName.trim());
+                Alert.alert(
+                    'Account Created', 
+                    'Your account has been created! Please wait for admin approval before you can access courses.'
+                );
+                setIsSignUp(false);
+                setEmail('');
+                setPassword('');
+                setFullName('');
+            } else {
                 await signInWithPassword(email, password);
                 // Navigation will happen via useEffect when session is set
-            } else {
-                await signInWithEmail(email);
-                Alert.alert('Check your email', 'We sent you a magic link to login!');
             }
         } catch (error: any) {
-            console.error('Login error:', error);
+            console.error('Auth error:', error);
             let errorMessage = error.message || 'An error occurred';
             
             if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch')) {
-                errorMessage = 'Network error: Please check your Supabase URL and internet connection. Make sure your .env file has EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY set.';
+                errorMessage = 'Network error: Please check your connection.';
             } else if (errorMessage.includes('Invalid login credentials')) {
-                errorMessage = 'Invalid email or password. Please check your credentials.';
+                errorMessage = 'Invalid email or password. Please try again.';
+            } else if (errorMessage.includes('User already registered')) {
+                errorMessage = 'This email is already registered. Please sign in instead.';
             }
             
-            Alert.alert('Login Failed', errorMessage);
+            Alert.alert(isSignUp ? 'Sign Up Failed' : 'Login Failed', errorMessage);
         } finally {
             setLoading(false);
         }
-    };
-
-    const quickLogin = (testEmail: string, testPassword: string) => {
-        setEmail(testEmail);
-        setPassword(testPassword);
-        setUsePassword(true);
     };
 
     const dismissKeyboard = () => {
@@ -83,63 +88,67 @@ export default function LoginScreen() {
                             <View style={styles.logoContainer}>
                                 <Text style={styles.logoText}>BDI</Text>
                             </View>
-                            <Text style={styles.title}>Welcome Back</Text>
-                            <Text style={styles.subtitle}>Sign in to access your courses</Text>
+                            <Text style={styles.title}>
+                                {isSignUp ? 'Create Account' : 'Welcome Back'}
+                            </Text>
+                            <Text style={styles.subtitle}>
+                                {isSignUp ? 'Sign up to get started' : 'Sign in to access your courses'}
+                            </Text>
                         </View>
 
                         <View style={styles.form}>
+                            {isSignUp && (
+                                <Input
+                                    label="Full Name"
+                                    value={fullName}
+                                    onChangeText={setFullName}
+                                    placeholder="John Doe"
+                                    autoCapitalize="words"
+                                />
+                            )}
+
                             <Input
                                 label="Email Address"
                                 value={email}
                                 onChangeText={setEmail}
-                                placeholder="student@test.com"
+                                placeholder="you@example.com"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
 
-                            {usePassword && (
-                                <Input
-                                    label="Password"
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    placeholder="Enter password"
-                                    secureTextEntry
-                                    containerStyle={styles.passwordInput}
-                                />
-                            )}
+                            <Input
+                                label="Password"
+                                value={password}
+                                onChangeText={setPassword}
+                                placeholder={isSignUp ? 'Create a password (min. 6 characters)' : 'Enter your password'}
+                                secureTextEntry
+                            />
 
                             <Button
-                                title={usePassword ? "Sign In" : "Sign In with Magic Link"}
-                                onPress={handleLogin}
-                                isLoading={loading}
-                                style={styles.button}
+                                title={loading 
+                                    ? (isSignUp ? 'Creating Account...' : 'Signing In...')
+                                    : (isSignUp ? 'Create Account' : 'Sign In')
+                                }
+                                onPress={handleSubmit}
+                                disabled={loading}
+                                style={styles.submitButton}
                             />
 
                             <View style={styles.switchContainer}>
-                                <Text style={styles.switchText} onPress={() => setUsePassword(!usePassword)}>
-                                    {usePassword ? 'Use Magic Link instead' : 'Use Password instead'}
+                                <Text style={styles.switchText}>
+                                    {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
                                 </Text>
-                            </View>
-
-                            {/* Quick Login for Testing */}
-                            <View style={styles.quickLoginContainer}>
-                                <Text style={styles.quickLoginLabel}>Quick Login (Test):</Text>
-                                <View style={styles.quickLoginButtons}>
-                                    <Button
-                                        title="Student"
-                                        onPress={() => quickLogin('student@test.com', 'student123')}
-                                        variant="outline"
-                                        size="sm"
-                                        style={styles.quickButton}
-                                    />
-                                    <Button
-                                        title="Admin"
-                                        onPress={() => quickLogin('admin@test.com', 'admin123')}
-                                        variant="outline"
-                                        size="sm"
-                                        style={styles.quickButton}
-                                    />
-                                </View>
+                                <Button
+                                    title={isSignUp ? 'Sign In' : 'Sign Up'}
+                                    onPress={() => {
+                                        setIsSignUp(!isSignUp);
+                                        setEmail('');
+                                        setPassword('');
+                                        setFullName('');
+                                    }}
+                                    variant="ghost"
+                                    style={styles.switchButton}
+                                />
                             </View>
                         </View>
                     </ScrollView>
@@ -152,90 +161,69 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.surface,
+        backgroundColor: COLORS.background,
     },
     keyboardView: {
         flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: SPACING.xl,
-        paddingVertical: SPACING.xxl,
         justifyContent: 'center',
+        padding: SPACING.lg,
     },
     header: {
         alignItems: 'center',
-        marginBottom: SPACING.xxl + SPACING.lg,
+        marginBottom: SPACING.xl * 2,
     },
     logoContainer: {
-        width: 140,
-        height: 140,
+        width: 120,
+        height: 120,
+        borderRadius: BORDER_RADIUS.xl,
         backgroundColor: COLORS.primary,
-        borderRadius: BORDER_RADIUS.xxl,
-        alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.xxl,
-        ...SHADOWS.xl,
+        alignItems: 'center',
+        marginBottom: SPACING.xl,
+        ...SHADOWS.lg,
     },
     logoText: {
-        color: COLORS.surface,
-        fontSize: 44,
+        fontSize: FONT_SIZE.xxxl,
         fontWeight: FONT_WEIGHT.extrabold,
-        letterSpacing: 4,
+        color: COLORS.surface,
+        letterSpacing: 2,
     },
     title: {
         fontSize: FONT_SIZE.xxxl,
-        fontWeight: FONT_WEIGHT.extrabold,
+        fontWeight: FONT_WEIGHT.bold,
         color: COLORS.text,
         marginBottom: SPACING.sm,
-        letterSpacing: -1.2,
-        lineHeight: 44,
+        textAlign: 'center',
     },
     subtitle: {
         fontSize: FONT_SIZE.lg,
         color: COLORS.textSecondary,
-        lineHeight: 26,
-        fontWeight: FONT_WEIGHT.medium,
+        textAlign: 'center',
+        lineHeight: 24,
     },
     form: {
         width: '100%',
-        marginTop: SPACING.xl,
     },
-    button: {
+    submitButton: {
         marginTop: SPACING.lg,
-        height: 56,
-    },
-    passwordInput: {
-        marginTop: SPACING.md,
+        marginBottom: SPACING.md,
     },
     switchContainer: {
-        marginTop: SPACING.md,
+        flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
+        marginTop: SPACING.md,
     },
     switchText: {
-        color: COLORS.primary,
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-    quickLoginContainer: {
-        marginTop: SPACING.xl,
-        paddingTop: SPACING.xl,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.borderLight,
-    },
-    quickLoginLabel: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: '600',
+        fontSize: FONT_SIZE.md,
         color: COLORS.textSecondary,
-        marginBottom: SPACING.sm,
-        textAlign: 'center',
     },
-    quickLoginButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: SPACING.md,
-    },
-    quickButton: {
-        flex: 1,
+    switchButton: {
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        minHeight: 'auto',
     },
 });
