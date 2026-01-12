@@ -256,36 +256,39 @@ export default function CoursesScreen() {
 
             {/* Filter chips */}
             {enrollments.length > 0 && (
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filtersContainer}
-                >
-                    <FilterChip 
-                        label="All" 
-                        count={counts.all} 
-                        active={filter === 'all'} 
-                        onPress={() => setFilter('all')} 
-                    />
-                    <FilterChip 
-                        label="In Progress" 
-                        count={counts.in_progress} 
-                        active={filter === 'in_progress'} 
-                        onPress={() => setFilter('in_progress')} 
-                    />
-                    <FilterChip 
-                        label="Completed" 
-                        count={counts.completed} 
-                        active={filter === 'completed'} 
-                        onPress={() => setFilter('completed')} 
-                    />
-                    <FilterChip 
-                        label="Not Started" 
-                        count={counts.not_started} 
-                        active={filter === 'not_started'} 
-                        onPress={() => setFilter('not_started')} 
-                    />
-                </ScrollView>
+                <View style={styles.filtersWrapper}>
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.filtersContainer}
+                        bounces={false}
+                    >
+                        <FilterChip 
+                            label="All" 
+                            count={counts.all} 
+                            active={filter === 'all'} 
+                            onPress={() => setFilter('all')} 
+                        />
+                        <FilterChip 
+                            label="In Progress" 
+                            count={counts.in_progress} 
+                            active={filter === 'in_progress'} 
+                            onPress={() => setFilter('in_progress')} 
+                        />
+                        <FilterChip 
+                            label="Completed" 
+                            count={counts.completed} 
+                            active={filter === 'completed'} 
+                            onPress={() => setFilter('completed')} 
+                        />
+                        <FilterChip 
+                            label="Not Started" 
+                            count={counts.not_started} 
+                            active={filter === 'not_started'} 
+                            onPress={() => setFilter('not_started')} 
+                        />
+                    </ScrollView>
+                </View>
             )}
 
             <ScrollView
@@ -383,11 +386,17 @@ const styles = StyleSheet.create({
     },
     
     // Filters
+    filtersWrapper: {
+        backgroundColor: COLORS.background,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+        zIndex: 10,
+    },
     filtersContainer: {
         paddingHorizontal: SPACING.lg,
         paddingVertical: SPACING.md,
-        gap: SPACING.sm,
         flexDirection: 'row',
+        alignItems: 'center',
     },
     filterChip: {
         flexDirection: 'row',
@@ -396,10 +405,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.md,
         paddingVertical: SPACING.sm,
         borderRadius: BORDER_RADIUS.round,
-        gap: SPACING.xs,
         borderWidth: 1,
         borderColor: COLORS.border,
         marginRight: SPACING.sm,
+        minHeight: 36,
     },
     filterChipActive: {
         backgroundColor: COLORS.primary,
@@ -409,6 +418,7 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.sm,
         color: COLORS.textSecondary,
         fontWeight: FONT_WEIGHT.medium,
+        marginRight: SPACING.xs,
     },
     filterChipTextActive: {
         color: '#fff',
