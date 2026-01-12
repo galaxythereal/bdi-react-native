@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { useAuth } from '../../src/features/auth/AuthContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
-import { Mail, Lock, UserPlus } from 'lucide-react-native';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -15,6 +16,7 @@ export default function LoginScreen() {
     const [isSignUp, setIsSignUp] = useState(false);
     const [loading, setLoading] = useState(false);
     const { signInWithPassword, signUp, session, isLoading } = useAuth();
+    const { colors, isDark } = useTheme();
     const router = useRouter();
 
     // Navigate to dashboard when session is available
@@ -74,7 +76,8 @@ export default function LoginScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <StatusBar style={isDark ? 'light' : 'dark'} />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={styles.keyboardView}
@@ -85,13 +88,13 @@ export default function LoginScreen() {
                         keyboardShouldPersistTaps="handled"
                     >
                         <View style={styles.header}>
-                            <View style={styles.logoContainer}>
-                                <Text style={styles.logoText}>BDI</Text>
+                            <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
+                                <Text style={[styles.logoText, { color: colors.surface }]}>BDI</Text>
                             </View>
-                            <Text style={styles.title}>
+                            <Text style={[styles.title, { color: colors.text }]}>
                                 {isSignUp ? 'Create Account' : 'Welcome Back'}
                             </Text>
-                            <Text style={styles.subtitle}>
+                            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                                 {isSignUp ? 'Sign up to get started' : 'Sign in to access your courses'}
                             </Text>
                         </View>
@@ -135,7 +138,7 @@ export default function LoginScreen() {
                             />
 
                             <View style={styles.switchContainer}>
-                                <Text style={styles.switchText}>
+                                <Text style={[styles.switchText, { color: colors.textSecondary }]}>
                                     {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
                                 </Text>
                                 <Button

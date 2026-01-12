@@ -19,10 +19,12 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
+import { ComingSoonModal } from '../../src/components/ComingSoonModal';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { getDownloadRecords, removeDownloadRecord, deleteLessonDownload, getDownloadsStorageUsed } from '../../src/features/offline/downloadManager';
 import { supabase } from '../../src/lib/supabase';
+import { useTheme } from '../../src/context/ThemeContext';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
 
 interface MenuItem {
@@ -52,6 +54,7 @@ export default function ProfileScreen() {
     const { signOut, session } = useAuth();
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { colors, isDark, theme, setTheme } = useTheme();
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState<StatsData>({ courses: 0, progress: 0, certificates: 0 });
     
@@ -60,6 +63,9 @@ export default function ProfileScreen() {
     const [changePasswordVisible, setChangePasswordVisible] = useState(false);
     const [downloadsVisible, setDownloadsVisible] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [themeModalVisible, setThemeModalVisible] = useState(false);
+    const [comingSoonVisible, setComingSoonVisible] = useState(false);
+    const [comingSoonConfig, setComingSoonConfig] = useState({ title: '', description: '', icon: 'rocket-outline' as any });
     
     // Form states
     const [fullName, setFullName] = useState('');
@@ -75,6 +81,12 @@ export default function ProfileScreen() {
     
     // Tab bar height
     const TAB_BAR_HEIGHT = 56 + Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 24);
+
+    // Show coming soon modal helper
+    const showComingSoon = (title: string, description: string, icon: keyof typeof Ionicons.glyphMap = 'rocket-outline') => {
+        setComingSoonConfig({ title, description, icon });
+        setComingSoonVisible(true);
+    };
 
     // Refresh stats when screen comes into focus
     useFocusEffect(
@@ -275,7 +287,11 @@ export default function ProfileScreen() {
                     icon: 'bookmark-outline', 
                     label: 'Bookmarks',
                     subtitle: 'Saved lessons and resources',
-                    onPress: () => Alert.alert('Bookmarks', 'Bookmarks feature coming soon!')
+                    onPress: () => showComingSoon(
+                        'Bookmarks',
+                        'Save your favorite lessons and resources for quick access. This feature is coming in our next update!',
+                        'bookmark-outline'
+                    )
                 },
                 { 
                     icon: 'trophy-outline', 
@@ -308,16 +324,20 @@ export default function ProfileScreen() {
                     }
                 },
                 { 
-                    icon: 'moon-outline', 
+                    icon: isDark ? 'moon' : 'sunny-outline', 
                     label: 'Appearance',
-                    subtitle: 'Theme and display settings',
-                    onPress: () => Alert.alert('Appearance', 'Dark mode coming soon!')
+                    subtitle: theme === 'system' ? 'System' : (isDark ? 'Dark Mode' : 'Light Mode'),
+                    onPress: () => setThemeModalVisible(true)
                 },
                 { 
                     icon: 'language-outline', 
                     label: 'Language',
                     subtitle: 'English',
-                    onPress: () => Alert.alert('Language', 'Additional languages coming soon!')
+                    onPress: () => showComingSoon(
+                        'Multiple Languages',
+                        'Support for Arabic, French, and more languages is coming soon. Stay tuned for our internationalization update!',
+                        'language-outline'
+                    )
                 },
             ],
         },
@@ -328,7 +348,11 @@ export default function ProfileScreen() {
                     icon: 'help-circle-outline', 
                     label: 'Help Center',
                     subtitle: 'FAQs and guides',
-                    onPress: () => Linking.openURL('https://help.bdi.com')
+                    onPress: () => showComingSoon(
+                        'Help Center',
+                        'Our comprehensive help center with FAQs, guides, and tutorials is being built. For now, contact support directly!',
+                        'help-circle-outline'
+                    )
                 },
                 { 
                     icon: 'chatbubble-outline', 
@@ -340,7 +364,11 @@ export default function ProfileScreen() {
                     icon: 'document-text-outline', 
                     label: 'Terms & Privacy',
                     subtitle: 'Legal information',
-                    onPress: () => Linking.openURL('https://bdi.com/privacy')
+                    onPress: () => showComingSoon(
+                        'Terms & Privacy',
+                        'Our terms of service and privacy policy documentation is being finalized. These will be available before public launch.',
+                        'document-text-outline'
+                    )
                 },
             ],
         },
@@ -360,7 +388,7 @@ export default function ProfileScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScrollView 
                 contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_HEIGHT + SPACING.lg }]}
                 showsVerticalScrollIndicator={false}
@@ -368,8 +396,8 @@ export default function ProfileScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        tintColor={COLORS.primary}
-                        colors={[COLORS.primary]}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
                     />
                 }
             >
@@ -381,23 +409,23 @@ export default function ProfileScreen() {
                         transform: [{ translateY: slideAnim }],
                     },
                 ]}>
-                    <View style={styles.headerBackground} />
+                    <View style={[styles.headerBackground, { backgroundColor: colors.primary }]} />
                     
                     <View style={styles.avatarContainer}>
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>{getUserInitials()}</Text>
+                        <View style={[styles.avatar, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
+                            <Text style={[styles.avatarText, { color: colors.primary }]}>{getUserInitials()}</Text>
                         </View>
-                        <TouchableOpacity style={styles.editAvatarButton}>
-                            <Ionicons name="camera" size={16} color={COLORS.surface} />
+                        <TouchableOpacity style={[styles.editAvatarButton, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
+                            <Ionicons name="camera" size={16} color={colors.surface} />
                         </TouchableOpacity>
                     </View>
                     
-                    <Text style={styles.userName}>{getUserName()}</Text>
-                    <Text style={styles.email}>{session?.user.email}</Text>
+                    <Text style={[styles.userName, { color: colors.text }]}>{getUserName()}</Text>
+                    <Text style={[styles.email, { color: colors.textSecondary }]}>{session?.user.email}</Text>
                     
-                    <View style={styles.roleBadge}>
-                        <Ionicons name="school-outline" size={14} color={COLORS.primary} />
-                        <Text style={styles.roleText}>Student</Text>
+                    <View style={[styles.roleBadge, { backgroundColor: colors.primary + '15' }]}>
+                        <Ionicons name="school-outline" size={14} color={colors.primary} />
+                        <Text style={[styles.roleText, { color: colors.primary }]}>Student</Text>
                     </View>
                 </Animated.View>
 
@@ -409,33 +437,33 @@ export default function ProfileScreen() {
                         transform: [{ translateY: slideAnim }],
                     },
                 ]}>
-                    <Card style={styles.statsCard}>
+                    <Card style={[styles.statsCard, { backgroundColor: colors.surface }]}>
                         <View style={styles.statItem}>
-                            <View style={[styles.statIconContainer, { backgroundColor: COLORS.primary + '15' }]}>
-                                <Ionicons name="library" size={22} color={COLORS.primary} />
+                            <View style={[styles.statIconContainer, { backgroundColor: colors.primary + '15' }]}>
+                                <Ionicons name="library" size={22} color={colors.primary} />
                             </View>
-                            <Text style={styles.statValue}>{stats.courses}</Text>
-                            <Text style={styles.statLabel}>Courses</Text>
+                            <Text style={[styles.statValue, { color: colors.text }]}>{stats.courses}</Text>
+                            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Courses</Text>
                         </View>
                         
-                        <View style={styles.statDivider} />
+                        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                         
                         <View style={styles.statItem}>
-                            <View style={[styles.statIconContainer, { backgroundColor: COLORS.success + '15' }]}>
-                                <Ionicons name="trending-up" size={22} color={COLORS.success} />
+                            <View style={[styles.statIconContainer, { backgroundColor: colors.success + '15' }]}>
+                                <Ionicons name="trending-up" size={22} color={colors.success} />
                             </View>
-                            <Text style={styles.statValue}>{stats.progress}%</Text>
-                            <Text style={styles.statLabel}>Progress</Text>
+                            <Text style={[styles.statValue, { color: colors.text }]}>{stats.progress}%</Text>
+                            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Progress</Text>
                         </View>
                         
-                        <View style={styles.statDivider} />
+                        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                         
                         <View style={styles.statItem}>
-                            <View style={[styles.statIconContainer, { backgroundColor: COLORS.warning + '15' }]}>
-                                <Ionicons name="trophy" size={22} color={COLORS.warning} />
+                            <View style={[styles.statIconContainer, { backgroundColor: colors.warning + '15' }]}>
+                                <Ionicons name="trophy" size={22} color={colors.warning} />
                             </View>
-                            <Text style={styles.statValue}>{stats.certificates}</Text>
-                            <Text style={styles.statLabel}>Certificates</Text>
+                            <Text style={[styles.statValue, { color: colors.text }]}>{stats.certificates}</Text>
+                            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Certificates</Text>
                         </View>
                     </Card>
                 </Animated.View>
@@ -452,14 +480,14 @@ export default function ProfileScreen() {
                             },
                         ]}
                     >
-                        <Text style={styles.sectionTitle}>{section.title}</Text>
-                        <View style={styles.menuCard}>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{section.title}</Text>
+                        <View style={[styles.menuCard, { backgroundColor: colors.surface }]}>
                             {section.items.map((item, index) => (
                                 <TouchableOpacity
                                     key={index}
                                     style={[
                                         styles.menuItem,
-                                        index < section.items.length - 1 && styles.menuItemBorder,
+                                        index < section.items.length - 1 && [styles.menuItemBorder, { borderBottomColor: colors.borderLight }],
                                         item.danger && styles.menuItemDanger,
                                     ]}
                                     onPress={item.onPress}
@@ -467,24 +495,24 @@ export default function ProfileScreen() {
                                 >
                                     <View style={[
                                         styles.menuIconContainer,
-                                        item.danger && styles.menuIconContainerDanger,
+                                        { backgroundColor: item.danger ? colors.error + '10' : colors.primary + '10' },
                                     ]}>
                                         <Ionicons 
                                             name={item.icon} 
                                             size={20} 
-                                            color={item.danger ? COLORS.error : COLORS.primary} 
+                                            color={item.danger ? colors.error : colors.primary} 
                                         />
                                     </View>
                                     
                                     <View style={styles.menuItemContent}>
                                         <Text style={[
                                             styles.menuItemText,
-                                            item.danger && styles.menuItemTextDanger,
+                                            { color: item.danger ? colors.error : colors.text },
                                         ]}>
                                             {item.label}
                                         </Text>
                                         {item.subtitle && (
-                                            <Text style={styles.menuItemSubtitle} numberOfLines={1}>
+                                            <Text style={[styles.menuItemSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
                                                 {item.subtitle}
                                             </Text>
                                         )}
@@ -492,11 +520,11 @@ export default function ProfileScreen() {
                                     
                                     <View style={styles.menuItemRight}>
                                         {item.badge && (
-                                            <View style={styles.badge}>
-                                                <Text style={styles.badgeText}>{item.badge}</Text>
+                                            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                                                <Text style={[styles.badgeText, { color: colors.surface }]}>{item.badge}</Text>
                                             </View>
                                         )}
-                                        <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
+                                        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                                     </View>
                                 </TouchableOpacity>
                             ))}
@@ -513,19 +541,19 @@ export default function ProfileScreen() {
                     },
                 ]}>
                     <TouchableOpacity 
-                        style={styles.signOutButton}
+                        style={[styles.signOutButton, { backgroundColor: colors.error + '10', borderColor: colors.error + '30' }]}
                         onPress={handleSignOut}
                         activeOpacity={0.7}
                     >
-                        <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
-                        <Text style={styles.signOutText}>Sign Out</Text>
+                        <Ionicons name="log-out-outline" size={22} color={colors.error} />
+                        <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
                     </TouchableOpacity>
                 </Animated.View>
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.version}>BDI Learning • Version 1.0.0</Text>
-                    <Text style={styles.copyright}>© 2026 BDI. All rights reserved.</Text>
+                    <Text style={[styles.version, { color: colors.textSecondary }]}>BDI Learning • Version 1.0.0</Text>
+                    <Text style={[styles.copyright, { color: colors.textTertiary }]}>© 2026 BDI. All rights reserved.</Text>
                 </View>
             </ScrollView>
 
@@ -536,37 +564,37 @@ export default function ProfileScreen() {
                 transparent={true}
                 onRequestClose={() => setEditProfileVisible(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+                <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Edit Profile</Text>
+                            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Edit Profile</Text>
                             <TouchableOpacity onPress={() => setEditProfileVisible(false)}>
-                                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+                                <Ionicons name="close" size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
                         
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Full Name</Text>
+                            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Full Name</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
                                 value={fullName}
                                 onChangeText={setFullName}
                                 placeholder="Enter your full name"
-                                placeholderTextColor={COLORS.textTertiary}
+                                placeholderTextColor={colors.textTertiary}
                             />
                         </View>
                         
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Email</Text>
+                            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Email</Text>
                             <TextInput
-                                style={[styles.input, styles.inputDisabled]}
+                                style={[styles.input, styles.inputDisabled, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
                                 value={session?.user.email || ''}
                                 editable={false}
                             />
                         </View>
                         
-                        <TouchableOpacity style={styles.modalButton} onPress={handleUpdateProfile}>
-                            <Text style={styles.modalButtonText}>Save Changes</Text>
+                        <TouchableOpacity style={[styles.modalButton, { backgroundColor: colors.primary }]} onPress={handleUpdateProfile}>
+                            <Text style={[styles.modalButtonText, { color: colors.surface }]}>Save Changes</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -579,41 +607,41 @@ export default function ProfileScreen() {
                 transparent={true}
                 onRequestClose={() => setChangePasswordVisible(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+                <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Change Password</Text>
+                            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Change Password</Text>
                             <TouchableOpacity onPress={() => setChangePasswordVisible(false)}>
-                                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+                                <Ionicons name="close" size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
                         
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>New Password</Text>
+                            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>New Password</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
                                 value={newPassword}
                                 onChangeText={setNewPassword}
                                 placeholder="Enter new password"
-                                placeholderTextColor={COLORS.textTertiary}
+                                placeholderTextColor={colors.textTertiary}
                                 secureTextEntry
                             />
                         </View>
                         
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Confirm Password</Text>
+                            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Confirm Password</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
                                 placeholder="Confirm new password"
-                                placeholderTextColor={COLORS.textTertiary}
+                                placeholderTextColor={colors.textTertiary}
                                 secureTextEntry
                             />
                         </View>
                         
-                        <TouchableOpacity style={styles.modalButton} onPress={handleChangePassword}>
-                            <Text style={styles.modalButtonText}>Update Password</Text>
+                        <TouchableOpacity style={[styles.modalButton, { backgroundColor: colors.primary }]} onPress={handleChangePassword}>
+                            <Text style={[styles.modalButtonText, { color: colors.surface }]}>Update Password</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -626,36 +654,36 @@ export default function ProfileScreen() {
                 transparent={true}
                 onRequestClose={() => setDownloadsVisible(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+                <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
+                    <View style={[styles.modalContent, { maxHeight: '80%', backgroundColor: colors.surface }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Downloads</Text>
+                            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Downloads</Text>
                             <TouchableOpacity onPress={() => setDownloadsVisible(false)}>
-                                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+                                <Ionicons name="close" size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
                         
-                        <View style={styles.storageInfo}>
-                            <Ionicons name="folder-outline" size={20} color={COLORS.primary} />
-                            <Text style={styles.storageText}>Storage Used: {formatBytes(storageUsed)}</Text>
+                        <View style={[styles.storageInfo, { backgroundColor: colors.primary + '10' }]}>
+                            <Ionicons name="folder-outline" size={20} color={colors.primary} />
+                            <Text style={[styles.storageText, { color: colors.textPrimary }]}>Storage Used: {formatBytes(storageUsed)}</Text>
                         </View>
                         
                         <ScrollView style={styles.downloadsList}>
                             {downloads.length === 0 ? (
                                 <View style={styles.emptyState}>
-                                    <Ionicons name="cloud-download-outline" size={48} color={COLORS.textTertiary} />
-                                    <Text style={styles.emptyStateText}>No downloads yet</Text>
-                                    <Text style={styles.emptyStateSubtext}>Downloaded videos will appear here</Text>
+                                    <Ionicons name="cloud-download-outline" size={48} color={colors.textTertiary} />
+                                    <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>No downloads yet</Text>
+                                    <Text style={[styles.emptyStateSubtext, { color: colors.textTertiary }]}>Downloaded videos will appear here</Text>
                                 </View>
                             ) : (
                                 downloads.map((item) => (
-                                    <View key={item.id} style={styles.downloadItem}>
-                                        <View style={styles.downloadItemIcon}>
-                                            <Ionicons name="videocam" size={24} color={COLORS.primary} />
+                                    <View key={item.id} style={[styles.downloadItem, { borderBottomColor: colors.border }]}>
+                                        <View style={[styles.downloadItemIcon, { backgroundColor: colors.primary + '10' }]}>
+                                            <Ionicons name="videocam" size={24} color={colors.primary} />
                                         </View>
                                         <View style={styles.downloadItemInfo}>
-                                            <Text style={styles.downloadItemTitle} numberOfLines={1}>{item.title}</Text>
-                                            <Text style={styles.downloadItemSubtitle}>
+                                            <Text style={[styles.downloadItemTitle, { color: colors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
+                                            <Text style={[styles.downloadItemSubtitle, { color: colors.textSecondary }]}>
                                                 {item.courseTitle} • {formatBytes(item.fileSize || 0)}
                                             </Text>
                                         </View>
@@ -663,7 +691,7 @@ export default function ProfileScreen() {
                                             onPress={() => handleDeleteDownload(item.id)}
                                             style={styles.downloadItemDelete}
                                         >
-                                            <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                                            <Ionicons name="trash-outline" size={20} color={colors.error} />
                                         </TouchableOpacity>
                                     </View>
                                 ))
@@ -672,6 +700,72 @@ export default function ProfileScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Theme Selection Modal */}
+            <Modal
+                visible={themeModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setThemeModalVisible(false)}
+            >
+                <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Appearance</Text>
+                            <TouchableOpacity onPress={() => setThemeModalVisible(false)}>
+                                <Ionicons name="close" size={24} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <View style={styles.themeOptions}>
+                            {[
+                                { value: 'light', label: 'Light', icon: 'sunny-outline' },
+                                { value: 'dark', label: 'Dark', icon: 'moon-outline' },
+                                { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+                            ].map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.themeOption,
+                                        { 
+                                            backgroundColor: theme === option.value ? colors.primary + '15' : colors.background,
+                                            borderColor: theme === option.value ? colors.primary : colors.border,
+                                        }
+                                    ]}
+                                    onPress={() => {
+                                        setTheme(option.value as any);
+                                        setThemeModalVisible(false);
+                                    }}
+                                >
+                                    <Ionicons 
+                                        name={option.icon as any} 
+                                        size={24} 
+                                        color={theme === option.value ? colors.primary : colors.textSecondary} 
+                                    />
+                                    <Text style={[
+                                        styles.themeOptionText, 
+                                        { color: theme === option.value ? colors.primary : colors.text }
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                    {theme === option.value && (
+                                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Coming Soon Modal */}
+            <ComingSoonModal
+                visible={comingSoonVisible}
+                onClose={() => setComingSoonVisible(false)}
+                title={comingSoonConfig.title}
+                description={comingSoonConfig.description}
+                icon={comingSoonConfig.icon}
+            />
         </SafeAreaView>
     );
 }
@@ -1030,5 +1124,21 @@ const styles = StyleSheet.create({
     },
     downloadItemDelete: {
         padding: SPACING.sm,
+    },
+    themeOptions: {
+        gap: SPACING.sm,
+    },
+    themeOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: SPACING.md,
+        borderRadius: BORDER_RADIUS.md,
+        borderWidth: 1.5,
+        gap: SPACING.md,
+    },
+    themeOptionText: {
+        flex: 1,
+        fontSize: FONT_SIZE.md,
+        fontFamily: 'Inter-Medium',
     },
 });

@@ -19,6 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Enrollment } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -152,6 +153,7 @@ export default function DashboardScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const { colors } = useTheme();
 
     const loadData = async () => {
         try {
@@ -209,10 +211,10 @@ export default function DashboardScreen() {
 
     if (loading && !refreshing) {
         return (
-            <SafeAreaView style={styles.container} edges={['top']}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Loading your dashboard...</Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your dashboard...</Text>
                 </View>
             </SafeAreaView>
         );
@@ -222,15 +224,15 @@ export default function DashboardScreen() {
     const TAB_BAR_HEIGHT = 56 + Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 24);
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl 
                         refreshing={refreshing} 
                         onRefresh={onRefresh} 
-                        tintColor={COLORS.primary}
-                        colors={[COLORS.primary]}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
                     />
                 }
                 contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + SPACING.lg }}
@@ -550,7 +552,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.lg,
         paddingVertical: SPACING.md,
         paddingBottom: SPACING.lg,
-        background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
         backgroundColor: 'rgba(0,0,0,0.75)',
     },
     featuredContent: {

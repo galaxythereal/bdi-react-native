@@ -23,6 +23,7 @@ import { WebView } from 'react-native-webview';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyCertificates, generateCertificateHTML } from '../../src/features/certificates/certificateService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Certificate } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -111,6 +112,7 @@ export default function CertificatesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const { colors } = useTheme();
 
     const loadData = async () => {
         try {
@@ -237,22 +239,22 @@ export default function CertificatesScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.container} edges={['top']}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Loading certificates...</Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading certificates...</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>Certificates</Text>
-                    <Text style={styles.headerSubtitle}>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>Certificates</Text>
+                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
                         {certificates.length > 0
                             ? `${certificates.length} certificate${certificates.length !== 1 ? 's' : ''} earned`
                             : 'Complete courses to earn certificates'}
@@ -273,7 +275,7 @@ export default function CertificatesScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        tintColor={COLORS.primary}
+                        tintColor={colors.primary}
                     />
                 }
                 showsVerticalScrollIndicator={false}

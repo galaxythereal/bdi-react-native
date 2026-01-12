@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
+import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
+import { useTheme } from '../context/ThemeContext';
 
 interface ButtonProps {
     title: string;
@@ -27,27 +28,29 @@ export const Button = ({
     style,
     textStyle,
 }: ButtonProps) => {
+    const { colors } = useTheme();
+
     const getBackgroundColor = () => {
-        if (disabled) return COLORS.border;
-        if (variant === 'primary') return COLORS.primary;
-        if (variant === 'secondary') return COLORS.secondary;
+        if (disabled) return colors.border;
+        if (variant === 'primary') return colors.primary;
+        if (variant === 'secondary') return colors.secondary;
         if (variant === 'outline') return 'transparent';
         if (variant === 'ghost') return 'transparent';
-        return COLORS.primary;
+        return colors.primary;
     };
 
     const getTextColor = () => {
-        if (disabled) return COLORS.textTertiary;
-        if (variant === 'primary') return COLORS.surface;
-        if (variant === 'secondary') return COLORS.text;
-        if (variant === 'outline') return COLORS.primary;
-        if (variant === 'ghost') return COLORS.primary;
-        return COLORS.surface;
+        if (disabled) return colors.textTertiary;
+        if (variant === 'primary') return colors.surface;
+        if (variant === 'secondary') return colors.text;
+        if (variant === 'outline') return colors.primary;
+        if (variant === 'ghost') return colors.primary;
+        return colors.surface;
     };
 
     const getBorderColor = () => {
-        if (disabled) return COLORS.border;
-        if (variant === 'outline') return COLORS.primary;
+        if (disabled) return colors.border;
+        if (variant === 'outline') return colors.primary;
         return 'transparent';
     };
 

@@ -9,6 +9,7 @@ import {
     Animated,
     TextInputProps,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
@@ -49,6 +50,7 @@ export const Input = ({
     inputStyle,
     ...rest
 }: InputProps) => {
+    const { colors } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [isSecure, setIsSecure] = useState(initialSecureEntry);
     const focusAnim = useRef(new Animated.Value(0)).current;
@@ -97,8 +99,8 @@ export const Input = ({
     const borderColor = focusAnim.interpolate({
         inputRange: [0, 1],
         outputRange: [
-            error ? COLORS.error : COLORS.border,
-            error ? COLORS.error : COLORS.primary
+            error ? colors.error : colors.border,
+            error ? colors.error : colors.primary
         ],
     });
 
@@ -112,8 +114,9 @@ export const Input = ({
             {label && (
                 <Text style={[
                     styles.label,
-                    error && styles.labelError,
-                    isFocused && styles.labelFocused,
+                    { color: colors.text },
+                    error && { color: colors.error },
+                    isFocused && { color: colors.primary },
                 ]}>
                     {label}
                 </Text>
@@ -122,17 +125,18 @@ export const Input = ({
             <Animated.View
                 style={[
                     styles.inputWrapper,
-                    variant === 'filled' && styles.inputWrapperFilled,
-                    variant === 'outline' && styles.inputWrapperOutline,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                    variant === 'filled' && { backgroundColor: colors.backgroundSecondary, borderColor: 'transparent' },
+                    variant === 'outline' && { backgroundColor: 'transparent' },
                     {
                         borderColor,
                         shadowOpacity,
-                        shadowColor: error ? COLORS.error : COLORS.primary,
+                        shadowColor: error ? colors.error : colors.primary,
                         shadowOffset: { width: 0, height: 2 },
                         shadowRadius: 8,
                         elevation: isFocused ? 2 : 0,
                     },
-                    disabled && styles.inputWrapperDisabled,
+                    disabled && { backgroundColor: colors.backgroundSecondary, opacity: 0.6 },
                 ]}
             >
                 {leftIcon && (
@@ -140,7 +144,7 @@ export const Input = ({
                         <Ionicons 
                             name={leftIcon} 
                             size={20} 
-                            color={isFocused ? COLORS.primary : COLORS.textSecondary} 
+                            color={isFocused ? colors.primary : colors.textSecondary} 
                         />
                     </View>
                 )}
@@ -149,19 +153,20 @@ export const Input = ({
                     ref={inputRef}
                     style={[
                         styles.input,
+                        { color: colors.text },
                         {
                             height: getInputHeight(),
                             fontSize: getFontSize(),
                         },
                         leftIcon && styles.inputWithLeftIcon,
                         (rightIcon || initialSecureEntry) && styles.inputWithRightIcon,
-                        disabled && styles.inputDisabled,
+                        disabled && { color: colors.textTertiary },
                         inputStyle,
                     ]}
                     value={value}
                     onChangeText={onChangeText}
                     placeholder={placeholder}
-                    placeholderTextColor={COLORS.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     secureTextEntry={isSecure}
                     autoCapitalize={autoCapitalize}
                     keyboardType={keyboardType}
@@ -180,7 +185,7 @@ export const Input = ({
                         <Ionicons 
                             name={isSecure ? 'eye-outline' : 'eye-off-outline'} 
                             size={20} 
-                            color={COLORS.textSecondary} 
+                            color={colors.textSecondary} 
                         />
                     </TouchableOpacity>
                 )}
@@ -195,7 +200,7 @@ export const Input = ({
                         <Ionicons 
                             name={rightIcon} 
                             size={20} 
-                            color={COLORS.textSecondary} 
+                            color={colors.textSecondary} 
                         />
                     </TouchableOpacity>
                 )}
@@ -205,11 +210,11 @@ export const Input = ({
                 <View style={styles.helperContainer}>
                     {error ? (
                         <View style={styles.errorContainer}>
-                            <Ionicons name="alert-circle" size={14} color={COLORS.error} />
-                            <Text style={styles.errorText}>{error}</Text>
+                            <Ionicons name="alert-circle" size={14} color={colors.error} />
+                            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
                         </View>
                     ) : hint ? (
-                        <Text style={styles.hintText}>{hint}</Text>
+                        <Text style={[styles.hintText, { color: colors.textSecondary }]}>{hint}</Text>
                     ) : null}
                 </View>
             )}
@@ -235,26 +240,28 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     onSubmit,
     containerStyle,
 }) => {
+    const { colors } = useTheme();
+    
     const handleClear = () => {
         onChangeText('');
         onClear?.();
     };
 
     return (
-        <View style={[styles.searchContainer, containerStyle]}>
-            <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
+        <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary }, containerStyle]}>
+            <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
             <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, { color: colors.text }]}
                 value={value}
                 onChangeText={onChangeText}
                 placeholder={placeholder}
-                placeholderTextColor={COLORS.textTertiary}
+                placeholderTextColor={colors.textTertiary}
                 returnKeyType="search"
                 onSubmitEditing={onSubmit}
             />
             {value.length > 0 && (
                 <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-                    <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
+                    <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
             )}
         </View>

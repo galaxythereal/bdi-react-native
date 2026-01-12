@@ -29,6 +29,7 @@ import {
     sendTicketMessage,
 } from '../../src/features/support/supportService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
+import { useTheme } from '../../src/context/ThemeContext';
 import { SupportTicket, TicketMessage } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -139,6 +140,7 @@ export default function SupportScreen() {
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const messagesScrollRef = useRef<ScrollView>(null);
+    const { colors } = useTheme();
 
     const loadData = async () => {
         try {
@@ -237,29 +239,29 @@ export default function SupportScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.container} edges={['top']}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Loading tickets...</Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading tickets...</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>Support</Text>
-                    <Text style={styles.headerSubtitle}>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>Support</Text>
+                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
                         {tickets.length > 0
                             ? `${tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length} open ticket${tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length !== 1 ? 's' : ''}`
                             : 'Need help? Create a ticket'}
                     </Text>
                 </View>
                 <TouchableOpacity
-                    style={styles.createButton}
+                    style={[styles.createButton, { backgroundColor: colors.primary }]}
                     onPress={() => setShowCreateModal(true)}
                 >
                     <Ionicons name="add" size={24} color="#fff" />
@@ -276,22 +278,22 @@ export default function SupportScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        tintColor={COLORS.primary}
+                        tintColor={colors.primary}
                     />
                 }
                 showsVerticalScrollIndicator={false}
             >
                 {tickets.length === 0 ? (
                     <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
-                        <View style={styles.emptyIcon}>
-                            <Ionicons name="chatbubbles-outline" size={64} color={COLORS.textTertiary} />
+                        <View style={[styles.emptyIcon, { backgroundColor: colors.backgroundSecondary }]}>
+                            <Ionicons name="chatbubbles-outline" size={64} color={colors.textTertiary} />
                         </View>
-                        <Text style={styles.emptyTitle}>No Support Tickets</Text>
-                        <Text style={styles.emptyText}>
+                        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Support Tickets</Text>
+                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                             Having issues or questions? Create a support ticket and we'll help you out.
                         </Text>
                         <TouchableOpacity
-                            style={styles.emptyButton}
+                            style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                             onPress={() => setShowCreateModal(true)}
                         >
                             <Ionicons name="add" size={18} color="#fff" />

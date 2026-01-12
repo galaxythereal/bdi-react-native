@@ -19,6 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Enrollment } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -178,6 +179,7 @@ export default function CoursesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const { colors } = useTheme();
 
     const loadData = async () => {
         try {
@@ -235,21 +237,21 @@ export default function CoursesScreen() {
 
     if (loading && !refreshing) {
         return (
-            <SafeAreaView style={styles.container} edges={['top']}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Loading courses...</Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading courses...</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
             <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-                <Text style={styles.headerTitle}>My Courses</Text>
-                <Text style={styles.headerSubtitle}>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>My Courses</Text>
+                <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
                     {enrollments.length} {enrollments.length === 1 ? 'course' : 'courses'} enrolled
                 </Text>
             </Animated.View>

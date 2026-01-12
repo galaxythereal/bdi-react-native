@@ -1,22 +1,32 @@
 import React from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
-import { BORDER_RADIUS, COLORS, SPACING } from '../lib/constants';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { BORDER_RADIUS, SPACING } from '../lib/constants';
+import { useTheme } from '../context/ThemeContext';
 
 interface CardProps {
     children: React.ReactNode;
-    style?: ViewStyle;
+    style?: StyleProp<ViewStyle>;
     variant?: 'elevated' | 'outlined' | 'flat';
     onPress?: () => void; // TODO: Implement touchable if needed
 }
 
 export const Card = ({ children, style, variant = 'elevated' }: CardProps) => {
+    const { colors, isDark } = useTheme();
+    
     return (
         <View
             style={[
                 styles.container,
-                variant === 'elevated' && styles.elevated,
-                variant === 'outlined' && styles.outlined,
-                variant === 'flat' && styles.flat,
+                { backgroundColor: colors.surface },
+                variant === 'elevated' && [
+                    styles.elevated,
+                    { 
+                        borderColor: colors.borderLight,
+                        shadowOpacity: isDark ? 0.3 : 0.08,
+                    }
+                ],
+                variant === 'outlined' && [styles.outlined, { borderColor: colors.border }],
+                variant === 'flat' && { backgroundColor: colors.background },
                 style,
             ]}
         >
@@ -27,24 +37,17 @@ export const Card = ({ children, style, variant = 'elevated' }: CardProps) => {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: COLORS.surface,
         borderRadius: BORDER_RADIUS.xl,
         padding: SPACING.lg + SPACING.sm,
     },
     elevated: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
         shadowRadius: 16,
         elevation: 3,
         borderWidth: 1,
-        borderColor: COLORS.borderLight,
     },
     outlined: {
         borderWidth: 1.5,
-        borderColor: COLORS.border,
-    },
-    flat: {
-        backgroundColor: COLORS.background,
     },
 });
