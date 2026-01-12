@@ -123,25 +123,20 @@ export const fetchCourseContent = async (courseId: string): Promise<CourseDetail
             const quizBlock = blocks.find((b: any) => b.type === 'quiz');
             const textBlock = blocks.find((b: any) => b.type === 'text');
             
-            // Use first block's type as primary content type
+            // Use first block's type as primary content type - DON'T override later!
             let content_type = firstBlock?.type || 'text';
             let video_url = null;
             let video_provider = 'direct';
             let content_html = null;
-            let quiz_data = null;
+            let quiz_data: any = null;
             
             // Extract video data if present
             if (videoBlock) {
               video_url = videoBlock.content?.url || videoBlock.content?.video_url;
               video_provider = videoBlock.content?.provider || 'direct';
-              // If first block is video, set content_type
-              if (firstBlock?.type === 'video') {
-                content_type = 'video';
-              }
             }
-            // Extract quiz data if present
+            // Extract quiz data if present (but don't override content_type - keep first block's type)
             if (quizBlock) {
-              content_type = 'quiz';
               // Transform quiz block content to QuizData format
               // New format stores questions array directly: { title, time_limit, passing_score, questions: [...] }
               // Legacy format is single question: { question, question_type, options, explanation, points, attempts }
@@ -314,6 +309,43 @@ const fetchCourseContentSimple = async (courseId: string, course: any): Promise<
   }));
 
   return { ...course, modules };
+};
+
+// Update enrollment progress when lessons are completed
+export const updateEnrollmentProgress = async (
+  courseId: string, 
+  completedLessons: number, 
+  totalLessons: number
+): Promise<void> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.warn('Not authenticated, cannot update progress');
+      return;
+    }
+
+    const progress = totalLessons > 0 
+      ? Math.round((completedLessons / totalLessons) * 100) 
+      : 0;
+
+    const { error } = await supabase
+      .from('enrollments')
+      .update({ 
+        progress,
+        status: progress >= 100 ? 'completed' : 'active',
+        last_accessed_at: new Date().toISOString(),
+      })
+      .eq('course_id', courseId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating enrollment progress:', error);
+    } else {
+      console.log(`Progress updated: ${completedLessons}/${totalLessons} = ${progress}%`);
+    }
+  } catch (error) {
+    console.error('updateEnrollmentProgress error:', error);
+  }
 };
 
 // Add offline fallback wrapper or modifying existing if called from UI?

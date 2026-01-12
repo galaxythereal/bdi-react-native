@@ -13,6 +13,7 @@ export interface Enrollment {
     course_id: string;
     enrolled_at: string;
     progress: number; // 0-100
+    status?: 'active' | 'completed' | 'dropped' | 'pending';
     course: Course;
 }
 
@@ -21,7 +22,43 @@ export interface Profile {
     email: string;
     full_name: string | null;
     avatar_url: string | null;
-    role: 'student' | 'admin' | 'instructor';
+    role: 'student' | 'admin' | 'instructor' | 'support';
+    status?: 'pending' | 'active' | 'suspended' | 'inactive';
+}
+
+export interface Certificate {
+    id: string;
+    user_id: string;
+    course_id: string;
+    enrollment_id: string;
+    certificate_number: string;
+    verification_code: string;
+    issued_at: string;
+    course?: Course;
+}
+
+export interface SupportTicket {
+    id: string;
+    user_id: string;
+    assigned_to: string | null;
+    subject: string;
+    description: string;
+    status: 'open' | 'in_progress' | 'resolved' | 'closed';
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    created_at: string;
+    updated_at: string;
+    resolved_at: string | null;
+    messages?: TicketMessage[];
+}
+
+export interface TicketMessage {
+    id: string;
+    ticket_id: string;
+    user_id: string;
+    message: string;
+    is_internal: boolean;
+    created_at: string;
+    profile?: Profile;
 }
 
 export interface Lesson {
@@ -50,4 +87,5 @@ export interface Module {
 export interface CourseDetail extends Course {
     modules: Module[];
 }
+
 

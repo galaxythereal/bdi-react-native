@@ -775,7 +775,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
 
                 <View style={styles.footerCenter}>
                     <Text style={styles.footerProgress}>
-                        {checkedQuestions.size}/{totalQuestions} checked
+                        {answeredCount}/{totalQuestions} answered
                     </Text>
                 </View>
 
@@ -785,7 +785,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                             <Text style={styles.nextButtonText}>Next</Text>
                             <Ionicons name="chevron-forward" size={20} color={COLORS.surface} />
                         </TouchableOpacity>
-                    ) : checkedQuestions.size === totalQuestions ? (
+                    ) : (
                         <TouchableOpacity
                             style={styles.finishButton}
                             onPress={handleSubmit}
@@ -795,17 +795,11 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                 <ActivityIndicator color={COLORS.surface} />
                             ) : (
                                 <>
-                                    <Text style={styles.finishButtonText}>See Results</Text>
+                                    <Text style={styles.finishButtonText}>Finish Quiz</Text>
                                     <Ionicons name="trophy" size={20} color={COLORS.surface} />
                                 </>
                             )}
                         </TouchableOpacity>
-                    ) : (
-                        <View style={styles.finishHint}>
-                            <Text style={styles.finishHintText}>
-                                Check all answers to finish
-                            </Text>
-                        </View>
                     )}
                 </View>
             </View>

@@ -1,23 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { 
     ActivityIndicator, 
     Alert, 
     Animated, 
-    FlatList, 
+    Dimensions,
     Image, 
+    Platform,
     RefreshControl, 
+    ScrollView,
     StyleSheet, 
     Text, 
     TouchableOpacity, 
     View 
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
 import { Enrollment } from '../../src/types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_GAP = 12;
+const CARD_WIDTH = (SCREEN_WIDTH - SPACING.lg * 2 - CARD_GAP) / 2;
+
+// Filter types
+type FilterType = 'all' | 'in_progress' | 'completed' | 'not_started';
 
 // Course Card Component
 interface CourseCardProps {
@@ -34,102 +43,144 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
     useEffect(() => {
         Animated.spring(cardAnim, {
             toValue: 1,
-            delay: index * 80,
-            tension: 50,
-            friction: 7,
+            delay: index * 50,
+            tension: 80,
+            friction: 10,
             useNativeDriver: true,
         }).start();
     }, []);
 
     const scale = cardAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0.96, 1],
+        outputRange: [0.9, 1],
     });
 
-    const opacity = cardAnim.interpolate({
+    const translateY = cardAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, 1],
+        outputRange: [20, 0],
     });
+
+    const getProgressColor = () => {
+        if (progress >= 100) return COLORS.success;
+        if (progress >= 50) return COLORS.primary;
+        if (progress > 0) return COLORS.warning;
+        return COLORS.textTertiary;
+    };
+
+    const getStatusLabel = () => {
+        if (progress >= 100) return 'Completed';
+        if (progress > 0) return 'In Progress';
+        return 'Not Started';
+    };
 
     return (
         <Animated.View
             style={[
-                styles.courseCardWrapper,
+                styles.cardWrapper,
                 {
-                    transform: [{ scale }],
-                    opacity,
+                    transform: [{ scale }, { translateY }],
+                    opacity: cardAnim,
                 },
             ]}
         >
             <TouchableOpacity 
                 onPress={onPress}
-                activeOpacity={0.92}
-                style={styles.courseCard}
+                activeOpacity={0.9}
+                style={styles.card}
             >
-                    <View style={styles.thumbnailContainer}>
-                        {course?.thumbnail_url ? (
-                            <Image
-                                source={{ uri: course.thumbnail_url }}
-                                style={styles.thumbnail}
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <View style={styles.thumbnailPlaceholder}>
-                                <View style={styles.placeholderIconContainer}>
-                                    <Ionicons name="library" size={40} color={COLORS.primary} />
-                                </View>
-                            </View>
-                        )}
-                        <View style={styles.progressBadge}>
-                            <Ionicons name="checkmark-circle" size={14} color={COLORS.surface} />
-                            <Text style={styles.progressBadgeText}>{progress}%</Text>
+                {/* Thumbnail */}
+                <View style={styles.thumbnailContainer}>
+                    {course?.thumbnail_url ? (
+                        <Image
+                            source={{ uri: course.thumbnail_url }}
+                            style={styles.thumbnail}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <View style={styles.thumbnailPlaceholder}>
+                            <Ionicons name="book" size={28} color={COLORS.primary} />
                         </View>
+                    )}
+                    {/* Progress badge */}
+                    <View style={[styles.progressBadge, { backgroundColor: getProgressColor() }]}>
+                        <Text style={styles.progressBadgeText}>{progress}%</Text>
+                    </View>
+                    {/* Completed checkmark */}
+                    {progress >= 100 && (
+                        <View style={styles.completedBadge}>
+                            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                        </View>
+                    )}
+                </View>
+                
+                {/* Info */}
+                <View style={styles.cardInfo}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>
+                        {course?.title || 'Untitled Course'}
+                    </Text>
+                    
+                    {/* Status */}
+                    <View style={styles.statusRow}>
+                        <View style={[styles.statusDot, { backgroundColor: getProgressColor() }]} />
+                        <Text style={[styles.statusText, { color: getProgressColor() }]}>
+                            {getStatusLabel()}
+                        </Text>
                     </View>
                     
-                    <View style={styles.courseInfo}>
-                        <Text style={styles.courseTitle} numberOfLines={2}>
-                            {course?.title || 'Untitled Course'}
-                        </Text>
-                        
-                        {course?.description && (
-                            <Text style={styles.courseDescription} numberOfLines={2}>
-                                {course.description}
-                            </Text>
-                        )}
-                        
-                        <View style={styles.progressSection}>
-                            <View style={styles.progressHeader}>
-                                <Text style={styles.progressLabel}>Progress</Text>
-                                <Text style={styles.progressPercent}>{progress}%</Text>
-                            </View>
-                            <View style={styles.progressBarContainer}>
-                                <View style={styles.progressBar}>
-                                    <Animated.View 
-                                        style={[
-                                            styles.progressFill,
-                                            { width: `${progress}%` }
-                                        ]}
-                                    />
-                                </View>
-                            </View>
+                    {/* Progress bar */}
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressBar}>
+                            <View 
+                                style={[
+                                    styles.progressFill,
+                                    { width: `${progress}%`, backgroundColor: getProgressColor() }
+                                ]}
+                            />
                         </View>
                     </View>
-                </TouchableOpacity>
-            </Animated.View>
+                </View>
+            </TouchableOpacity>
+        </Animated.View>
     );
 };
+
+// Filter Chip Component
+interface FilterChipProps {
+    label: string;
+    count: number;
+    active: boolean;
+    onPress: () => void;
+}
+
+const FilterChip: React.FC<FilterChipProps> = ({ label, count, active, onPress }) => (
+    <TouchableOpacity
+        style={[styles.filterChip, active && styles.filterChipActive]}
+        onPress={onPress}
+        activeOpacity={0.8}
+    >
+        <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+            {label}
+        </Text>
+        <View style={[styles.filterChipBadge, active && styles.filterChipBadgeActive]}>
+            <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>
+                {count}
+            </Text>
+        </View>
+    </TouchableOpacity>
+);
 
 export default function CoursesScreen() {
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [filter, setFilter] = useState<FilterType>('all');
     const { session } = useAuth();
     const router = useRouter();
-    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const insets = useSafeAreaInsets();
+    const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const loadData = async () => {
         try {
-            setLoading(true);
             const data = await fetchMyEnrollments();
             setEnrollments(data || []);
             
@@ -148,18 +199,39 @@ export default function CoursesScreen() {
         }
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    // Reload when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [])
+    );
 
     const onRefresh = () => {
         setRefreshing(true);
         loadData();
     };
 
-    const renderCourseCard = ({ item, index }: { item: Enrollment; index: number }) => (
-        <CourseCard item={item} index={index} onPress={() => router.push(`/course/${item.course_id}`)} />
-    );
+    // Filter enrollments
+    const filteredEnrollments = enrollments.filter(e => {
+        const progress = e.progress || 0;
+        switch (filter) {
+            case 'completed': return progress >= 100;
+            case 'in_progress': return progress > 0 && progress < 100;
+            case 'not_started': return progress === 0;
+            default: return true;
+        }
+    });
+
+    // Get counts for filters
+    const counts = {
+        all: enrollments.length,
+        in_progress: enrollments.filter(e => (e.progress || 0) > 0 && (e.progress || 0) < 100).length,
+        completed: enrollments.filter(e => (e.progress || 0) >= 100).length,
+        not_started: enrollments.filter(e => (e.progress || 0) === 0).length,
+    };
+
+    // Tab bar height for bottom padding
+    const TAB_BAR_HEIGHT = 56 + Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 24);
 
     if (loading && !refreshing) {
         return (
@@ -174,25 +246,50 @@ export default function CoursesScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
+            {/* Header */}
             <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-                <View style={styles.headerContent}>
-                    <View>
-                        <Text style={styles.headerTitle}>My Courses</Text>
-                        <Text style={styles.headerSubtitle}>
-                            {enrollments.length} {enrollments.length === 1 ? 'course' : 'courses'} enrolled
-                        </Text>
-                    </View>
-                </View>
+                <Text style={styles.headerTitle}>My Courses</Text>
+                <Text style={styles.headerSubtitle}>
+                    {enrollments.length} {enrollments.length === 1 ? 'course' : 'courses'} enrolled
+                </Text>
             </Animated.View>
 
-            <FlatList
-                data={enrollments}
-                renderItem={renderCourseCard}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={[
-                    styles.listContent,
-                    enrollments.length === 0 && styles.emptyListContent
-                ]}
+            {/* Filter chips */}
+            {enrollments.length > 0 && (
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filtersContainer}
+                >
+                    <FilterChip 
+                        label="All" 
+                        count={counts.all} 
+                        active={filter === 'all'} 
+                        onPress={() => setFilter('all')} 
+                    />
+                    <FilterChip 
+                        label="In Progress" 
+                        count={counts.in_progress} 
+                        active={filter === 'in_progress'} 
+                        onPress={() => setFilter('in_progress')} 
+                    />
+                    <FilterChip 
+                        label="Completed" 
+                        count={counts.completed} 
+                        active={filter === 'completed'} 
+                        onPress={() => setFilter('completed')} 
+                    />
+                    <FilterChip 
+                        label="Not Started" 
+                        count={counts.not_started} 
+                        active={filter === 'not_started'} 
+                        onPress={() => setFilter('not_started')} 
+                    />
+                </ScrollView>
+            )}
+
+            <ScrollView
+                showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl 
                         refreshing={refreshing} 
@@ -201,20 +298,50 @@ export default function CoursesScreen() {
                         colors={[COLORS.primary]}
                     />
                 }
-                ListEmptyComponent={
+                contentContainerStyle={[
+                    styles.listContent,
+                    { paddingBottom: TAB_BAR_HEIGHT + SPACING.lg }
+                ]}
+            >
+                {filteredEnrollments.length > 0 ? (
+                    <View style={styles.coursesGrid}>
+                        {filteredEnrollments.map((item, index) => (
+                            <CourseCard
+                                key={item.id}
+                                item={item}
+                                index={index}
+                                onPress={() => router.push(`/course/${item.course_id}`)}
+                            />
+                        ))}
+                    </View>
+                ) : (
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconContainer}>
-                            <Ionicons name="library-outline" size={56} color={COLORS.textTertiary} />
+                            <Ionicons 
+                                name={
+                                    filter === 'completed' ? 'trophy-outline' :
+                                    filter === 'in_progress' ? 'hourglass-outline' :
+                                    filter === 'not_started' ? 'flag-outline' :
+                                    'library-outline'
+                                } 
+                                size={48} 
+                                color={COLORS.textTertiary} 
+                            />
                         </View>
-                        <Text style={styles.emptyTitle}>No courses yet</Text>
+                        <Text style={styles.emptyTitle}>
+                            {filter === 'all' ? 'No courses yet' :
+                             filter === 'completed' ? 'No completed courses' :
+                             filter === 'in_progress' ? 'No courses in progress' :
+                             'All courses started!'}
+                        </Text>
                         <Text style={styles.emptyText}>
-                            Enroll in courses from the dashboard{'\n'}
-                            to see them here
+                            {filter === 'all' 
+                                ? 'Enroll in courses to start learning'
+                                : 'Try selecting a different filter'}
                         </Text>
                     </View>
-                }
-                showsVerticalScrollIndicator={false}
-            />
+                )}
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -233,51 +360,101 @@ const styles = StyleSheet.create({
     loadingText: {
         fontSize: FONT_SIZE.md,
         color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
-        marginTop: SPACING.md,
+        marginTop: SPACING.sm,
     },
+    
+    // Header
     header: {
         backgroundColor: COLORS.surface,
-        paddingBottom: SPACING.xl,
+        paddingHorizontal: SPACING.lg,
+        paddingTop: SPACING.md,
+        paddingBottom: SPACING.lg,
         ...SHADOWS.sm,
     },
-    headerContent: {
-        paddingHorizontal: SPACING.xl,
-        paddingTop: SPACING.lg,
-    },
     headerTitle: {
-        fontSize: FONT_SIZE.xxxl,
-        fontWeight: FONT_WEIGHT.extrabold,
+        fontSize: FONT_SIZE.xxl,
+        fontWeight: FONT_WEIGHT.bold,
         color: COLORS.text,
-        marginBottom: SPACING.xs,
-        letterSpacing: -1.2,
-        lineHeight: 44,
+        marginBottom: 2,
     },
     headerSubtitle: {
-        fontSize: FONT_SIZE.md,
+        fontSize: FONT_SIZE.sm,
+        color: COLORS.textSecondary,
+    },
+    
+    // Filters
+    filtersContainer: {
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: SPACING.md,
+        gap: SPACING.sm,
+        flexDirection: 'row',
+    },
+    filterChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.surface,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: SPACING.sm,
+        borderRadius: BORDER_RADIUS.round,
+        gap: SPACING.xs,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        marginRight: SPACING.sm,
+    },
+    filterChipActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    filterChipText: {
+        fontSize: FONT_SIZE.sm,
         color: COLORS.textSecondary,
         fontWeight: FONT_WEIGHT.medium,
     },
+    filterChipTextActive: {
+        color: '#fff',
+    },
+    filterChipBadge: {
+        backgroundColor: COLORS.backgroundSecondary,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: BORDER_RADIUS.sm,
+    },
+    filterChipBadgeActive: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    filterChipCount: {
+        fontSize: 10,
+        color: COLORS.textSecondary,
+        fontWeight: FONT_WEIGHT.bold,
+    },
+    filterChipCountActive: {
+        color: '#fff',
+    },
+    
+    // List
     listContent: {
         padding: SPACING.lg,
-        paddingTop: SPACING.xl,
     },
-    emptyListContent: {
-        flexGrow: 1,
+    
+    // Course Grid
+    coursesGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: CARD_GAP,
     },
-    courseCardWrapper: {
-        marginBottom: SPACING.xl,
+    cardWrapper: {
+        width: CARD_WIDTH,
     },
-    courseCard: {
+    card: {
         backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
+        borderRadius: BORDER_RADIUS.lg,
         overflow: 'hidden',
-        ...SHADOWS.lg,
+        ...SHADOWS.md,
     },
     thumbnailContainer: {
         position: 'relative',
-        height: 220,
-        backgroundColor: COLORS.borderLight,
+        height: 100,
+        backgroundColor: COLORS.backgroundSecondary,
     },
     thumbnail: {
         width: '100%',
@@ -286,119 +463,95 @@ const styles = StyleSheet.create({
     thumbnailPlaceholder: {
         width: '100%',
         height: '100%',
-        backgroundColor: COLORS.backgroundSecondary,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    placeholderIconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: COLORS.primary + '15',
-        alignItems: 'center',
-        justifyContent: 'center',
+        backgroundColor: COLORS.primary + '10',
     },
     progressBadge: {
         position: 'absolute',
-        top: SPACING.lg,
-        right: SPACING.lg,
-        backgroundColor: COLORS.primary,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        borderRadius: 20,
-        ...SHADOWS.md,
+        top: SPACING.xs,
+        right: SPACING.xs,
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: 3,
+        borderRadius: BORDER_RADIUS.sm,
     },
     progressBadgeText: {
-        color: COLORS.surface,
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: FONT_WEIGHT.bold,
+    },
+    completedBadge: {
+        position: 'absolute',
+        top: SPACING.xs,
+        left: SPACING.xs,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+    },
+    cardInfo: {
+        padding: SPACING.sm,
+    },
+    cardTitle: {
         fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.extrabold,
-        letterSpacing: 0.3,
-    },
-    courseInfo: {
-        padding: SPACING.xl,
-    },
-    courseTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.extrabold,
+        fontWeight: FONT_WEIGHT.semibold,
         color: COLORS.text,
-        marginBottom: SPACING.sm,
-        lineHeight: 30,
-        letterSpacing: -0.6,
+        marginBottom: SPACING.xs,
+        lineHeight: 18,
+        minHeight: 36,
     },
-    courseDescription: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.lg,
-        lineHeight: 22,
-        fontWeight: FONT_WEIGHT.regular,
-    },
-    progressSection: {
-        padding: SPACING.md,
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.md,
-    },
-    progressHeader: {
+    statusRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.sm,
+        gap: 4,
+        marginBottom: SPACING.xs,
     },
-    progressLabel: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+    },
+    statusText: {
+        fontSize: 10,
         fontWeight: FONT_WEIGHT.semibold,
     },
-    progressPercent: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.extrabold,
-    },
-    progressBarContainer: {
-        marginTop: SPACING.xs,
+    progressContainer: {
+        marginTop: 2,
     },
     progressBar: {
-        height: 8,
+        height: 4,
         backgroundColor: COLORS.border,
-        borderRadius: 4,
+        borderRadius: 2,
         overflow: 'hidden',
     },
     progressFill: {
         height: '100%',
-        backgroundColor: COLORS.primary,
-        borderRadius: 4,
+        borderRadius: 2,
     },
+    
+    // Empty State
     emptyState: {
-        flex: 1,
-        padding: SPACING.xxxl,
+        padding: SPACING.xxl,
         alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 400,
+        marginTop: SPACING.xxl,
     },
     emptyIconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         backgroundColor: COLORS.backgroundSecondary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.xl,
+        marginBottom: SPACING.lg,
     },
     emptyTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.extrabold,
+        fontSize: FONT_SIZE.lg,
+        fontWeight: FONT_WEIGHT.bold,
         color: COLORS.text,
-        marginBottom: SPACING.md,
-        letterSpacing: -0.5,
+        marginBottom: SPACING.xs,
     },
     emptyText: {
+        fontSize: FONT_SIZE.sm,
         color: COLORS.textSecondary,
-        fontSize: FONT_SIZE.md,
         textAlign: 'center',
-        lineHeight: 24,
-        maxWidth: 320,
-        fontWeight: FONT_WEIGHT.regular,
+        lineHeight: 20,
     },
 });

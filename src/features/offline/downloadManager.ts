@@ -312,7 +312,8 @@ export const isDownloading = (lessonId: string): boolean => {
 export const getActiveDownloadCount = (): number => {
     return activeDownloads.size;
 };
-// Download a file to a specific location
+
+// Download a file to a specific location using react-native-blob-util
 export const downloadFile = async (
     url: string,
     localPath: string,
@@ -320,28 +321,44 @@ export const downloadFile = async (
 ): Promise<string> => {
     await ensureDirExists();
     
-    const downloadResumable = FileSystem.createDownloadResumable(
-        url,
-        localPath,
-        {},
-        (downloadProgress) => {
-            const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-            if (onProgress) onProgress(Math.min(progress, 1));
-        }
-    );
-
+    // Clean URL
+    let cleanUrl = url.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://' + cleanUrl;
+    }
+    
+    console.log('downloadFile: Downloading from', cleanUrl, 'to', localPath);
+    
+    // Use expo-file-system (works in Expo Go)
     try {
+        const downloadResumable = FileSystem.createDownloadResumable(
+            cleanUrl,
+            localPath,
+            {
+                headers: {
+                    'Accept': '*/*',
+                    'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36',
+                },
+            },
+            (downloadProgress) => {
+                const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+                if (onProgress) onProgress(Math.min(progress, 1));
+            }
+        );
+
         const result = await downloadResumable.downloadAsync();
-        if (!result || !result.uri) {
-            throw new Error('Download failed - no result returned');
+        if (result && result.uri) {
+            console.log('Download complete:', result.uri);
+            return result.uri;
         }
-        return result.uri;
-    } catch (error: any) {
-        // Clean up partial download
+        throw new Error('No result from download');
+    } catch (fsError: any) {
+        console.error('Download failed:', fsError.message);
+        // Clean up any partial file
         try {
             await FileSystem.deleteAsync(localPath, { idempotent: true });
         } catch {}
-        throw error;
+        throw new Error(`Download failed: ${fsError.message}`);
     }
 };
 

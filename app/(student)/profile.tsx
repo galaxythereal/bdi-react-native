@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     Alert,
     Animated, 
     Image, 
     Modal,
+    Platform,
     RefreshControl,
     ScrollView, 
     StyleSheet, 
@@ -15,7 +16,7 @@ import {
     TouchableOpacity, 
     View 
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { useAuth } from '../../src/features/auth/AuthContext';
@@ -50,6 +51,7 @@ interface DownloadItemData {
 export default function ProfileScreen() {
     const { signOut, session } = useAuth();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState<StatsData>({ courses: 0, progress: 0, certificates: 0 });
     
@@ -70,9 +72,18 @@ export default function ProfileScreen() {
     // Animations
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
     const slideAnim = React.useRef(new Animated.Value(30)).current;
+    
+    // Tab bar height
+    const TAB_BAR_HEIGHT = 56 + Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 24);
+
+    // Refresh stats when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            loadStats();
+        }, [])
+    );
 
     useEffect(() => {
-        loadStats();
         loadProfile();
         animateIn();
     }, []);
@@ -349,9 +360,9 @@ export default function ProfileScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <ScrollView 
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_HEIGHT + SPACING.lg }]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
@@ -671,7 +682,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.background,
     },
     scrollContent: {
-        paddingBottom: SPACING.xxxl,
+        // paddingBottom handled dynamically via TAB_BAR_HEIGHT
     },
     header: {
         alignItems: 'center',
