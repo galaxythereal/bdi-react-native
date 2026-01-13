@@ -1,15 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { BookOpen, LayoutDashboard, User } from 'lucide-react-native';
+import { Bell, BookOpen, LayoutDashboard, User } from 'lucide-react-native';
 import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useNotifications } from '../../src/context/NotificationContext';
 import { SHADOWS } from '../../src/lib/constants';
 
 export default function StudentLayout() {
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+    const { unreadCount } = useNotifications();
     
     // Calculate proper bottom padding for the tab bar
     const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 24);
@@ -68,6 +70,49 @@ export default function StudentLayout() {
                     options={{
                         title: 'Courses',
                         tabBarIcon: ({ color }) => <BookOpen color={color} size={22} />,
+                    }}
+                />
+                <Tabs.Screen
+                    name="notifications"
+                    options={{
+                        title: 'Alerts',
+                        tabBarIcon: ({ color }) => (
+                            <View>
+                                <Bell color={color} size={22} />
+                                {unreadCount > 0 && (
+                                    <View style={{
+                                        position: 'absolute',
+                                        top: -4,
+                                        right: -6,
+                                        backgroundColor: '#EF4444',
+                                        borderRadius: 8,
+                                        minWidth: 16,
+                                        height: 16,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        paddingHorizontal: 4,
+                                    }}>
+                                        <View style={{
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}>
+                                            <View>
+                                                {/* Badge text handled inline for simplicity */}
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        ),
+                        tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
+                        tabBarBadgeStyle: {
+                            backgroundColor: '#EF4444',
+                            fontSize: 10,
+                            fontFamily: 'Inter-Bold',
+                            minWidth: 18,
+                            height: 18,
+                            borderRadius: 9,
+                        },
                     }}
                 />
                 <Tabs.Screen

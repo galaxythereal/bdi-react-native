@@ -20,6 +20,8 @@ import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useNotifications } from '../../src/context/NotificationContext';
+import { NotificationBell } from '../../src/features/notifications/NotificationComponents';
 import { Enrollment } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -150,6 +152,7 @@ export default function DashboardScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const { session } = useAuth();
+    const { unreadCount } = useNotifications();
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -245,15 +248,21 @@ export default function DashboardScreen() {
                                 <Text style={styles.greeting}>{getGreeting()},</Text>
                                 <Text style={styles.userName}>{getUserName()} 👋</Text>
                             </View>
-                            <TouchableOpacity 
-                                style={styles.avatar}
-                                onPress={() => router.push('/(student)/profile')}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={styles.avatarText}>
-                                    {session?.user.email?.charAt(0).toUpperCase() || 'S'}
-                                </Text>
-                            </TouchableOpacity>
+                            <View style={styles.headerActions}>
+                                <NotificationBell 
+                                    onPress={() => router.push('/(student)/notifications')}
+                                    count={unreadCount}
+                                />
+                                <TouchableOpacity 
+                                    style={styles.avatar}
+                                    onPress={() => router.push('/(student)/profile')}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.avatarText}>
+                                        {session?.user.email?.charAt(0).toUpperCase() || 'S'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                         
                         {/* Quick Stats */}
@@ -447,6 +456,11 @@ const styles = StyleSheet.create({
     },
     headerTextContainer: {
         flex: 1,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm,
     },
     greeting: {
         fontSize: FONT_SIZE.md,
