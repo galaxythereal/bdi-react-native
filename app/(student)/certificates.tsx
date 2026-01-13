@@ -21,7 +21,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../../src/features/auth/AuthContext';
-import { fetchMyCertificates, generateCertificateHTML } from '../../src/features/certificates/certificateService';
+import { fetchMyCertificates, generateCertificateHTML, loadCertificateTemplate } from '../../src/features/certificates/certificateService';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
 import { useTheme } from '../../src/context/ThemeContext';
 import { Certificate } from '../../src/types';
@@ -108,11 +108,21 @@ export default function CertificatesScreen() {
     const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
     const [showViewer, setShowViewer] = useState(false);
     const [userName, setUserName] = useState('Student');
+    const [templateBase64, setTemplateBase64] = useState<string | undefined>(undefined);
     const { session } = useAuth();
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const { colors } = useTheme();
+
+    // Load the certificate template on mount
+    useEffect(() => {
+        const loadTemplate = async () => {
+            const base64 = await loadCertificateTemplate();
+            setTemplateBase64(base64);
+        };
+        loadTemplate();
+    }, []);
 
     const loadData = async () => {
         try {
@@ -168,7 +178,7 @@ export default function CertificatesScreen() {
         if (!selectedCertificate) return;
 
         try {
-            const html = generateCertificateHTML(selectedCertificate, userName);
+            const html = generateCertificateHTML(selectedCertificate, userName, templateBase64);
             
             // Generate PDF
             const { uri } = await printToFileAsync({
@@ -196,7 +206,7 @@ export default function CertificatesScreen() {
         if (!selectedCertificate) return;
 
         try {
-            const html = generateCertificateHTML(selectedCertificate, userName);
+            const html = generateCertificateHTML(selectedCertificate, userName, templateBase64);
             
             // Generate and save PDF
             const { uri } = await printToFileAsync({
@@ -350,7 +360,8 @@ export default function CertificatesScreen() {
                             source={{
                                 html: generateCertificateHTML(
                                     selectedCertificate,
-                                    userName
+                                    userName,
+                                    templateBase64
                                 ),
                             }}
                             style={styles.webView}
