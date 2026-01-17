@@ -1,8 +1,24 @@
 import { supabase } from '../../lib/supabase';
 import { CourseDetail, Enrollment } from '../../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { 
+    saveCourseOffline, 
+    getOfflineCourse,
+    saveEnrollmentsOffline,
+    getOfflineEnrollments,
+    checkIsOnline,
+} from '../offline/offlineManager';
 
 export const fetchMyEnrollments = async (): Promise<Enrollment[]> => {
   try {
+    const isOnline = await checkIsOnline();
+    
+    if (!isOnline) {
+      // Return cached enrollments when offline
+      console.log('Offline: Loading cached enrollments');
+      return await getOfflineEnrollments();
+    }
+    
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
@@ -42,7 +58,7 @@ export const fetchMyEnrollments = async (): Promise<Enrollment[]> => {
     }
 
     // Transform data to ensure course is always an object
-    return data.map((enrollment: any) => ({
+    const enrollments = data.map((enrollment: any) => ({
       ...enrollment,
       progress: enrollment.progress || 0,
       course: enrollment.course || {
@@ -53,8 +69,27 @@ export const fetchMyEnrollments = async (): Promise<Enrollment[]> => {
         slug: '',
       },
     })) as Enrollment[];
+    
+    // Cache enrollments for offline use
+    try {
+      await saveEnrollmentsOffline(enrollments);
+    } catch (e) {
+      console.warn('Failed to cache enrollments:', e);
+    }
+    
+    return enrollments;
   } catch (error: any) {
     console.error('fetchMyEnrollments error:', error);
+    
+    // Try to return cached enrollments on error
+    try {
+      const cached = await getOfflineEnrollments();
+      if (cached.length > 0) {
+        console.log('Returning cached enrollments after error');
+        return cached;
+      }
+    } catch {}
+    
     throw error;
   }
 };
@@ -142,6 +177,27 @@ export const fetchCourseContent = async (courseId: string): Promise<CourseDetail
               // Legacy format is single question: { question, question_type, options, explanation, points, attempts }
               const quizContent = quizBlock.content || {};
               
+              // Helper function to determine question type
+              const getQuestionType = (qt: string): 'multiple_choice' | 'multiple_select' | 'true_false' | 'short_answer' => {
+                if (qt === 'multiple_select') return 'multiple_select';
+                if (qt === 'numeric' || qt === 'text') return 'short_answer';
+                if (qt === 'true_false') return 'true_false';
+                return 'multiple_choice';
+              };
+              
+              // Helper function to get correct answer(s)
+              const getCorrectAnswer = (q: any): string | number | number[] => {
+                if (q.question_type === 'text' || q.question_type === 'numeric') {
+                  return q.correct_text_answer || '';
+                } else if (q.question_type === 'multiple_select') {
+                  // Get all indices of correct options
+                  return (q.options || [])
+                    .map((opt: any, i: number) => opt.correct === true ? i : -1)
+                    .filter((i: number) => i !== -1);
+                }
+                return (q.options || []).findIndex((opt: any) => opt.correct === true);
+              };
+              
               // Check if new multi-question format (has questions array)
               if (quizContent.questions && Array.isArray(quizContent.questions) && quizContent.questions.length > 0) {
                 // New multi-question format from admin panel
@@ -155,14 +211,9 @@ export const fetchCourseContent = async (courseId: string): Promise<CourseDetail
                   questions: quizContent.questions.map((q: any, idx: number) => ({
                     id: q.id || `${quizBlock.id}_q${idx + 1}`,
                     question: q.question || 'Question',
-                    type: q.question_type === 'multiple_select' ? 'multiple_choice' : 
-                          q.question_type === 'numeric' ? 'short_answer' :
-                          q.question_type === 'text' ? 'short_answer' :
-                          q.question_type || 'multiple_choice',
+                    type: getQuestionType(q.question_type),
                     options: (q.options || []).map((opt: any) => opt.text || opt),
-                    correct_answer: q.question_type === 'text' || q.question_type === 'numeric' 
-                      ? q.correct_text_answer || ''
-                      : (q.options || []).findIndex((opt: any) => opt.correct === true),
+                    correct_answer: getCorrectAnswer(q),
                     explanation: q.explanation,
                     points: q.points || 1,
                   })),
@@ -179,14 +230,9 @@ export const fetchCourseContent = async (courseId: string): Promise<CourseDetail
                   questions: [{
                     id: quizBlock.id + '_q1',
                     question: quizContent.question || 'Question',
-                    type: quizContent.question_type === 'multiple_select' ? 'multiple_choice' : 
-                          quizContent.question_type === 'numeric' ? 'short_answer' :
-                          quizContent.question_type === 'text' ? 'short_answer' :
-                          quizContent.question_type || 'multiple_choice',
+                    type: getQuestionType(quizContent.question_type),
                     options: (quizContent.options || []).map((opt: any) => opt.text || opt),
-                    correct_answer: quizContent.question_type === 'text' || quizContent.question_type === 'numeric'
-                      ? quizContent.correct_text_answer || ''
-                      : (quizContent.options || []).findIndex((opt: any) => opt.correct === true),
+                    correct_answer: getCorrectAnswer(quizContent),
                     explanation: quizContent.explanation,
                     points: quizContent.points || 1,
                   }],
@@ -200,14 +246,9 @@ export const fetchCourseContent = async (courseId: string): Promise<CourseDetail
                     quiz_data.questions.push({
                       id: qb.id + '_q' + (idx + 2),
                       question: qc.question || 'Question ' + (idx + 2),
-                      type: qc.question_type === 'multiple_select' ? 'multiple_choice' : 
-                            qc.question_type === 'numeric' ? 'short_answer' :
-                            qc.question_type === 'text' ? 'short_answer' :
-                            qc.question_type || 'multiple_choice',
+                      type: getQuestionType(qc.question_type),
                       options: (qc.options || []).map((opt: any) => opt.text || opt),
-                      correct_answer: qc.question_type === 'text' || qc.question_type === 'numeric'
-                        ? qc.correct_text_answer || ''
-                        : (qc.options || []).findIndex((opt: any) => opt.correct === true),
+                      correct_answer: getCorrectAnswer(qc),
                       explanation: qc.explanation,
                       points: qc.points || 1,
                     });
@@ -348,27 +389,132 @@ export const updateEnrollmentProgress = async (
   }
 };
 
-// Add offline fallback wrapper or modifying existing if called from UI?
-// For now, the UI calls this directly. Let's make the fallback internal to this function or export a wrapper.
-// Actually, let's wrap the whole body in a try/catch or handle the error in the caller?
-// Caller `loadCourseContent` in `[id].tsx` catches error. 
-// Better to handle it here: if network request fails, try cache.
-
+/**
+ * Fetch course content with comprehensive offline support
+ * - Online: Fetches from server, caches for offline
+ * - Offline: Returns cached data with local file paths
+ */
 export const fetchCourseContentWithOfflineSupport = async (courseId: string): Promise<CourseDetail> => {
+  const isOnline = await checkIsOnline();
+  
+  if (!isOnline) {
+    // Offline mode - try to get from offline storage
+    console.log('Offline: Loading cached course:', courseId);
+    
+    const offlineCourse = await getOfflineCourse(courseId);
+    if (offlineCourse) {
+      // Transform offline course to CourseDetail format
+      // Replace remote URLs with local paths where available
+      const courseDetail: CourseDetail = {
+        id: offlineCourse.id,
+        title: offlineCourse.title,
+        description: offlineCourse.description,
+        thumbnail_url: offlineCourse.thumbnail_local || offlineCourse.thumbnail_url,
+        slug: offlineCourse.slug,
+        created_at: offlineCourse.created_at,
+        modules: offlineCourse.modules.map(mod => ({
+          id: mod.id,
+          title: mod.title,
+          order_index: mod.order_index,
+          lessons: mod.lessons.map(lesson => ({
+            id: lesson.id,
+            title: lesson.title,
+            slug: lesson.slug,
+            content_type: lesson.content_type,
+            // Use local video path if available and downloaded
+            video_url: lesson.video_local || lesson.video_url,
+            video_provider: lesson.video_local ? 'direct' : lesson.video_provider, // Local files are always direct
+            content_html: lesson.content_html,
+            duration: lesson.duration || null,
+            is_preview: lesson.is_preview,
+            order_index: lesson.order_index,
+            description: lesson.description,
+            quiz_data: lesson.quiz_data,
+            // Transform blocks to use local URIs
+            blocks: lesson.blocks?.map(block => ({
+              ...block,
+              content: block.localUri 
+                ? { ...block.content, url: block.localUri }
+                : block.content,
+            })),
+          })),
+        })),
+      };
+      
+      return courseDetail;
+    }
+    
+    // Also check legacy cache
+    try {
+      const cached = await AsyncStorage.getItem(`course_cache_${courseId}`);
+      if (cached) {
+        console.log('Using legacy course cache');
+        return JSON.parse(cached);
+      }
+    } catch {}
+    
+    throw new Error('Course not available offline. Please download it first or connect to the internet.');
+  }
+  
+  // Online mode - fetch from server
   try {
-    return await fetchCourseContent(courseId);
+    const course = await fetchCourseContent(courseId);
+    
+    // Save to new offline storage for better offline support
+    try {
+      await saveCourseOffline(course);
+    } catch (e) {
+      console.warn('Failed to save course to offline storage:', e);
+    }
+    
+    return course;
   } catch (error) {
     console.log('Network fetch failed, trying offline cache for course:', courseId);
+    
+    // Try new offline storage first
+    const offlineCourse = await getOfflineCourse(courseId);
+    if (offlineCourse) {
+      // Return basic course detail from offline storage
+      return {
+        id: offlineCourse.id,
+        title: offlineCourse.title,
+        description: offlineCourse.description,
+        thumbnail_url: offlineCourse.thumbnail_url,
+        slug: offlineCourse.slug,
+        created_at: offlineCourse.created_at,
+        modules: offlineCourse.modules.map(mod => ({
+          id: mod.id,
+          title: mod.title,
+          order_index: mod.order_index,
+          lessons: mod.lessons.map(lesson => ({
+            id: lesson.id,
+            title: lesson.title,
+            slug: lesson.slug,
+            content_type: lesson.content_type,
+            video_url: lesson.video_local || lesson.video_url,
+            video_provider: lesson.video_local ? 'direct' : lesson.video_provider,
+            content_html: lesson.content_html,
+            duration: lesson.duration || null,
+            is_preview: lesson.is_preview,
+            order_index: lesson.order_index,
+            description: lesson.description,
+            quiz_data: lesson.quiz_data,
+            blocks: lesson.blocks,
+          })),
+        })),
+      };
+    }
+    
+    // Try legacy cache
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const cached = await AsyncStorage.getItem(`course_cache_${courseId}`);
       if (cached) {
         return JSON.parse(cached);
       }
     } catch (cacheError) {
-      console.warn('Failed to load course from cache', cacheError);
+      console.warn('Failed to load course from legacy cache', cacheError);
     }
+    
     throw error; // Throw original error if no cache
   }
 };
-

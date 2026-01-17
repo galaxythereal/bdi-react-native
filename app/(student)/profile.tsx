@@ -20,6 +20,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
 import { ComingSoonModal } from '../../src/components/ComingSoonModal';
+import { ProfilePhotoUpload } from '../../src/components/media/ProfilePhotoUpload';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { getDownloadRecords, removeDownloadRecord, deleteLessonDownload, getDownloadsStorageUsed } from '../../src/features/offline/downloadManager';
@@ -69,6 +70,7 @@ export default function ProfileScreen() {
     
     // Form states
     const [fullName, setFullName] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -139,11 +141,14 @@ export default function ProfileScreen() {
             if (user) {
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('full_name')
+                    .select('full_name, avatar_url')
                     .eq('id', user.id)
                     .single();
                 if (profile?.full_name) {
                     setFullName(profile.full_name);
+                }
+                if (profile?.avatar_url) {
+                    setAvatarUrl(profile.avatar_url);
                 }
             }
         } catch (error) {
@@ -181,6 +186,23 @@ export default function ProfileScreen() {
             }
         } catch (error: any) {
             Alert.alert('Error', error.message || 'Failed to update profile');
+        }
+    };
+
+    const handleAvatarChange = async (url: string | null) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ avatar_url: url })
+                    .eq('id', user.id);
+                
+                if (error) throw error;
+                setAvatarUrl(url);
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Failed to update avatar');
         }
     };
 
@@ -411,14 +433,14 @@ export default function ProfileScreen() {
                 ]}>
                     <View style={[styles.headerBackground, { backgroundColor: colors.primary }]} />
                     
-                    <View style={styles.avatarContainer}>
-                        <View style={[styles.avatar, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
-                            <Text style={[styles.avatarText, { color: colors.primary }]}>{getUserInitials()}</Text>
-                        </View>
-                        <TouchableOpacity style={[styles.editAvatarButton, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
-                            <Ionicons name="camera" size={16} color={colors.surface} />
-                        </TouchableOpacity>
-                    </View>
+                    <ProfilePhotoUpload
+                        value={avatarUrl}
+                        onChange={handleAvatarChange}
+                        userId={session?.user?.id}
+                        size={100}
+                        name={fullName || session?.user?.email?.split('@')[0]}
+                        showEditButton={true}
+                    />
                     
                     <Text style={[styles.userName, { color: colors.text }]}>{getUserName()}</Text>
                     <Text style={[styles.email, { color: colors.textSecondary }]}>{session?.user.email}</Text>

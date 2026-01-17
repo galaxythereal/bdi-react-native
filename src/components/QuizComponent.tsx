@@ -15,9 +15,9 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from 
 export interface QuizQuestion {
     id: string;
     question: string;
-    type: 'multiple_choice' | 'true_false' | 'short_answer';
+    type: 'multiple_choice' | 'multiple_select' | 'true_false' | 'short_answer';
     options?: (string | { id: string; text: string; correct?: boolean })[];
-    correct_answer: string | number;
+    correct_answer: string | number | number[]; // Can be array for multiple_select
     explanation?: string;
     points?: number;
 }
@@ -34,7 +34,7 @@ export interface QuizData {
 
 export interface QuizAnswer {
     questionId: string;
-    answer: string | number | null;
+    answer: string | number | number[] | null; // Can be array for multiple_select
 }
 
 export interface QuizResult {
@@ -45,8 +45,8 @@ export interface QuizResult {
     answers: {
         questionId: string;
         correct: boolean;
-        userAnswer: string | number | null;
-        correctAnswer: string | number;
+        userAnswer: string | number | number[] | null;
+        correctAnswer: string | number | number[];
     }[];
 }
 
@@ -156,7 +156,11 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
 
     const startQuiz = () => {
         if (!hasValidQuestions) return;
-        setAnswers(questions.map((q) => ({ questionId: q.id, answer: null })));
+        // Initialize answers - for multiple_select, start with empty array
+        setAnswers(questions.map((q) => ({ 
+            questionId: q.id, 
+            answer: q.type === 'multiple_select' ? [] : null 
+        })));
         setCurrentQuestionIndex(0);
         setResult(null);
         setCheckedQuestions(new Set());
@@ -167,16 +171,40 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
         }
     };
 
+    // Handle answer selection - supports both single and multiple select
     const selectAnswer = (answer: string | number) => {
         if (!currentQuestion) return;
         // Don't allow changing answer if already checked
         if (checkedQuestions.has(currentQuestionIndex)) return;
         
         const newAnswers = [...answers];
-        newAnswers[currentQuestionIndex] = {
-            questionId: currentQuestion.id,
-            answer,
-        };
+        
+        // Handle multiple_select differently - toggle selections
+        if (currentQuestion.type === 'multiple_select') {
+            const currentSelections = (newAnswers[currentQuestionIndex]?.answer as number[]) || [];
+            const answerIndex = answer as number;
+            
+            // Toggle the selection
+            let newSelections: number[];
+            if (currentSelections.includes(answerIndex)) {
+                // Remove from selections
+                newSelections = currentSelections.filter(s => s !== answerIndex);
+            } else {
+                // Add to selections
+                newSelections = [...currentSelections, answerIndex].sort((a, b) => a - b);
+            }
+            
+            newAnswers[currentQuestionIndex] = {
+                questionId: currentQuestion.id,
+                answer: newSelections,
+            };
+        } else {
+            // Single selection for other question types
+            newAnswers[currentQuestionIndex] = {
+                questionId: currentQuestion.id,
+                answer,
+            };
+        }
         setAnswers(newAnswers);
     };
 
@@ -186,7 +214,21 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
         if (checkedQuestions.has(currentQuestionIndex)) return;
         
         const userAnswer = answers[currentQuestionIndex]?.answer;
-        const isCorrect = String(userAnswer) === String(currentQuestion.correct_answer);
+        let isCorrect = false;
+        
+        if (currentQuestion.type === 'multiple_select') {
+            // For multiple_select, check if arrays match (both should be sorted)
+            const userSelections = (userAnswer as number[]) || [];
+            const correctAnswers = Array.isArray(currentQuestion.correct_answer) 
+                ? (currentQuestion.correct_answer as number[]).sort((a, b) => a - b)
+                : [currentQuestion.correct_answer as number];
+            
+            // Check if arrays are equal
+            isCorrect = userSelections.length === correctAnswers.length &&
+                userSelections.every((val, idx) => val === correctAnswers[idx]);
+        } else {
+            isCorrect = String(userAnswer) === String(currentQuestion.correct_answer);
+        }
         
         // Mark this question as checked
         setCheckedQuestions(prev => new Set(prev).add(currentQuestionIndex));
@@ -227,7 +269,21 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
             const points = question.points || 1;
             totalPoints += points;
             const userAnswer = answers[index]?.answer;
-            const isCorrect = String(userAnswer) === String(question.correct_answer);
+            
+            let isCorrect = false;
+            
+            if (question.type === 'multiple_select') {
+                // For multiple_select, check if arrays match
+                const userSelections = (userAnswer as number[]) || [];
+                const correctAnswers = Array.isArray(question.correct_answer) 
+                    ? (question.correct_answer as number[]).sort((a, b) => a - b)
+                    : [question.correct_answer as number];
+                
+                isCorrect = userSelections.length === correctAnswers.length &&
+                    userSelections.every((val, idx) => val === correctAnswers[idx]);
+            } else {
+                isCorrect = String(userAnswer) === String(question.correct_answer);
+            }
 
             if (isCorrect) {
                 earnedPoints += points;
@@ -264,10 +320,19 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
 
     // Check if current question is answered
     const currentAnswer = answers[currentQuestionIndex]?.answer;
-    const isCurrentAnswered = currentAnswer !== null && currentAnswer !== undefined;
+    // For multiple_select, check if at least one option is selected
+    const isCurrentAnswered = currentQuestion?.type === 'multiple_select'
+        ? Array.isArray(currentAnswer) && currentAnswer.length > 0
+        : currentAnswer !== null && currentAnswer !== undefined;
 
     // Count answered questions
-    const answeredCount = answers.filter(a => a.answer !== null && a.answer !== undefined).length;
+    const answeredCount = answers.filter((a, idx) => {
+        const q = questions[idx];
+        if (q?.type === 'multiple_select') {
+            return Array.isArray(a.answer) && a.answer.length > 0;
+        }
+        return a.answer !== null && a.answer !== undefined;
+    }).length;
 
     const retakeQuiz = () => {
         if (quiz?.allow_retry !== false) {
@@ -431,18 +496,26 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                                         color: answerResult.correct ? COLORS.success : COLORS.error,
                                                         fontWeight: FONT_WEIGHT.bold,
                                                     }}>
-                                                        {question.type === 'multiple_choice'
-                                                            ? getOptionText(question.options?.[answerResult.userAnswer as number])
-                                                            : String(answerResult.userAnswer || 'No answer')}
+                                                        {question.type === 'multiple_select'
+                                                            ? (Array.isArray(answerResult.userAnswer) && answerResult.userAnswer.length > 0
+                                                                ? (answerResult.userAnswer as number[]).map(i => getOptionText(question.options?.[i])).join(', ')
+                                                                : 'No answer')
+                                                            : question.type === 'multiple_choice'
+                                                                ? getOptionText(question.options?.[answerResult.userAnswer as number])
+                                                                : String(answerResult.userAnswer || 'No answer')}
                                                     </Text>
                                                 </Text>
                                                 {!answerResult.correct && (
                                                     <Text style={styles.correctAnswer}>
                                                         Correct answer: {' '}
                                                         <Text style={{ color: COLORS.success, fontWeight: FONT_WEIGHT.bold }}>
-                                                            {question.type === 'multiple_choice'
-                                                                ? getOptionText(question.options?.[answerResult.correctAnswer as number])
-                                                                : String(answerResult.correctAnswer)}
+                                                            {question.type === 'multiple_select'
+                                                                ? (Array.isArray(answerResult.correctAnswer)
+                                                                    ? (answerResult.correctAnswer as number[]).map(i => getOptionText(question.options?.[i])).join(', ')
+                                                                    : getOptionText(question.options?.[answerResult.correctAnswer as number]))
+                                                                : question.type === 'multiple_choice'
+                                                                    ? getOptionText(question.options?.[answerResult.correctAnswer as number])
+                                                                    : String(answerResult.correctAnswer)}
                                                         </Text>
                                                     </Text>
                                                 )}
@@ -605,6 +678,80 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                         </TouchableOpacity>
                                     );
                                 })}
+
+                            {/* Multiple Select - Allows selecting multiple answers */}
+                            {currentQuestion.type === 'multiple_select' &&
+                                currentQuestion.options?.map((option, index) => {
+                                    const optionText = typeof option === 'object' ? option.text : option;
+                                    const selectedAnswers = (currentAnswer as number[]) || [];
+                                    const isSelected = selectedAnswers.includes(index);
+                                    
+                                    // Get all correct answer indices
+                                    const correctAnswers = Array.isArray(currentQuestion.correct_answer)
+                                        ? (currentQuestion.correct_answer as number[])
+                                        : [currentQuestion.correct_answer as number];
+                                    const isCorrectOption = correctAnswers.includes(index);
+                                    const showCorrect = isCurrentChecked && isCorrectOption;
+                                    const showWrong = isCurrentChecked && isSelected && !isCorrectOption;
+                                    const showMissed = isCurrentChecked && !isSelected && isCorrectOption;
+                                    
+                                    return (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[
+                                                styles.optionButton,
+                                                isSelected && !isCurrentChecked && styles.optionSelected,
+                                                showCorrect && styles.optionCorrect,
+                                                showWrong && styles.optionWrong,
+                                                showMissed && styles.optionMissed,
+                                            ]}
+                                            onPress={() => selectAnswer(index)}
+                                            activeOpacity={isCurrentChecked ? 1 : 0.8}
+                                            disabled={isCurrentChecked}
+                                        >
+                                            <View style={[
+                                                styles.checkboxIndicator,
+                                                isSelected && !isCurrentChecked && styles.checkboxIndicatorSelected,
+                                                showCorrect && styles.optionIndicatorCorrect,
+                                                showWrong && styles.optionIndicatorWrong,
+                                                showMissed && styles.optionIndicatorMissed,
+                                            ]}>
+                                                {showCorrect || (isSelected && !isCurrentChecked) ? (
+                                                    <Ionicons name="checkmark" size={14} color={COLORS.surface} />
+                                                ) : showWrong ? (
+                                                    <Ionicons name="close" size={14} color={COLORS.surface} />
+                                                ) : showMissed ? (
+                                                    <Ionicons name="checkmark" size={14} color={COLORS.success} />
+                                                ) : null}
+                                            </View>
+                                            <Text style={[
+                                                styles.optionText,
+                                                isSelected && !isCurrentChecked && styles.optionTextSelected,
+                                                showCorrect && styles.optionTextCorrect,
+                                                showWrong && styles.optionTextWrong,
+                                            ]}>
+                                                {optionText}
+                                            </Text>
+                                            {showCorrect && (
+                                                <View style={styles.correctBadge}>
+                                                    <Text style={styles.correctBadgeText}>Correct</Text>
+                                                </View>
+                                            )}
+                                            {showMissed && (
+                                                <View style={[styles.correctBadge, { backgroundColor: COLORS.warning }]}>
+                                                    <Text style={styles.correctBadgeText}>Missed</Text>
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            
+                            {/* Show hint for multiple select */}
+                            {currentQuestion.type === 'multiple_select' && !isCurrentChecked && (
+                                <Text style={styles.multiSelectHint}>
+                                    Select all that apply
+                                </Text>
+                            )}
 
                             {currentQuestion.type === 'true_false' && (
                                 <View style={styles.trueFalseContainer}>
@@ -1038,6 +1185,40 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.error + '15',
         borderColor: COLORS.error,
     },
+    optionMissed: {
+        backgroundColor: COLORS.warning + '10',
+        borderColor: COLORS.warning,
+        borderStyle: 'dashed',
+    },
+    
+    // Checkbox style for multiple_select
+    checkboxIndicator: {
+        width: 28,
+        height: 28,
+        borderRadius: 6,
+        backgroundColor: COLORS.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: SPACING.md,
+        borderWidth: 2,
+        borderColor: COLORS.border,
+    },
+    checkboxIndicatorSelected: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    optionIndicatorMissed: {
+        backgroundColor: COLORS.warning + '30',
+        borderColor: COLORS.warning,
+    },
+    multiSelectHint: {
+        marginTop: SPACING.md,
+        fontSize: FONT_SIZE.sm,
+        color: COLORS.textSecondary,
+        fontStyle: 'italic',
+        textAlign: 'center',
+    },
+    
     correctBadge: {
         backgroundColor: COLORS.success,
         paddingHorizontal: SPACING.sm,

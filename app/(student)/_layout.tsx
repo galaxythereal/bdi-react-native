@@ -33,16 +33,17 @@ export default function StudentLayout() {
                         left: 0,
                         right: 0,
                         borderTopWidth: 0,
-                        elevation: 20,
                         height: 56 + bottomPadding,
                         paddingBottom: bottomPadding,
                         paddingTop: 6,
                         backgroundColor: colors.surface,
-                        ...SHADOWS.lg,
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
                         shadowColor: isDark ? '#000' : '#000',
                         shadowOpacity: isDark ? 0.3 : 0.12,
+                        shadowOffset: { width: 0, height: -4 },
+                        shadowRadius: 12,
+                        elevation: 20,
                     },
                     tabBarLabelStyle: {
                         fontSize: 10,
@@ -53,9 +54,9 @@ export default function StudentLayout() {
                         marginTop: 2,
                     },
                     tabBarHideOnKeyboard: true,
-                }}
-                sceneContainerStyle={{
-                    backgroundColor: colors.background,
+                    sceneStyle: {
+                        backgroundColor: colors.background,
+                    },
                 }}
             >
                 <Tabs.Screen
@@ -116,8 +117,16 @@ export default function StudentLayout() {
                     }}
                 />
                 <Tabs.Screen
+                    name="downloads"
+                    options={{
+                        title: 'Downloads',
+                        tabBarIcon: ({ color }) => <Ionicons name="cloud-download-outline" color={color} size={22} />,
+                    }}
+                />
+                <Tabs.Screen
                     name="certificates"
                     options={{
+                        href: null, // Hide from tab bar, access from profile
                         title: 'Certificates',
                         tabBarIcon: ({ color }) => <Ionicons name="ribbon-outline" color={color} size={22} />,
                     }}
@@ -125,6 +134,7 @@ export default function StudentLayout() {
                 <Tabs.Screen
                     name="support"
                     options={{
+                        href: null, // Hide from tab bar, access from profile
                         title: 'Support',
                         tabBarIcon: ({ color }) => <Ionicons name="chatbubbles-outline" color={color} size={22} />,
                     }}
