@@ -1,25 +1,23 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bell, BookOpen, LayoutDashboard, User } from 'lucide-react-native';
-import { Platform, View } from 'react-native';
+import { Platform, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useNotifications } from '../../src/context/NotificationContext';
-import { SHADOWS } from '../../src/lib/constants';
 
 export default function StudentLayout() {
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
     const { unreadCount } = useNotifications();
-    
+
     // Calculate proper bottom padding for the tab bar
     const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 24);
-    
+
     return (
         <>
-            <StatusBar 
-                style={isDark ? 'light' : 'dark'} 
+            <StatusBar
+                style={isDark ? 'light' : 'dark'}
                 backgroundColor={colors.background}
             />
             <Tabs
@@ -33,22 +31,22 @@ export default function StudentLayout() {
                         left: 0,
                         right: 0,
                         borderTopWidth: 0,
-                        height: 56 + bottomPadding,
+                        height: 60 + bottomPadding,
                         paddingBottom: bottomPadding,
-                        paddingTop: 6,
+                        paddingTop: 8,
                         backgroundColor: colors.surface,
-                        borderTopLeftRadius: 20,
-                        borderTopRightRadius: 20,
+                        borderTopLeftRadius: 24,
+                        borderTopRightRadius: 24,
                         shadowColor: isDark ? '#000' : '#000',
-                        shadowOpacity: isDark ? 0.3 : 0.12,
+                        shadowOpacity: isDark ? 0.3 : 0.15,
                         shadowOffset: { width: 0, height: -4 },
-                        shadowRadius: 12,
-                        elevation: 20,
+                        shadowRadius: 16,
+                        elevation: 24,
                     },
                     tabBarLabelStyle: {
-                        fontSize: 10,
+                        fontSize: 11,
                         fontFamily: 'Inter-SemiBold',
-                        marginTop: 2,
+                        marginTop: 4,
                     },
                     tabBarIconStyle: {
                         marginTop: 2,
@@ -59,91 +57,121 @@ export default function StudentLayout() {
                     },
                 }}
             >
+                {/* ========== VISIBLE TABS (4 total) ========== */}
                 <Tabs.Screen
                     name="dashboard"
                     options={{
                         title: 'Home',
-                        tabBarIcon: ({ color }) => <LayoutDashboard color={color} size={22} />,
+                        tabBarIcon: ({ color, focused }) => (
+                            <View style={{ alignItems: 'center' }}>
+                                <LayoutDashboard
+                                    color={color}
+                                    size={24}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                            </View>
+                        ),
                     }}
                 />
                 <Tabs.Screen
                     name="courses"
                     options={{
-                        title: 'Courses',
-                        tabBarIcon: ({ color }) => <BookOpen color={color} size={22} />,
+                        title: 'Learn',
+                        tabBarIcon: ({ color, focused }) => (
+                            <View style={{ alignItems: 'center' }}>
+                                <BookOpen
+                                    color={color}
+                                    size={24}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                            </View>
+                        ),
                     }}
                 />
                 <Tabs.Screen
                     name="notifications"
                     options={{
                         title: 'Alerts',
-                        tabBarIcon: ({ color }) => (
-                            <View>
-                                <Bell color={color} size={22} />
+                        tabBarIcon: ({ color, focused }) => (
+                            <View style={{ alignItems: 'center' }}>
+                                <Bell
+                                    color={color}
+                                    size={24}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
                                 {unreadCount > 0 && (
                                     <View style={{
                                         position: 'absolute',
                                         top: -4,
-                                        right: -6,
+                                        right: -8,
                                         backgroundColor: '#EF4444',
-                                        borderRadius: 8,
-                                        minWidth: 16,
-                                        height: 16,
+                                        borderRadius: 10,
+                                        minWidth: 18,
+                                        height: 18,
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         paddingHorizontal: 4,
+                                        borderWidth: 2,
+                                        borderColor: colors.surface,
                                     }}>
-                                        <View style={{
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
+                                        <Text style={{
+                                            color: '#FFFFFF',
+                                            fontSize: 10,
+                                            fontFamily: 'Inter-Bold',
                                         }}>
-                                            <View>
-                                                {/* Badge text handled inline for simplicity */}
-                                            </View>
-                                        </View>
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </Text>
                                     </View>
                                 )}
                             </View>
                         ),
-                        tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
-                        tabBarBadgeStyle: {
-                            backgroundColor: '#EF4444',
-                            fontSize: 10,
-                            fontFamily: 'Inter-Bold',
-                            minWidth: 18,
-                            height: 18,
-                            borderRadius: 9,
-                        },
-                    }}
-                />
-                <Tabs.Screen
-                    name="downloads"
-                    options={{
-                        title: 'Downloads',
-                        tabBarIcon: ({ color }) => <Ionicons name="cloud-download-outline" color={color} size={22} />,
-                    }}
-                />
-                <Tabs.Screen
-                    name="certificates"
-                    options={{
-                        href: null, // Hide from tab bar, access from profile
-                        title: 'Certificates',
-                        tabBarIcon: ({ color }) => <Ionicons name="ribbon-outline" color={color} size={22} />,
-                    }}
-                />
-                <Tabs.Screen
-                    name="support"
-                    options={{
-                        href: null, // Hide from tab bar, access from profile
-                        title: 'Support',
-                        tabBarIcon: ({ color }) => <Ionicons name="chatbubbles-outline" color={color} size={22} />,
                     }}
                 />
                 <Tabs.Screen
                     name="profile"
                     options={{
                         title: 'Profile',
-                        tabBarIcon: ({ color }) => <User color={color} size={20} />,
+                        tabBarIcon: ({ color, focused }) => (
+                            <View style={{ alignItems: 'center' }}>
+                                <User
+                                    color={color}
+                                    size={24}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                            </View>
+                        ),
+                    }}
+                />
+
+                {/* ========== HIDDEN TABS (accessible via navigation) ========== */}
+                <Tabs.Screen
+                    name="catalog"
+                    options={{
+                        href: null, // Hidden - access from Home page
+                    }}
+                />
+                <Tabs.Screen
+                    name="live-sessions"
+                    options={{
+                        href: null, // Hidden - featured on Home page
+                    }}
+                />
+                <Tabs.Screen
+                    name="downloads"
+                    options={{
+                        href: null, // Hidden - access from Profile
+                    }}
+                />
+                <Tabs.Screen
+                    name="certificates"
+                    options={{
+                        href: null, // Hidden - access from Profile
+                    }}
+                />
+                <Tabs.Screen
+                    name="support"
+                    options={{
+                        href: null, // Hidden - access from Profile
                     }}
                 />
             </Tabs>

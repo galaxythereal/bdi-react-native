@@ -55,22 +55,22 @@ export interface OfflineLesson {
     content_type: 'video' | 'text' | 'quiz' | 'image' | 'file' | 'audio';
     order_index: number;
     is_preview: boolean;
-    
+
     // Content based on type
     video_url: string | null;
     video_local?: string | null;
     video_provider?: 'youtube' | 'vimeo' | 'wistia' | 'direct';
-    
+
     content_html: string | null;
-    
+
     quiz_data?: any;
-    
+
     description?: string | null;
     duration?: number | null;
-    
+
     // Blocks for complex lessons
     blocks?: OfflineBlock[];
-    
+
     // Download metadata
     downloadStatus: 'pending' | 'downloading' | 'completed' | 'failed' | 'not_downloaded';
     downloadProgress: number;
@@ -122,17 +122,17 @@ const activeDownloads = new Map<string, any>();
  */
 export const initializeOfflineStorage = async (): Promise<void> => {
     if (isInitialized) return;
-    
+
     try {
         const dirs = [BASE_DIR, VIDEOS_DIR, AUDIO_DIR, PDFS_DIR, IMAGES_DIR, FILES_DIR];
-        
+
         for (const dir of dirs) {
             const dirInfo = await FileSystem.getInfoAsync(dir);
             if (!dirInfo.exists) {
                 await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
             }
         }
-        
+
         isInitialized = true;
         console.log('Offline storage initialized');
     } catch (error) {
@@ -175,12 +175,12 @@ export const checkIsOnline = async (): Promise<boolean> => {
         // Try to fetch a small resource to verify connectivity
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
+
         const response = await fetch('https://www.google.com/generate_204', {
             method: 'HEAD',
             signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
         isOnline = response.ok || response.status === 204;
         return isOnline;
@@ -207,7 +207,7 @@ export const saveCourseOffline = async (
     enrollmentProgress: number = 0
 ): Promise<void> => {
     await initializeOfflineStorage();
-    
+
     try {
         const offlineCourse: OfflineCourse = {
             id: course.id,
@@ -243,11 +243,11 @@ export const saveCourseOffline = async (
                 })),
             })),
         };
-        
+
         // Get existing courses
         const existingCourses = await getOfflineCourses();
         const courseIndex = existingCourses.findIndex(c => c.id === course.id);
-        
+
         if (courseIndex >= 0) {
             // Update existing - preserve download status
             const existing = existingCourses[courseIndex];
@@ -279,7 +279,7 @@ export const saveCourseOffline = async (
         } else {
             existingCourses.push(offlineCourse);
         }
-        
+
         await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(existingCourses));
     } catch (error) {
         console.error('Failed to save course offline:', error);
@@ -323,7 +323,7 @@ export const removeCourseOffline = async (courseId: string): Promise<void> => {
     try {
         const courses = await getOfflineCourses();
         const course = courses.find(c => c.id === courseId);
-        
+
         if (course) {
             // Delete all downloaded files for this course
             for (const module of course.modules) {
@@ -331,20 +331,20 @@ export const removeCourseOffline = async (courseId: string): Promise<void> => {
                     if (lesson.video_local) {
                         try {
                             await FileSystem.deleteAsync(lesson.video_local, { idempotent: true });
-                        } catch {}
+                        } catch { }
                     }
                     // Delete block files
                     for (const block of lesson.blocks || []) {
                         if (block.localUri) {
                             try {
                                 await FileSystem.deleteAsync(block.localUri, { idempotent: true });
-                            } catch {}
+                            } catch { }
                         }
                     }
                 }
             }
         }
-        
+
         const filteredCourses = courses.filter(c => c.id !== courseId);
         await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(filteredCourses));
     } catch (error) {
@@ -401,13 +401,13 @@ export const downloadFile = async (
     onProgress?: (progress: number) => void
 ): Promise<{ uri: string; size: number }> => {
     await initializeOfflineStorage();
-    
+
     // Clean URL
     let cleanUrl = url.trim();
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
         cleanUrl = 'https://' + cleanUrl;
     }
-    
+
     const downloadResumable = FileSystem.createDownloadResumable(
         cleanUrl,
         localPath,
@@ -424,17 +424,17 @@ export const downloadFile = async (
             onProgress?.(Math.min(progress, 1));
         }
     );
-    
+
     const result = await downloadResumable.downloadAsync();
-    
+
     if (!result || !result.uri) {
         throw new Error('Download failed - no result');
     }
-    
+
     // @ts-ignore
     const fileInfo = await FileSystem.getInfoAsync(result.uri, { size: true });
     const size = fileInfo.exists && 'size' in fileInfo ? (fileInfo as any).size : 0;
-    
+
     return { uri: result.uri, size };
 };
 
@@ -485,7 +485,7 @@ export const downloadLesson = async (
     onProgress?: (progress: LessonDownloadProgress) => void
 ): Promise<{ success: boolean; totalSize: number; error?: string }> => {
     await initializeOfflineStorage();
-    
+
     const progress: LessonDownloadProgress = {
         lessonId,
         status: 'downloading',
@@ -494,7 +494,7 @@ export const downloadLesson = async (
         totalFiles: 0,
         completedFiles: 0,
     };
-    
+
     try {
         // Collect all downloadable items
         interface DownloadItem {
@@ -503,9 +503,9 @@ export const downloadLesson = async (
             filename: string;
             blockIndex?: number;
         }
-        
+
         const downloadItems: DownloadItem[] = [];
-        
+
         // Main video (direct URLs only)
         if (lesson.video_url && lesson.video_provider === 'direct') {
             const ext = getExtensionFromUrl(lesson.video_url, 'mp4');
@@ -515,15 +515,15 @@ export const downloadLesson = async (
                 filename: `${lessonId}_main.${ext}`,
             });
         }
-        
+
         // Blocks content
         if (lesson.blocks) {
             lesson.blocks.forEach((block, index) => {
                 if (!block.content?.url) return;
-                
+
                 let type: 'video' | 'audio' | 'pdf' | 'image' | 'file' = 'file';
                 let defaultExt = 'file';
-                
+
                 switch (block.type) {
                     case 'video':
                         // Only download direct videos
@@ -550,7 +550,7 @@ export const downloadLesson = async (
                     default:
                         return;
                 }
-                
+
                 const ext = getExtensionFromUrl(block.content.url, defaultExt);
                 downloadItems.push({
                     type,
@@ -560,68 +560,68 @@ export const downloadLesson = async (
                 });
             });
         }
-        
+
         progress.totalFiles = downloadItems.length;
-        
+
         if (downloadItems.length === 0) {
             // No files to download (text/quiz only) - mark as complete
             progress.status = 'completed';
             progress.progress = 1;
             onProgress?.(progress);
-            
+
             await updateLessonDownloadStatus(courseId, lessonId, 'completed', 1, 0);
             return { success: true, totalSize: 0 };
         }
-        
+
         let totalSize = 0;
         const localUris: Record<string, string> = {};
-        
+
         // Download each file
         for (let i = 0; i < downloadItems.length; i++) {
             const item = downloadItems[i];
             progress.currentFile = item.filename;
             onProgress?.(progress);
-            
+
             const localPath = getLocalPath(item.type, item.filename);
-            
+
             try {
                 const result = await downloadFile(item.url, localPath, (fileProgress) => {
                     progress.progress = (i + fileProgress) / downloadItems.length;
                     onProgress?.(progress);
                 });
-                
+
                 totalSize += result.size;
                 localUris[item.filename] = result.uri;
-                
+
                 // Store the main video local path (not block videos)
                 if (item.type === 'video' && item.blockIndex === undefined) {
                     await updateLessonLocalVideo(courseId, lessonId, result.uri);
                 }
-                
+
                 // Store block local URIs
                 if (item.blockIndex !== undefined) {
                     await updateBlockLocalUri(courseId, lessonId, item.blockIndex, result.uri);
                 }
-                
+
                 progress.completedFiles++;
             } catch (error: any) {
                 console.error(`Failed to download ${item.filename}:`, error);
                 // Continue with other files
             }
         }
-        
+
         progress.status = 'completed';
         progress.progress = 1;
         onProgress?.(progress);
-        
+
         await updateLessonDownloadStatus(courseId, lessonId, 'completed', 1, totalSize);
         return { success: true, totalSize };
-        
+
     } catch (error: any) {
         progress.status = 'failed';
         progress.error = error.message;
         onProgress?.(progress);
-        
+
         await updateLessonDownloadStatus(courseId, lessonId, 'failed', 0, 0, error.message);
         return { success: false, totalSize: 0, error: error.message };
     }
@@ -640,11 +640,11 @@ const updateLessonDownloadStatus = async (
 ): Promise<void> => {
     const courses = await getOfflineCourses();
     const courseIndex = courses.findIndex(c => c.id === courseId);
-    
+
     if (courseIndex < 0) return;
-    
+
     const course = courses[courseIndex];
-    
+
     for (const module of course.modules) {
         const lesson = module.lessons.find(l => l.id === lessonId);
         if (lesson) {
@@ -652,16 +652,16 @@ const updateLessonDownloadStatus = async (
             lesson.downloadProgress = progress;
             lesson.fileSize = fileSize;
             lesson.error = error;
-            
+
             // Recalculate total course size
-            course.totalSize = course.modules.reduce((total, mod) => 
+            course.totalSize = course.modules.reduce((total, mod) =>
                 total + mod.lessons.reduce((lessonTotal, l) => lessonTotal + (l.fileSize || 0), 0)
-            , 0);
-            
+                , 0);
+
             break;
         }
     }
-    
+
     courses[courseIndex] = course;
     await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(courses));
 };
@@ -676,9 +676,9 @@ const updateLessonLocalVideo = async (
 ): Promise<void> => {
     const courses = await getOfflineCourses();
     const courseIndex = courses.findIndex(c => c.id === courseId);
-    
+
     if (courseIndex < 0) return;
-    
+
     for (const module of courses[courseIndex].modules) {
         const lesson = module.lessons.find(l => l.id === lessonId);
         if (lesson) {
@@ -686,7 +686,7 @@ const updateLessonLocalVideo = async (
             break;
         }
     }
-    
+
     await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(courses));
 };
 
@@ -701,9 +701,9 @@ const updateBlockLocalUri = async (
 ): Promise<void> => {
     const courses = await getOfflineCourses();
     const courseIndex = courses.findIndex(c => c.id === courseId);
-    
+
     if (courseIndex < 0) return;
-    
+
     for (const module of courses[courseIndex].modules) {
         const lesson = module.lessons.find(l => l.id === lessonId);
         if (lesson && lesson.blocks && lesson.blocks[blockIndex]) {
@@ -711,7 +711,7 @@ const updateBlockLocalUri = async (
             break;
         }
     }
-    
+
     await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(courses));
 };
 
@@ -739,7 +739,7 @@ export const downloadCourseForOffline = async (
 ): Promise<{ success: boolean; totalSize: number; error?: string }> => {
     // First save course metadata
     await saveCourseOffline(course);
-    
+
     const progress: CourseDownloadProgress = {
         courseId: course.id,
         status: 'downloading',
@@ -749,7 +749,7 @@ export const downloadCourseForOffline = async (
         completedLessons: 0,
         totalSize: 0,
     };
-    
+
     try {
         // Flatten all lessons
         const allLessons: { moduleIndex: number; lesson: any }[] = [];
@@ -758,18 +758,18 @@ export const downloadCourseForOffline = async (
                 allLessons.push({ moduleIndex, lesson });
             });
         });
-        
+
         progress.totalLessons = allLessons.length;
         onProgress?.(progress);
-        
+
         let totalSize = 0;
-        
+
         for (let i = 0; i < allLessons.length; i++) {
             const { lesson } = allLessons[i];
             progress.currentLesson = lesson.title;
             progress.progress = i / allLessons.length;
             onProgress?.(progress);
-            
+
             // Download lesson content
             const result = await downloadLesson(
                 course.id,
@@ -781,23 +781,23 @@ export const downloadCourseForOffline = async (
                     onProgress?.(progress);
                 }
             );
-            
+
             totalSize += result.totalSize;
             progress.completedLessons++;
             progress.totalSize = totalSize;
         }
-        
+
         progress.status = 'completed';
         progress.progress = 1;
         onProgress?.(progress);
-        
+
         return { success: true, totalSize };
-        
+
     } catch (error: any) {
         progress.status = 'failed';
         progress.error = error.message;
         onProgress?.(progress);
-        
+
         return { success: false, totalSize: 0, error: error.message };
     }
 };
@@ -815,11 +815,11 @@ export const deleteLessonDownload = async (
 ): Promise<void> => {
     const courses = await getOfflineCourses();
     const courseIndex = courses.findIndex(c => c.id === courseId);
-    
+
     if (courseIndex < 0) return;
-    
+
     const course = courses[courseIndex];
-    
+
     for (const module of course.modules) {
         const lesson = module.lessons.find(l => l.id === lessonId);
         if (lesson) {
@@ -828,7 +828,7 @@ export const deleteLessonDownload = async (
                 await deleteFile(lesson.video_local);
                 lesson.video_local = undefined;
             }
-            
+
             // Delete block files
             if (lesson.blocks) {
                 for (const block of lesson.blocks) {
@@ -838,21 +838,21 @@ export const deleteLessonDownload = async (
                     }
                 }
             }
-            
+
             lesson.downloadStatus = 'not_downloaded';
             lesson.downloadProgress = 0;
             lesson.fileSize = 0;
             lesson.error = undefined;
-            
+
             break;
         }
     }
-    
+
     // Recalculate total size
-    course.totalSize = course.modules.reduce((total, mod) => 
+    course.totalSize = course.modules.reduce((total, mod) =>
         total + mod.lessons.reduce((lessonTotal, l) => lessonTotal + (l.fileSize || 0), 0)
-    , 0);
-    
+        , 0);
+
     courses[courseIndex] = course;
     await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(courses));
 };
@@ -866,22 +866,22 @@ export const deleteLessonDownload = async (
  */
 export const getOfflineStats = async (): Promise<OfflineStats> => {
     const courses = await getOfflineCourses();
-    
+
     let totalLessons = 0;
     let totalSize = 0;
-    
+
     for (const course of courses) {
         totalSize += course.totalSize || 0;
         for (const module of course.modules) {
             totalLessons += module.lessons.filter(l => l.downloadStatus === 'completed').length;
         }
     }
-    
+
     return {
         totalCourses: courses.length,
         totalLessons,
         totalSize,
-        lastSyncedAt: courses.length > 0 
+        lastSyncedAt: courses.length > 0
             ? courses.reduce((latest, c) => c.downloadedAt > latest ? c.downloadedAt : latest, '')
             : null,
         isOnline,
@@ -904,7 +904,7 @@ export const verifyDownloadStatuses = async (): Promise<void> => {
     try {
         const courses = await getOfflineCourses();
         let modified = false;
-        
+
         for (const course of courses) {
             for (const module of course.modules) {
                 for (const lesson of module.lessons) {
@@ -924,7 +924,7 @@ export const verifyDownloadStatuses = async (): Promise<void> => {
                         lesson.downloadStatus = 'not_downloaded';
                         modified = true;
                     }
-                    
+
                     // For non-video content types (quiz, text), they're "downloaded" when saved
                     if (lesson.content_type === 'quiz' || lesson.content_type === 'text') {
                         if (lesson.quiz_data || lesson.content_html) {
@@ -935,7 +935,7 @@ export const verifyDownloadStatuses = async (): Promise<void> => {
                 }
             }
         }
-        
+
         if (modified) {
             await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(courses));
         }
@@ -955,18 +955,18 @@ export const clearAllOfflineData = async (): Promise<void> => {
     try {
         // Delete all directories
         const dirs = [VIDEOS_DIR, AUDIO_DIR, PDFS_DIR, IMAGES_DIR, FILES_DIR];
-        
+
         for (const dir of dirs) {
             try {
                 await FileSystem.deleteAsync(dir, { idempotent: true });
-            } catch {}
+            } catch { }
         }
-        
+
         // Recreate directories
         for (const dir of dirs) {
             await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
         }
-        
+
         // Clear storage
         await AsyncStorage.multiRemove([
             OFFLINE_COURSES_KEY,
@@ -974,7 +974,7 @@ export const clearAllOfflineData = async (): Promise<void> => {
             OFFLINE_ENROLLMENTS_KEY,
             DOWNLOAD_QUEUE_KEY,
         ]);
-        
+
         console.log('All offline data cleared');
     } catch (error) {
         console.error('Failed to clear offline data:', error);
@@ -1069,12 +1069,12 @@ export const markQuizAttemptsSynced = async (lessonIds: string[]): Promise<void>
     try {
         const data = await AsyncStorage.getItem(QUIZ_PROGRESS_KEY);
         const attempts: OfflineQuizAttempt[] = data ? JSON.parse(data) : [];
-        
+
         const updated = attempts.map(a => ({
             ...a,
             synced: lessonIds.includes(a.lessonId) ? true : a.synced,
         }));
-        
+
         await AsyncStorage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify(updated));
     } catch (error) {
         console.error('Failed to mark quiz attempts synced:', error);
@@ -1093,25 +1093,25 @@ export const markQuizAttemptsSynced = async (lessonIds: string[]): Promise<void>
  */
 export const syncOfflineData = async (): Promise<{ synced: number; errors: string[] }> => {
     const result = { synced: 0, errors: [] as string[] };
-    
+
     try {
         const online = await checkIsOnline();
         if (!online) {
             return { synced: 0, errors: ['No network connection'] };
         }
-        
+
         // 1. Sync quiz attempts
         const unsyncedAttempts = await getUnsyncedQuizAttempts();
         if (unsyncedAttempts.length > 0) {
             console.log(`Syncing ${unsyncedAttempts.length} quiz attempts...`);
-            
+
             // Import supabase dynamically to avoid circular dependencies
             const { supabase } = await import('../../lib/supabase');
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             if (user) {
                 const syncedIds: string[] = [];
-                
+
                 for (const attempt of unsyncedAttempts) {
                     try {
                         // Try to update or insert quiz attempt
@@ -1127,7 +1127,7 @@ export const syncOfflineData = async (): Promise<{ synced: number; errors: strin
                                 passed: attempt.passed,
                                 completed_at: attempt.completedAt,
                             }, { onConflict: 'user_id,lesson_id' });
-                        
+
                         if (!error) {
                             syncedIds.push(attempt.lessonId);
                             result.synced++;
@@ -1139,31 +1139,31 @@ export const syncOfflineData = async (): Promise<{ synced: number; errors: strin
                         result.errors.push(`Quiz sync error: ${e.message}`);
                     }
                 }
-                
+
                 // Mark synced attempts
                 if (syncedIds.length > 0) {
                     await markQuizAttemptsSynced(syncedIds);
                 }
             }
         }
-        
+
         // 2. Sync enrollment progress from offline enrollments
         const offlineEnrollments = await getOfflineEnrollments();
         if (offlineEnrollments.length > 0) {
             const { supabase } = await import('../../lib/supabase');
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             if (user) {
                 for (const enrollment of offlineEnrollments) {
                     if (enrollment.progress > 0) {
                         try {
                             await supabase
-                                .from('enrollments')
+                                .from('diploma_enrollments')
                                 .update({
                                     progress: enrollment.progress,
                                     last_accessed_at: new Date().toISOString(),
                                 })
-                                .eq('course_id', enrollment.course_id)
+                                .eq('diploma_id', enrollment.diploma_id)
                                 .eq('user_id', user.id);
                         } catch (e: any) {
                             console.warn('Failed to sync enrollment progress:', e);
@@ -1172,7 +1172,7 @@ export const syncOfflineData = async (): Promise<{ synced: number; errors: strin
                 }
             }
         }
-        
+
         console.log(`Sync complete: ${result.synced} items synced`);
         return result;
     } catch (error: any) {
@@ -1189,20 +1189,20 @@ export const syncOfflineData = async (): Promise<{ synced: number; errors: strin
 export default {
     // Initialization
     initializeOfflineStorage,
-    
+
     // Network
     startNetworkMonitoring,
     stopNetworkMonitoring,
     checkIsOnline,
     getIsOnline,
-    
+
     // Courses
     saveCourseOffline,
     getOfflineCourses,
     getOfflineCourse,
     isCourseOffline,
     removeCourseOffline,
-    
+
     // Downloads
     downloadLesson,
     downloadCourseForOffline,
@@ -1211,18 +1211,18 @@ export default {
     fileExists,
     deleteFile,
     getLocalPath,
-    
+
     // Stats
     getOfflineStats,
     getOfflineStorageUsed,
-    
+
     // Clear
     clearAllOfflineData,
-    
+
     // Enrollments
     saveEnrollmentsOffline,
     getOfflineEnrollments,
-    
+
     // Quiz
     saveQuizAttemptOffline,
     getUnsyncedQuizAttempts,

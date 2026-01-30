@@ -61,7 +61,7 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
                     </View>
                     <View style={styles.cardHeaderText}>
                         <Text style={styles.cardTitle} numberOfLines={2}>
-                            {certificate.course?.title || 'Course Certificate'}
+                            {certificate.diploma?.title || 'Diploma Certificate'}
                         </Text>
                         <Text style={styles.cardDate}>
                             Issued {new Date(certificate.issued_at).toLocaleDateString('en-US', {
@@ -72,9 +72,9 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
                         </Text>
                     </View>
                 </View>
-                
+
                 <View style={styles.cardDivider} />
-                
+
                 <View style={styles.cardDetails}>
                     <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Certificate #</Text>
@@ -89,7 +89,7 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
                         </Text>
                     </View>
                 </View>
-                
+
                 <View style={styles.cardFooter}>
                     <View style={styles.viewButton}>
                         <Text style={styles.viewButtonText}>View Certificate</Text>
@@ -142,7 +142,7 @@ export default function CertificatesScreen() {
             }
             const data = await fetchMyCertificates();
             setCertificates(data);
-            
+
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 400,
@@ -179,19 +179,19 @@ export default function CertificatesScreen() {
 
         try {
             const html = generateCertificateHTML(selectedCertificate, userName, templateBase64);
-            
+
             // Generate PDF
             const { uri } = await printToFileAsync({
                 html,
                 base64: false,
             });
-            
+
             // Share the PDF
             const canShare = await Sharing.isAvailableAsync();
             if (canShare) {
                 await Sharing.shareAsync(uri, {
                     mimeType: 'application/pdf',
-                    dialogTitle: `Share Certificate - ${selectedCertificate.course?.title}`,
+                    dialogTitle: `Share Certificate - ${selectedCertificate.diploma?.title}`,
                 });
             } else {
                 Alert.alert('Sharing not available', 'Unable to share on this device.');
@@ -207,22 +207,22 @@ export default function CertificatesScreen() {
 
         try {
             const html = generateCertificateHTML(selectedCertificate, userName, templateBase64);
-            
+
             // Generate and save PDF
             const { uri } = await printToFileAsync({
                 html,
                 base64: false,
             });
-            
+
             // Move to documents directory
             const fileName = `Certificate_${selectedCertificate.certificate_number}.pdf`;
             const destUri = FileSystem.documentDirectory + fileName;
-            
+
             await FileSystem.moveAsync({
                 from: uri,
                 to: destUri,
             });
-            
+
             Alert.alert(
                 'Certificate Saved',
                 `Certificate saved as ${fileName}`,
@@ -337,7 +337,7 @@ export default function CertificatesScreen() {
                             <Ionicons name="close" size={24} color={COLORS.text} />
                         </TouchableOpacity>
                         <Text style={styles.viewerTitle} numberOfLines={1}>
-                            {selectedCertificate?.course?.title || 'Certificate'}
+                            {selectedCertificate?.diploma?.title || 'Certificate'}
                         </Text>
                         <View style={styles.viewerActions}>
                             <TouchableOpacity
@@ -354,7 +354,7 @@ export default function CertificatesScreen() {
                             </TouchableOpacity>
                         </View>
                     </View>
-                    
+
                     {selectedCertificate && (
                         <WebView
                             source={{

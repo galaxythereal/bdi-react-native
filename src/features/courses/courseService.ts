@@ -1,361 +1,267 @@
+/**
+ * Course Service - Diploma Model Only
+ * Uses diploma → courses → chapters → lessons → lesson_blocks structure
+ */
 import { supabase } from '../../lib/supabase';
-import { CourseDetail, Enrollment } from '../../types';
+import { CourseDetail, Chapter, Lesson } from '../../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { 
-    saveCourseOffline, 
-    getOfflineCourse,
-    saveEnrollmentsOffline,
-    getOfflineEnrollments,
-    checkIsOnline,
+import {
+  saveCourseOffline,
+  getOfflineCourse,
+  checkIsOnline,
 } from '../offline/offlineManager';
 
-export const fetchMyEnrollments = async (): Promise<Enrollment[]> => {
+const CACHE_KEY_PREFIX = 'bdi_course_';
+
+/**
+ * Fetch course content with chapters, lessons, and lesson blocks
+ */
+export const fetchCourseContent = async (courseId: string): Promise<CourseDetail> => {
   try {
     const isOnline = await checkIsOnline();
-    
+
     if (!isOnline) {
-      // Return cached enrollments when offline
-      console.log('Offline: Loading cached enrollments');
-      return await getOfflineEnrollments();
-    }
-    
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Try to get from offline storage
+      console.log('Offline: Loading cached course:', courseId);
+      const offlineCourse = await getOfflineCourse(courseId);
+      if (offlineCourse) {
+        return transformOfflineCourse(offlineCourse);
+      }
 
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      throw new Error('Not authenticated. Please sign in again.');
+      // Try legacy cache
+      const cached = await AsyncStorage.getItem(`${CACHE_KEY_PREFIX}${courseId}`);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+
+      throw new Error('Course not available offline. Please connect to the internet.');
     }
 
-    const { data, error } = await supabase
-      .from('enrollments')
+    // Fetch course with chapters and lessons
+    const { data: course, error: courseError } = await supabase
+      .from('courses')
       .select(`
         *,
-        course:courses (
+        diploma:diplomas (
           id,
           title,
-          description,
-          thumbnail_url,
-          slug,
-          created_at
+          thumbnail_url
+        ),
+        chapters (
+          *,
+          lessons (
+            *,
+            lesson_blocks (
+              id,
+              block_type,
+              title,
+              content,
+              order_index
+            )
+          )
         )
       `)
-      .eq('user_id', user.id)
-      .order('enrolled_at', { ascending: false });
+      .eq('id', courseId)
+      .single();
 
-    if (error) {
-      console.error('Error fetching enrollments:', error);
-      // If table doesn't exist or RLS issue, return empty array instead of throwing
-      if (error.code === 'PGRST116' || error.message.includes('permission')) {
-        console.warn('Enrollments table may not exist or RLS is blocking access');
-        return [];
-      }
-      throw new Error(error.message || 'Failed to load courses');
-    }
+    if (courseError) throw courseError;
+    if (!course) throw new Error('Course not found');
 
-    // Ensure we return an array and handle null/undefined
-    if (!data) {
-      return [];
-    }
+    // Transform and sort the data
+    const courseDetail: CourseDetail = {
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      thumbnail_url: course.thumbnail_url,
+      slug: course.slug,
+      diploma_id: course.diploma_id,
+      status: course.status,
+      order_index: course.order_index,
+      created_at: course.created_at,
+      updated_at: course.updated_at,
+      chapters: (course.chapters || [])
+        .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
+        .map((chapter: any) => ({
+          ...chapter,
+          lessons: (chapter.lessons || [])
+            .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
+            .map((lesson: any) => transformLesson(lesson)),
+        })),
+    };
 
-    // Transform data to ensure course is always an object
-    const enrollments = data.map((enrollment: any) => ({
-      ...enrollment,
-      progress: enrollment.progress || 0,
-      course: enrollment.course || {
-        id: enrollment.course_id,
-        title: 'Untitled Course',
-        description: null,
-        thumbnail_url: null,
-        slug: '',
-      },
-    })) as Enrollment[];
-    
-    // Cache enrollments for offline use
+    // Cache for offline use
     try {
-      await saveEnrollmentsOffline(enrollments);
+      await AsyncStorage.setItem(`${CACHE_KEY_PREFIX}${courseId}`, JSON.stringify(courseDetail));
+      await saveCourseOffline(courseDetail);
     } catch (e) {
-      console.warn('Failed to cache enrollments:', e);
+      console.warn('Failed to cache course:', e);
     }
-    
-    return enrollments;
+
+    return courseDetail;
   } catch (error: any) {
-    console.error('fetchMyEnrollments error:', error);
-    
-    // Try to return cached enrollments on error
+    console.error('fetchCourseContent error:', error);
+
+    // Try to return cached data on error
     try {
-      const cached = await getOfflineEnrollments();
-      if (cached.length > 0) {
-        console.log('Returning cached enrollments after error');
-        return cached;
+      const cached = await AsyncStorage.getItem(`${CACHE_KEY_PREFIX}${courseId}`);
+      if (cached) {
+        console.log('Returning cached course after error');
+        return JSON.parse(cached);
       }
-    } catch {}
-    
+    } catch { }
+
     throw error;
   }
 };
 
-export const fetchCourseContent = async (courseId: string): Promise<CourseDetail> => {
-  const { data: course, error: courseError } = await supabase
-    .from('courses')
-    .select('*')
-    .eq('id', courseId)
-    .single();
+/**
+ * Transform a lesson from database format to app format
+ */
+function transformLesson(lesson: any): Lesson {
+  const blocks = lesson.lesson_blocks || [];
 
-  if (courseError) throw courseError;
+  // Determine primary content type from first block or lesson_type
+  let content_type = lesson.lesson_type || 'text';
+  let video_url: string | null = null;
+  let video_provider: 'youtube' | 'vimeo' | 'wistia' | 'direct' = 'direct';
+  let content_html: string | null = null;
+  let quiz_data: any = null;
+  let audio_url: string | null = null;
+  let pdf_url: string | null = null;
 
-  // Fetch the edX-style hierarchy: sections -> subsections -> units -> blocks
-  // The actual content (video, quiz, text) is stored in blocks
-  const { data: sections, error: sectionsError } = await supabase
-    .from('sections')
-    .select(`
-      id,
-      title,
-      order_index,
-      subsections (
-        id,
-        title,
-        order_index,
-        units (
-          id,
-          title,
-          order_index,
-          blocks (
-            id,
-            title,
-            type,
-            content,
-            order_index
-          )
-        )
-      )
-    `)
-    .eq('course_id', courseId)
-    .order('order_index');
+  // Sort blocks by order_index
+  const sortedBlocks = blocks.sort((a: any, b: any) =>
+    (a.order_index || 0) - (b.order_index || 0)
+  );
 
-  if (sectionsError) {
-    console.warn('Error fetching sections:', sectionsError);
-    // Try alternative simpler structure
-    return await fetchCourseContentSimple(courseId, course);
+  // Extract primary content from blocks
+  for (const block of sortedBlocks) {
+    const content = block.content || {};
+
+    switch (block.block_type) {
+      case 'video':
+        if (!video_url) {
+          video_url = content.url || content.video_url || null;
+          video_provider = (content.provider || 'direct') as typeof video_provider;
+          content_type = 'video';
+        }
+        break;
+      case 'text':
+        if (!content_html) {
+          content_html = content.html || null;
+          if (content_type === 'text') content_type = 'text';
+        }
+        break;
+      case 'quiz':
+        if (!quiz_data && content.questions) {
+          quiz_data = {
+            id: block.id,
+            title: content.title || block.title || lesson.title,
+            description: 'Test your knowledge',
+            time_limit: content.time_limit || 15,
+            passing_score: content.passing_score || 70,
+            allow_retry: true,
+            questions: (content.questions || []).map((q: any, idx: number) => ({
+              id: q.id || `${block.id}_q${idx + 1}`,
+              question: q.question || 'Question',
+              type: q.question_type || 'multiple_choice',
+              options: (q.options || []).map((opt: any) => opt.text || opt),
+              correct_answer: getCorrectAnswer(q),
+              explanation: q.explanation,
+              points: q.points || 1,
+            })),
+          };
+          content_type = 'quiz';
+        }
+        break;
+      case 'audio':
+        if (!audio_url) {
+          audio_url = content.url || content.audio_url || null;
+          content_type = 'audio';
+        }
+        break;
+      case 'pdf':
+        if (!pdf_url) {
+          pdf_url = content.url || null;
+          content_type = 'pdf';
+        }
+        break;
+    }
   }
 
-  // Transform edX structure to our frontend module/lesson interface
-  const modules = (sections || []).map((section: any) => {
-    // Flatten subsections > units > blocks into lessons
-    const lessons: any[] = [];
-    
-    (section.subsections || [])
-      .sort((a: any, b: any) => a.order_index - b.order_index)
-      .forEach((subsection: any) => {
-        (subsection.units || [])
-          .sort((a: any, b: any) => a.order_index - b.order_index)
-          .forEach((unit: any) => {
-            // Each unit becomes a "lesson" with blocks as content
-            const blocks = (unit.blocks || []).sort((a: any, b: any) => a.order_index - b.order_index);
-            
-            // Determine lesson type from the FIRST block (respects ordering)
-            const firstBlock = blocks[0];
-            const videoBlock = blocks.find((b: any) => b.type === 'video');
-            const quizBlock = blocks.find((b: any) => b.type === 'quiz');
-            const textBlock = blocks.find((b: any) => b.type === 'text');
-            
-            // Use first block's type as primary content type - DON'T override later!
-            let content_type = firstBlock?.type || 'text';
-            let video_url = null;
-            let video_provider = 'direct';
-            let content_html = null;
-            let quiz_data: any = null;
-            
-            // Extract video data if present
-            if (videoBlock) {
-              video_url = videoBlock.content?.url || videoBlock.content?.video_url;
-              video_provider = videoBlock.content?.provider || 'direct';
-            }
-            // Extract quiz data if present (but don't override content_type - keep first block's type)
-            if (quizBlock) {
-              // Transform quiz block content to QuizData format
-              // New format stores questions array directly: { title, time_limit, passing_score, questions: [...] }
-              // Legacy format is single question: { question, question_type, options, explanation, points, attempts }
-              const quizContent = quizBlock.content || {};
-              
-              // Helper function to determine question type
-              const getQuestionType = (qt: string): 'multiple_choice' | 'multiple_select' | 'true_false' | 'short_answer' => {
-                if (qt === 'multiple_select') return 'multiple_select';
-                if (qt === 'numeric' || qt === 'text') return 'short_answer';
-                if (qt === 'true_false') return 'true_false';
-                return 'multiple_choice';
-              };
-              
-              // Helper function to get correct answer(s)
-              const getCorrectAnswer = (q: any): string | number | number[] => {
-                if (q.question_type === 'text' || q.question_type === 'numeric') {
-                  return q.correct_text_answer || '';
-                } else if (q.question_type === 'multiple_select') {
-                  // Get all indices of correct options
-                  return (q.options || [])
-                    .map((opt: any, i: number) => opt.correct === true ? i : -1)
-                    .filter((i: number) => i !== -1);
-                }
-                return (q.options || []).findIndex((opt: any) => opt.correct === true);
-              };
-              
-              // Check if new multi-question format (has questions array)
-              if (quizContent.questions && Array.isArray(quizContent.questions) && quizContent.questions.length > 0) {
-                // New multi-question format from admin panel
-                quiz_data = {
-                  id: quizBlock.id,
-                  title: quizContent.title || quizBlock.title || unit.title || 'Quiz',
-                  description: 'Test your knowledge',
-                  time_limit: quizContent.time_limit || 15,
-                  passing_score: quizContent.passing_score || 70,
-                  allow_retry: true,
-                  questions: quizContent.questions.map((q: any, idx: number) => ({
-                    id: q.id || `${quizBlock.id}_q${idx + 1}`,
-                    question: q.question || 'Question',
-                    type: getQuestionType(q.question_type),
-                    options: (q.options || []).map((opt: any) => opt.text || opt),
-                    correct_answer: getCorrectAnswer(q),
-                    explanation: q.explanation,
-                    points: q.points || 1,
-                  })),
-                };
-              } else if (quizContent.question) {
-                // Legacy single-question format
-                quiz_data = {
-                  id: quizBlock.id,
-                  title: quizBlock.title || unit.title || 'Quiz',
-                  description: quizContent.explanation || 'Test your knowledge',
-                  time_limit: quizContent.time_limit || 15,
-                  passing_score: quizContent.passing_score || 70,
-                  allow_retry: quizContent.attempts !== 1,
-                  questions: [{
-                    id: quizBlock.id + '_q1',
-                    question: quizContent.question || 'Question',
-                    type: getQuestionType(quizContent.question_type),
-                    options: (quizContent.options || []).map((opt: any) => opt.text || opt),
-                    correct_answer: getCorrectAnswer(quizContent),
-                    explanation: quizContent.explanation,
-                    points: quizContent.points || 1,
-                  }],
-                };
-                
-                // Also gather any additional quiz blocks in this unit (legacy behavior)
-                const additionalQuizBlocks = blocks.filter((b: any) => b.type === 'quiz' && b.id !== quizBlock.id);
-                additionalQuizBlocks.forEach((qb: any, idx: number) => {
-                  const qc = qb.content || {};
-                  if (qc.question) {
-                    quiz_data.questions.push({
-                      id: qb.id + '_q' + (idx + 2),
-                      question: qc.question || 'Question ' + (idx + 2),
-                      type: getQuestionType(qc.question_type),
-                      options: (qc.options || []).map((opt: any) => opt.text || opt),
-                      correct_answer: getCorrectAnswer(qc),
-                      explanation: qc.explanation,
-                      points: qc.points || 1,
-                    });
-                  }
-                });
-              } else {
-                // Empty quiz - create placeholder
-                quiz_data = {
-                  id: quizBlock.id,
-                  title: quizBlock.title || unit.title || 'Quiz',
-                  description: 'Test your knowledge',
-                  time_limit: 15,
-                  passing_score: 70,
-                  allow_retry: true,
-                  questions: [],
-                };
-              }
-            }
-            if (textBlock) {
-              content_html = textBlock.content?.html || textBlock.content;
-            }
-            
-            lessons.push({
-              id: unit.id,
-              title: unit.title || subsection.title,
-              slug: unit.id,
-              content_type,
-              video_url,
-              video_provider,
-              content_html,
-              quiz_data,
-              blocks,
-              is_preview: false,
-              order_index: lessons.length,
-            });
-          });
-      });
-    
-    return {
-      id: section.id,
-      title: section.title,
-      order_index: section.order_index,
-      lessons,
-    };
-  });
-
-  const result = { ...course, modules };
-
-  // Cache the result for offline use
-  try {
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    await AsyncStorage.setItem(`course_cache_${courseId}`, JSON.stringify(result));
-  } catch (e) {
-    console.warn('Failed to cache course', e);
+  // Use lesson-level content as fallback
+  if (!video_url && lesson.content_url && (lesson.lesson_type === 'video' || lesson.lesson_type === 'audio')) {
+    video_url = lesson.content_url;
+  }
+  if (!content_html && lesson.content_html) {
+    content_html = lesson.content_html;
   }
 
-  return result;
-};
+  return {
+    id: lesson.id,
+    chapter_id: lesson.chapter_id,
+    title: lesson.title,
+    slug: lesson.slug,
+    content_type,
+    video_url,
+    video_provider,
+    audio_url,
+    pdf_url,
+    content_html,
+    duration: lesson.duration_minutes || null,
+    is_preview: lesson.is_preview || false,
+    order_index: lesson.order_index || 0,
+    description: lesson.description,
+    quiz_data,
+    blocks: sortedBlocks,
+  };
+}
 
-// Fallback for simpler schema or when edX structure isn't available
-const fetchCourseContentSimple = async (courseId: string, course: any): Promise<CourseDetail> => {
-  // Try to fetch sections with subsections directly (without units/blocks)
-  const { data: sections, error: sectionsError } = await supabase
-    .from('sections')
-    .select(`
-      id,
-      title,
-      order_index,
-      subsections (
-        id,
-        title,
-        order_index
-      )
-    `)
-    .eq('course_id', courseId)
-    .order('order_index');
-
-  if (sectionsError || !sections?.length) {
-    console.warn('No sections found for course');
-    return { ...course, modules: [] };
+/**
+ * Get correct answer from quiz question
+ */
+function getCorrectAnswer(q: any): number | number[] | string {
+  if (q.question_type === 'text' || q.question_type === 'short_answer') {
+    return q.correct_text_answer || '';
+  } else if (q.question_type === 'multiple_select') {
+    return (q.options || [])
+      .map((opt: any, i: number) => opt.correct === true ? i : -1)
+      .filter((i: number) => i !== -1);
   }
+  return (q.options || []).findIndex((opt: any) => opt.correct === true);
+}
 
-  const modules = sections.map((section: any) => ({
-    id: section.id,
-    title: section.title,
-    order_index: section.order_index,
-    lessons: (section.subsections || [])
-      .sort((a: any, b: any) => a.order_index - b.order_index)
-      .map((sub: any, idx: number) => ({
-        id: sub.id,
-        title: sub.title,
-        slug: sub.id,
-        content_type: 'text',
-        video_url: null,
-        content_html: null,
-        is_preview: false,
-        order_index: idx,
+/**
+ * Transform offline course to CourseDetail
+ */
+function transformOfflineCourse(offlineCourse: any): CourseDetail {
+  return {
+    id: offlineCourse.id,
+    title: offlineCourse.title,
+    description: offlineCourse.description,
+    thumbnail_url: offlineCourse.thumbnail_local || offlineCourse.thumbnail_url,
+    slug: offlineCourse.slug,
+    created_at: offlineCourse.created_at,
+    chapters: (offlineCourse.chapters || offlineCourse.modules || []).map((ch: any) => ({
+      id: ch.id,
+      course_id: offlineCourse.id,
+      title: ch.title,
+      order_index: ch.order_index,
+      lessons: (ch.lessons || []).map((lesson: any) => ({
+        ...lesson,
+        video_url: lesson.video_local || lesson.video_url,
+        video_provider: (lesson.video_local ? 'direct' : lesson.video_provider) as 'youtube' | 'vimeo' | 'wistia' | 'direct',
       })),
-  }));
+    })),
+  };
+}
 
-  return { ...course, modules };
-};
-
-// Update enrollment progress when lessons are completed
+/**
+ * Update enrollment progress when lessons are completed
+ */
 export const updateEnrollmentProgress = async (
-  courseId: string, 
-  completedLessons: number, 
+  enrollmentId: string,
+  completedLessons: number,
   totalLessons: number
 ): Promise<void> => {
   try {
@@ -365,19 +271,19 @@ export const updateEnrollmentProgress = async (
       return;
     }
 
-    const progress = totalLessons > 0 
-      ? Math.round((completedLessons / totalLessons) * 100) 
+    const progress = totalLessons > 0
+      ? Math.round((completedLessons / totalLessons) * 100)
       : 0;
 
     const { error } = await supabase
-      .from('enrollments')
-      .update({ 
+      .from('diploma_enrollments')
+      .update({
         progress,
         status: progress >= 100 ? 'completed' : 'active',
+        completed_at: progress >= 100 ? new Date().toISOString() : null,
         last_accessed_at: new Date().toISOString(),
       })
-      .eq('course_id', courseId)
-      .eq('user_id', user.id);
+      .eq('id', enrollmentId);
 
     if (error) {
       console.error('Error updating enrollment progress:', error);
@@ -390,131 +296,114 @@ export const updateEnrollmentProgress = async (
 };
 
 /**
- * Fetch course content with comprehensive offline support
- * - Online: Fetches from server, caches for offline
- * - Offline: Returns cached data with local file paths
+ * Get course content with offline support
  */
 export const fetchCourseContentWithOfflineSupport = async (courseId: string): Promise<CourseDetail> => {
-  const isOnline = await checkIsOnline();
-  
-  if (!isOnline) {
-    // Offline mode - try to get from offline storage
-    console.log('Offline: Loading cached course:', courseId);
-    
-    const offlineCourse = await getOfflineCourse(courseId);
-    if (offlineCourse) {
-      // Transform offline course to CourseDetail format
-      // Replace remote URLs with local paths where available
-      const courseDetail: CourseDetail = {
-        id: offlineCourse.id,
-        title: offlineCourse.title,
-        description: offlineCourse.description,
-        thumbnail_url: offlineCourse.thumbnail_local || offlineCourse.thumbnail_url,
-        slug: offlineCourse.slug,
-        created_at: offlineCourse.created_at,
-        modules: offlineCourse.modules.map(mod => ({
-          id: mod.id,
-          title: mod.title,
-          order_index: mod.order_index,
-          lessons: mod.lessons.map(lesson => ({
-            id: lesson.id,
-            title: lesson.title,
-            slug: lesson.slug,
-            content_type: lesson.content_type,
-            // Use local video path if available and downloaded
-            video_url: lesson.video_local || lesson.video_url,
-            video_provider: lesson.video_local ? 'direct' : lesson.video_provider, // Local files are always direct
-            content_html: lesson.content_html,
-            duration: lesson.duration || null,
-            is_preview: lesson.is_preview,
-            order_index: lesson.order_index,
-            description: lesson.description,
-            quiz_data: lesson.quiz_data,
-            // Transform blocks to use local URIs
-            blocks: lesson.blocks?.map(block => ({
-              ...block,
-              content: block.localUri 
-                ? { ...block.content, url: block.localUri }
-                : block.content,
-            })),
-          })),
-        })),
-      };
-      
-      return courseDetail;
-    }
-    
-    // Also check legacy cache
-    try {
-      const cached = await AsyncStorage.getItem(`course_cache_${courseId}`);
-      if (cached) {
-        console.log('Using legacy course cache');
-        return JSON.parse(cached);
-      }
-    } catch {}
-    
-    throw new Error('Course not available offline. Please download it first or connect to the internet.');
-  }
-  
-  // Online mode - fetch from server
+  // This is now the same as fetchCourseContent since it has offline support built in
+  return fetchCourseContent(courseId);
+};
+
+/**
+ * Clear course cache
+ */
+export const clearCourseCache = async (courseId: string): Promise<void> => {
   try {
-    const course = await fetchCourseContent(courseId);
-    
-    // Save to new offline storage for better offline support
-    try {
-      await saveCourseOffline(course);
-    } catch (e) {
-      console.warn('Failed to save course to offline storage:', e);
-    }
-    
-    return course;
+    await AsyncStorage.removeItem(`${CACHE_KEY_PREFIX}${courseId}`);
   } catch (error) {
-    console.log('Network fetch failed, trying offline cache for course:', courseId);
-    
-    // Try new offline storage first
-    const offlineCourse = await getOfflineCourse(courseId);
-    if (offlineCourse) {
-      // Return basic course detail from offline storage
-      return {
-        id: offlineCourse.id,
-        title: offlineCourse.title,
-        description: offlineCourse.description,
-        thumbnail_url: offlineCourse.thumbnail_url,
-        slug: offlineCourse.slug,
-        created_at: offlineCourse.created_at,
-        modules: offlineCourse.modules.map(mod => ({
-          id: mod.id,
-          title: mod.title,
-          order_index: mod.order_index,
-          lessons: mod.lessons.map(lesson => ({
-            id: lesson.id,
-            title: lesson.title,
-            slug: lesson.slug,
-            content_type: lesson.content_type,
-            video_url: lesson.video_local || lesson.video_url,
-            video_provider: lesson.video_local ? 'direct' : lesson.video_provider,
-            content_html: lesson.content_html,
-            duration: lesson.duration || null,
-            is_preview: lesson.is_preview,
-            order_index: lesson.order_index,
-            description: lesson.description,
-            quiz_data: lesson.quiz_data,
-            blocks: lesson.blocks,
-          })),
-        })),
-      };
+    console.error('Error clearing course cache:', error);
+  }
+};
+
+/**
+ * Fetch current user's enrollments with diploma and course details
+ */
+export const fetchMyEnrollments = async (): Promise<any[]> => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.warn('Not authenticated, cannot fetch enrollments');
+      return [];
     }
-    
-    // Try legacy cache
-    try {
-      const cached = await AsyncStorage.getItem(`course_cache_${courseId}`);
-      if (cached) {
-        return JSON.parse(cached);
-      }
-    } catch (cacheError) {
-      console.warn('Failed to load course from legacy cache', cacheError);
+
+    // Fetch enrollments with diploma information
+    const { data: enrollments, error } = await supabase
+      .from('diploma_enrollments')
+      .select(`
+        *,
+        diploma:diplomas (
+          id,
+          title,
+          title_ar,
+          description,
+          thumbnail_url,
+          courses (
+            id,
+            title,
+            thumbnail_url,
+            order_index
+          )
+        )
+      `)
+      .eq('user_id', user.id)
+      .in('status', ['active', 'completed'])
+      .order('enrolled_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching enrollments:', error);
+      throw error;
     }
-    
-    throw error; // Throw original error if no cache
+
+    // Transform enrollments to diploma-centric format
+    return (enrollments || []).map((enrollment: any) => ({
+      id: enrollment.id,
+      diploma_id: enrollment.diploma_id,
+      user_id: enrollment.user_id,
+      status: enrollment.status,
+      progress: enrollment.progress || 0,
+      enrolled_at: enrollment.enrolled_at,
+      completed_at: enrollment.completed_at,
+      last_accessed_at: enrollment.last_accessed_at,
+      enrollment_type: enrollment.enrollment_type || 'individual',
+      batch_id: enrollment.batch_id,
+      expires_at: enrollment.expires_at,
+      // Include diploma info
+      diploma: enrollment.diploma,
+      // Include courses within the diploma for navigation
+      courses: enrollment.diploma?.courses || [],
+    }));
+  } catch (error) {
+    console.error('fetchMyEnrollments error:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch all available diplomas for browsing
+ */
+export const fetchAvailableDiplomas = async (): Promise<any[]> => {
+  try {
+    const { data: diplomas, error } = await supabase
+      .from('diplomas')
+      .select(`
+        *,
+        courses (
+          id,
+          title,
+          thumbnail_url,
+          order_index
+        )
+      `)
+      .eq('status', 'published')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching diplomas:', error);
+      throw error;
+    }
+
+    return diplomas || [];
+  } catch (error) {
+    console.error('fetchAvailableDiplomas error:', error);
+    return [];
   }
 };

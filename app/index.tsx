@@ -4,7 +4,7 @@ import { useAuth } from '../src/features/auth/AuthContext';
 import { COLORS } from '../src/lib/constants';
 
 export default function Index() {
-    const { session, isLoading } = useAuth();
+    const { session, isLoading, userRole, isAdmin } = useAuth();
 
     if (isLoading) {
         return (
@@ -15,6 +15,11 @@ export default function Index() {
     }
 
     if (session) {
+        // Route based on user role
+        if (isAdmin || userRole === 'admin' || userRole === 'instructor') {
+            return <Redirect href="/(admin)/dashboard" />;
+        }
+        // Default to student dashboard
         return <Redirect href="/(student)/dashboard" />;
     }
 

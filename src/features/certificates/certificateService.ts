@@ -13,6 +13,31 @@ export const fetchMyCertificates = async (): Promise<Certificate[]> => {
       throw new Error('Not authenticated. Please sign in again.');
     }
 
+    // Try to fetch from diploma-based certificates first
+    const { data: diplomaCerts, error: diplomaError } = await supabase
+      .from('certificates')
+      .select(`
+        *,
+        diploma:diplomas (
+          id,
+          title,
+          description,
+          thumbnail_url,
+          slug
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('issued_at', { ascending: false });
+
+    if (!diplomaError && diplomaCerts && diplomaCerts.length > 0) {
+      // Transform diploma certificates to match expected format
+      return diplomaCerts.map((cert: any) => ({
+        ...cert,
+        course: cert.diploma, // Map diploma to course for backward compatibility
+      })) as Certificate[];
+    }
+
+    // Fallback to course-based certificates for backward compatibility
     const { data, error } = await supabase
       .from('certificates')
       .select(`
@@ -89,7 +114,7 @@ export const generateCertificateHTML = (certificate: Certificate, userName: stri
     <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Certificate - ${certificate.course?.title}</title>
+        <title>Certificate - ${certificate.diploma?.title || 'Diploma'}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
@@ -153,7 +178,7 @@ export const generateCertificateHTML = (certificate: Certificate, userName: stri
         <div class="certificate-container">
           <div class="text-overlay ref-number">${certificate.certificate_number}</div>
           <div class="text-overlay name">${userName}</div>
-          <div class="text-overlay course-name">${certificate.course?.title || 'Course'} Certificate</div>
+          <div class="text-overlay course-name">${certificate.diploma?.title || 'Diploma'} Certificate</div>
           <div class="text-overlay issue-date">${issueDateFormatted}</div>
         </div>
       </body>

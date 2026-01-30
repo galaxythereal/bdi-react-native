@@ -71,18 +71,18 @@ interface FlattenedLesson extends Lesson {
 // Extract video ID from various YouTube URL formats
 const getYouTubeVideoId = (url: string): string | null => {
     if (!url) return null;
-    
+
     // Try regex patterns first
     const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
         /youtube\.com\/shorts\/([^&\n?#]+)/,
     ];
-    
+
     for (const pattern of patterns) {
         const match = url.match(pattern);
         if (match?.[1]) return match[1];
     }
-    
+
     // Try URL parsing for edge cases
     try {
         const urlObj = new URL(url);
@@ -91,14 +91,14 @@ const getYouTubeVideoId = (url: string): string | null => {
     } catch (e) {
         // Invalid URL
     }
-    
+
     return null;
 };
 
 // Generate custom HTML video player for YouTube with full control
 const generateYouTubePlayerHTML = (videoId: string): string => {
     if (!videoId) return '<html><body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><p>Invalid video</p></body></html>';
-    
+
     return `
 <!DOCTYPE html>
 <html>
@@ -776,11 +776,11 @@ const generateYouTubePlayerHTML = (videoId: string): string => {
 // Helper function to convert video URLs to embeddable format
 const getEmbedUrl = (url: string | null, provider: string = 'direct'): string | null => {
     if (!url) return null;
-    
+
     if (provider === 'youtube') {
         // Handle various YouTube URL formats including playlists
         let videoId: string | undefined = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/)?.[1];
-        
+
         // Also try to get video ID from URLs with list parameters
         if (!videoId) {
             try {
@@ -790,9 +790,9 @@ const getEmbedUrl = (url: string | null, provider: string = 'direct'): string | 
                 // Invalid URL, continue with undefined
             }
         }
-        
+
         if (!videoId) return null;
-        
+
         // Use youtube.com/embed for best compatibility (not youtube-nocookie which can have issues)
         // Important parameters:
         // - autoplay=0: Don't autoplay (user controls)
@@ -803,17 +803,17 @@ const getEmbedUrl = (url: string | null, provider: string = 'direct'): string | 
         // - controls=1: Show player controls
         return `https://www.youtube.com/embed/${videoId}?autoplay=0&playsinline=1&rel=0&modestbranding=1&fs=1&controls=1`;
     }
-    
+
     if (provider === 'vimeo') {
         const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1];
         return videoId ? `https://player.vimeo.com/video/${videoId}?playsinline=1&byline=0&portrait=0&title=0` : null;
     }
-    
+
     if (provider === 'wistia') {
         const videoId = url.match(/wistia\.com\/medias\/(\w+)/)?.[1];
         return videoId ? `https://fast.wistia.net/embed/iframe/${videoId}?playsinline=true` : null;
     }
-    
+
     // For direct URLs, return as-is (will use native Video component)
     return url;
 };
@@ -852,7 +852,7 @@ export default function CoursePlayerScreen() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isSpeedBoosted, setIsSpeedBoosted] = useState(false); // For hold-to-2x feature
     const [normalSpeed, setNormalSpeed] = useState(1.0); // Store normal speed when boosting
-    
+
     const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
     // Download state
@@ -876,7 +876,7 @@ export default function CoursePlayerScreen() {
     const [currentPdfTitle, setCurrentPdfTitle] = useState<string>('');
     const [pdfBase64, setPdfBase64] = useState<string | null>(null);
     const [pdfLoading, setPdfLoading] = useState(true);
-    
+
     // File download progress state
     const [fileDownloadProgress, setFileDownloadProgress] = useState<{
         filename: string;
@@ -886,8 +886,8 @@ export default function CoursePlayerScreen() {
 
     // Double-tap and long-press state for video
     const [lastTapTime, setLastTapTime] = useState<{ left: number; right: number }>({ left: 0, right: 0 });
-    const [skipIndicator, setSkipIndicator] = useState<{ visible: boolean; side: 'left' | 'right'; seconds: number }>({ 
-        visible: false, side: 'left', seconds: 0 
+    const [skipIndicator, setSkipIndicator] = useState<{ visible: boolean; side: 'left' | 'right'; seconds: number }>({
+        visible: false, side: 'left', seconds: 0
     });
 
     // Refs
@@ -910,7 +910,7 @@ export default function CoursePlayerScreen() {
             // This ensures progress is at least showing which lesson user has started
             const progressLessons = Math.max(currentIndex, 1); // At least 1 if they've started
             updateEnrollmentProgress(id, progressLessons, allLessons.length);
-            
+
             // Save the current lesson index for resume functionality
             AsyncStorage.setItem(`course_${id}_lastLesson`, String(currentIndex)).catch(e => {
                 console.warn('Failed to save last lesson position:', e);
@@ -922,7 +922,7 @@ export default function CoursePlayerScreen() {
         if (id) {
             loadCourseContent();
         }
-        
+
         // Cleanup function - unload media when leaving the screen
         return () => {
             // Clear any pending lesson change timeout
@@ -950,7 +950,7 @@ export default function CoursePlayerScreen() {
         if (isTransitioning.current && !fullUnload) {
             return;
         }
-        
+
         // Stop video - just pause, don't unload unless fullUnload is true
         // (The key prop change on Video will handle destroying the old instance)
         if (videoRef.current) {
@@ -967,7 +967,7 @@ export default function CoursePlayerScreen() {
                 // Ignore errors - video might not be loaded yet or already unloading
             }
         }
-        
+
         // Stop WebView (YouTube/embedded) by injecting pause script
         if (webViewRef.current) {
             try {
@@ -996,10 +996,10 @@ export default function CoursePlayerScreen() {
     // Check online status and if course is downloaded, sync when online
     useEffect(() => {
         let wasOffline = !isOnline;
-        
+
         const checkOfflineStatus = async () => {
             const online = await checkIsOnline();
-            
+
             // If we just came online, sync offline data
             if (online && wasOffline) {
                 console.log('Back online - syncing offline data...');
@@ -1012,16 +1012,16 @@ export default function CoursePlayerScreen() {
                     console.warn('Sync failed:', e);
                 }
             }
-            
+
             wasOffline = !online;
             setIsOnline(online);
-            
+
             if (id) {
                 const offlineCourse = await getOfflineCourse(id);
                 setIsCourseDownloaded(!!offlineCourse);
             }
         };
-        
+
         checkOfflineStatus();
         // Recheck periodically
         const interval = setInterval(checkOfflineStatus, 30000);
@@ -1054,14 +1054,15 @@ export default function CoursePlayerScreen() {
 
             // Flatten all lessons for easy navigation
             const flattened: FlattenedLesson[] = [];
-            data.modules.forEach((module: Module, moduleIndex: number) => {
-                module.lessons.forEach((lesson: Lesson, lessonIndex: number) => {
+            const chapters = data.chapters || [];
+            chapters.forEach((chapter: any, moduleIndex: number) => {
+                (chapter.lessons || []).forEach((lesson: Lesson, lessonIndex: number) => {
                     flattened.push({
                         ...lesson,
                         moduleIndex,
                         lessonIndex,
-                        moduleTitle: module.title,
-                        totalInModule: module.lessons.length,
+                        moduleTitle: chapter.title,
+                        totalInModule: (chapter.lessons || []).length,
                     });
                 });
             });
@@ -1106,7 +1107,7 @@ export default function CoursePlayerScreen() {
     // Download entire course for offline use
     const handleDownloadCourse = async () => {
         if (!course || !id) return;
-        
+
         if (isCourseDownloaded) {
             // Show confirmation to delete
             Alert.alert(
@@ -1135,11 +1136,11 @@ export default function CoursePlayerScreen() {
             );
             return;
         }
-        
+
         setIsCourseDownloading(true);
         setCourseDownloadProgress(0);
         setCourseDownloadStatus('Preparing...');
-        
+
         try {
             await downloadCourseForOffline(
                 course,
@@ -1152,7 +1153,7 @@ export default function CoursePlayerScreen() {
                     }
                 }
             );
-            
+
             setIsCourseDownloaded(true);
             setCourseDownloadStatus('');
             Alert.alert(
@@ -1176,12 +1177,12 @@ export default function CoursePlayerScreen() {
                 clearTimeout(lessonChangeTimeout.current);
             }
         }
-        
+
         isTransitioning.current = true;
-        
+
         // Stop current media first (just pause, don't fully unload)
         stopAllMedia(false);
-        
+
         // Small delay to let the video component unmount cleanly before creating new one
         lessonChangeTimeout.current = setTimeout(() => {
             setCurrentIndex(index);
@@ -1192,12 +1193,12 @@ export default function CoursePlayerScreen() {
             setVideoDuration(0);
             setVideoError(null); // Reset video error when changing lessons
             setIsBuffering(true); // Show buffering for new video
-            
+
             const lesson = allLessons[index];
             if (lesson?.content_type === 'quiz' && lesson.quiz_data) {
                 prepareQuiz(lesson);
             }
-            
+
             // Mark transition complete after a short delay for rendering
             setTimeout(() => {
                 isTransitioning.current = false;
@@ -1250,7 +1251,7 @@ export default function CoursePlayerScreen() {
             }
             return;
         }
-        
+
         // Only show buffering when actually buffering AND not playing
         // This prevents the buffering overlay from showing during normal playback
         setIsBuffering(status.isBuffering && !status.isPlaying);
@@ -1339,10 +1340,10 @@ export default function CoursePlayerScreen() {
             setCurrentPdfLocalPath(localPath);
             setCurrentPdfTitle(title);
             setPdfViewerVisible(true);
-            
+
             // Read file as base64
-            const base64Content = await readAsStringAsync(localPath, { 
-                encoding: EncodingType.Base64 
+            const base64Content = await readAsStringAsync(localPath, {
+                encoding: EncodingType.Base64
             });
             setPdfBase64(base64Content);
             setPdfLoading(false);
@@ -1375,7 +1376,7 @@ export default function CoursePlayerScreen() {
             const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
             const isPdf = safeFilename.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('.pdf');
             const localPath = (documentDirectory || cacheDirectory || '') + safeFilename;
-            
+
             // Check if file already exists locally
             let fileExists = false;
             try {
@@ -1384,7 +1385,7 @@ export default function CoursePlayerScreen() {
             } catch (e) {
                 fileExists = false;
             }
-            
+
             if (fileExists && isPdf) {
                 // File exists, offer to view or re-download
                 Alert.alert(
@@ -1453,17 +1454,17 @@ export default function CoursePlayerScreen() {
         try {
             // Show progress indicator
             setFileDownloadProgress({ filename, progress: 0.05, visible: true });
-            
+
             // Clean up URL - handle potential issues
             let cleanUrl = url.trim();
-            
+
             // If URL doesn't have protocol, add https
             if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
                 cleanUrl = 'https://' + cleanUrl;
             }
-            
+
             console.log('downloadFile: Downloading from', cleanUrl, 'to', localPath);
-            
+
             // Use expo-file-system downloadAsync with progress callback
             const downloadResumable = (await import('expo-file-system/legacy')).createDownloadResumable(
                 cleanUrl,
@@ -1480,17 +1481,17 @@ export default function CoursePlayerScreen() {
                     setFileDownloadProgress(prev => ({ ...prev, progress: Math.min(0.99, progress) }));
                 }
             );
-            
+
             const result = await downloadResumable.downloadAsync();
-            
+
             if (result && result.uri) {
                 console.log('File saved to:', result.uri);
                 setFileDownloadProgress({ filename: 'Complete', progress: 1, visible: true });
-                
+
                 // Brief delay to show complete status
                 await new Promise(resolve => setTimeout(resolve, 500));
                 setFileDownloadProgress({ filename: '', progress: 0, visible: false });
-                
+
                 // Success - open or share the file
                 if (isPdf) {
                     Alert.alert(
@@ -1536,7 +1537,7 @@ export default function CoursePlayerScreen() {
         } catch (err: any) {
             console.error('Download error:', err);
             setFileDownloadProgress({ filename: '', progress: 0, visible: false });
-            
+
             // Provide more helpful error messages
             let errorMessage = 'Could not download file.';
             const errStr = String(err.message || err);
@@ -1549,7 +1550,7 @@ export default function CoursePlayerScreen() {
             } else if (errStr.includes('403')) {
                 errorMessage = 'Access denied.';
             }
-            
+
             // Offer to open in browser as fallback
             Alert.alert(
                 'Download Failed',
@@ -1577,9 +1578,9 @@ export default function CoursePlayerScreen() {
         if (skipIndicatorTimeout.current) {
             clearTimeout(skipIndicatorTimeout.current);
         }
-        
+
         setSkipIndicator({ visible: true, side, seconds });
-        
+
         skipIndicatorTimeout.current = setTimeout(() => {
             setSkipIndicator({ visible: false, side: 'left', seconds: 0 });
         }, 600);
@@ -1591,11 +1592,11 @@ export default function CoursePlayerScreen() {
         const screenWidth = SCREEN_WIDTH;
         const now = Date.now();
         const DOUBLE_TAP_DELAY = 300;
-        
+
         // Determine if left or right side
         const isLeftSide = touchX < screenWidth * 0.35;
         const isRightSide = touchX > screenWidth * 0.65;
-        
+
         if (isLeftSide) {
             // Check for double-tap on left
             if (now - lastTapTime.left < DOUBLE_TAP_DELAY) {
@@ -1648,7 +1649,7 @@ export default function CoursePlayerScreen() {
     const handleVideoLongPressStart = async (event: GestureResponderEvent) => {
         const touchX = event.nativeEvent.locationX;
         const screenWidth = SCREEN_WIDTH;
-        
+
         // If touch is on the right 40% of screen, start speed boost
         if (touchX > screenWidth * 0.6) {
             longPressTimer.current = setTimeout(async () => {
@@ -1664,14 +1665,14 @@ export default function CoursePlayerScreen() {
             }, 300); // Start after 300ms hold
         }
     };
-    
+
     const handleVideoLongPressEnd = async () => {
         // Clear the timer
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
         }
-        
+
         // If speed was boosted, restore normal speed
         if (isSpeedBoosted && videoRef.current) {
             setIsSpeedBoosted(false);
@@ -1699,10 +1700,10 @@ export default function CoursePlayerScreen() {
     const toggleLandscape = async () => {
         try {
             const currentOrientation = await ScreenOrientation.getOrientationAsync();
-            const isCurrentlyLandscape = 
+            const isCurrentlyLandscape =
                 currentOrientation === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
                 currentOrientation === ScreenOrientation.Orientation.LANDSCAPE_RIGHT;
-            
+
             if (isCurrentlyLandscape) {
                 // Go back to portrait
                 await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
@@ -1718,7 +1719,7 @@ export default function CoursePlayerScreen() {
     // Cleanup orientation lock when leaving screen
     useEffect(() => {
         return () => {
-            ScreenOrientation.unlockAsync().catch(() => {});
+            ScreenOrientation.unlockAsync().catch(() => { });
         };
     }, []);
 
@@ -1727,16 +1728,16 @@ export default function CoursePlayerScreen() {
         if (!currentLesson) return;
         handleFullLessonDownload(currentLesson.id);
     };
-    
+
     // Handle downloading entire lesson by ID
     const handleFullLessonDownload = async (lessonId: string) => {
         const lesson = allLessons.find(l => l.id === lessonId) || currentLesson;
         if (!lesson) return;
-        
+
         // Check if already downloading
         const state = downloadStates.get(lessonId);
         if (state?.isDownloading) return;
-        
+
         Alert.alert(
             'Download Lesson',
             `Download "${lesson.title}" for offline viewing? This will download all content including videos, PDFs, and other files.`,
@@ -1833,7 +1834,7 @@ export default function CoursePlayerScreen() {
         if (id) {
             const completedLessons = currentIndex + 1;
             await updateEnrollmentProgress(id, completedLessons, allLessons.length);
-            
+
             // Save quiz attempt for offline sync if offline
             const online = await checkIsOnline();
             if (!online && currentLesson) {
@@ -1916,25 +1917,25 @@ export default function CoursePlayerScreen() {
 
     const downloadState = currentLesson ? downloadStates.get(currentLesson.id) : null;
     const progressPercent = videoDuration > 0 ? (videoProgress / videoDuration) * 100 : 0;
-    
+
     // Get embed URL for YouTube/Vimeo/Wistia or direct URL
     const videoProvider = currentLesson?.video_provider || 'direct';
     const useEmbeddedPlayer = isEmbeddedVideo(videoProvider);
     const isYouTube = videoProvider === 'youtube';
-    
+
     // For direct videos, check multiple sources for offline video
     // 1. Check if video URL is already a local file:// path (from offline course data)
     // 2. Check downloadStates for legacy downloadManager
     // 3. Check offline course for video_local path
     const getDirectVideoSource = () => {
         if (!currentLesson?.video_url) return null;
-        
+
         // If video_url already starts with file://, it's already local (from offline course)
         if (currentLesson.video_url.startsWith('file://')) {
             console.log('Using local video path from offline course:', currentLesson.video_url);
             return { uri: currentLesson.video_url };
         }
-        
+
         // Check legacy download manager state
         const state = downloadStates.get(currentLesson.id);
         if (state?.isDownloaded) {
@@ -1942,23 +1943,23 @@ export default function CoursePlayerScreen() {
             console.log('Using legacy downloaded video:', localUri);
             return { uri: localUri };
         }
-        
+
         // Return original URL for online playback
         return { uri: currentLesson.video_url };
     };
-    
+
     // Get the appropriate video URL
-    const embedUrl = useEmbeddedPlayer && currentLesson?.video_url 
-        ? getEmbedUrl(currentLesson.video_url, videoProvider) 
+    const embedUrl = useEmbeddedPlayer && currentLesson?.video_url
+        ? getEmbedUrl(currentLesson.video_url, videoProvider)
         : null;
     const directVideoSource = !useEmbeddedPlayer ? getDirectVideoSource() : null;
-    
+
     // For YouTube, generate custom HTML player for proper playback
-    const youtubeVideoId = isYouTube && currentLesson?.video_url 
-        ? getYouTubeVideoId(currentLesson.video_url) 
+    const youtubeVideoId = isYouTube && currentLesson?.video_url
+        ? getYouTubeVideoId(currentLesson.video_url)
         : null;
     const youtubePlayerHTML = youtubeVideoId ? generateYouTubePlayerHTML(youtubeVideoId) : null;
-    
+
     // Debug logging for video issues
     console.log('Video Debug:', {
         lessonTitle: currentLesson?.title,
@@ -1983,9 +1984,9 @@ export default function CoursePlayerScreen() {
                         /* YouTube player using HTML + baseUrl approach for proper origin */
                         <View style={styles.embeddedVideoWrapper}>
                             <WebView
-                                source={{ 
-                                    html: youtubePlayerHTML, 
-                                    baseUrl: 'https://www.youtube.com' 
+                                source={{
+                                    html: youtubePlayerHTML,
+                                    baseUrl: 'https://www.youtube.com'
                                 }}
                                 ref={webViewRef}
                                 style={styles.embeddedWebView}
@@ -2028,7 +2029,7 @@ export default function CoursePlayerScreen() {
                                 }}
                             />
                             {/* Floating back button */}
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.embeddedBackButton}
                                 onPress={async () => {
                                     await stopAllMedia(true);
@@ -2076,7 +2077,7 @@ export default function CoursePlayerScreen() {
                                 )}
                             />
                             {/* Floating back button - doesn't block video controls */}
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.embeddedBackButton}
                                 onPress={async () => {
                                     await stopAllMedia(true);
@@ -2108,7 +2109,7 @@ export default function CoursePlayerScreen() {
                                 </View>
                                 {/* Back button */}
                                 <View style={styles.embeddedTopBar}>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.topBarButton}
                                         onPress={async () => {
                                             await stopAllMedia(true);
@@ -2120,282 +2121,282 @@ export default function CoursePlayerScreen() {
                                 </View>
                             </View>
                         ) : (
-                        <View style={styles.videoWrapper}>
-                            {/* Video component - key forces re-creation when source changes to avoid decoder conflicts */}
-                            <Video
-                                key={`video-${currentLesson?.id}-${directVideoSource?.uri}`}
-                                ref={videoRef}
-                                source={directVideoSource}
-                                style={styles.video}
-                                resizeMode={ResizeMode.CONTAIN}
-                                onPlaybackStatusUpdate={handleVideoPlaybackStatus}
-                                shouldPlay={false}
-                                useNativeControls={false}
-                                progressUpdateIntervalMillis={500}
-                                onFullscreenUpdate={({ fullscreenUpdate }) => {
-                                    if (fullscreenUpdate === 3) { // PLAYER_DID_DISMISS
-                                        setIsFullscreen(false);
-                                    } else if (fullscreenUpdate === 1) { // PLAYER_WILL_PRESENT
-                                        setIsFullscreen(true);
-                                    }
-                                }}
-                                onError={(error) => {
-                                    console.error('Video playback error:', error);
-                                    // Detect various error types
-                                    const errorStr = String(error);
-                                    let errorMsg = 'Unable to play video.';
-                                    if (errorStr.includes('SSL') || errorStr.includes('certificate') || errorStr.includes('SSLPeerUnverifiedException')) {
-                                        errorMsg = 'SSL Certificate Error: The video server has an invalid certificate.';
-                                    } else if (errorStr.includes('404') || errorStr.includes('not found')) {
-                                        errorMsg = 'Video not found. The file may have been moved or deleted.';
-                                    } else if (errorStr.includes('network') || errorStr.includes('connection')) {
-                                        errorMsg = 'Network error. Please check your internet connection.';
-                                    } else if (errorStr.includes('Decoder') || errorStr.includes('codec') || errorStr.includes('c2.qti')) {
-                                        // Hardware decoder error - suggest retry
-                                        errorMsg = 'Video decoder error. The video format may not be supported. Try again or contact support.';
-                                    }
-                                    setVideoError(errorMsg);
-                                    setIsBuffering(false);
-                                }}
-                                onLoad={() => {
-                                    setVideoError(null);
-                                    setIsBuffering(false);
-                                }}
-                                onReadyForDisplay={() => {
-                                    // Video is ready to display
-                                    setIsBuffering(false);
-                                }}
-                            />
-                            
-                            {/* Transparent touch overlay for gestures - positioned below top bar */}
-                            <View style={styles.videoGestureContainer} pointerEvents="box-none">
-                                {/* Left tap zone - double tap to rewind, single tap toggle controls */}
-                                <Pressable
-                                    style={styles.videoTapZoneLeft}
-                                    onPress={handleVideoAreaTap}
-                                />
-                                
-                                {/* Center tap zone - toggle controls */}
-                                <Pressable
-                                    style={styles.videoTapZoneCenter}
-                                    onPress={() => setShowControls(prev => !prev)}
-                                />
-                                
-                                {/* Right tap zone - double tap to forward, long press for 2x */}
-                                <Pressable
-                                    style={styles.videoTapZoneRight}
-                                    onPress={handleVideoAreaTap}
-                                    onLongPress={async () => {
-                                        if (videoRef.current && isPlaying) {
-                                            setNormalSpeed(playbackSpeed);
-                                            setIsSpeedBoosted(true);
-                                            try {
-                                                await videoRef.current.setRateAsync(2.0, true);
-                                            } catch (e) {
-                                                console.warn('Could not set playback rate:', e);
-                                            }
+                            <View style={styles.videoWrapper}>
+                                {/* Video component - key forces re-creation when source changes to avoid decoder conflicts */}
+                                <Video
+                                    key={`video-${currentLesson?.id}-${directVideoSource?.uri}`}
+                                    ref={videoRef}
+                                    source={directVideoSource}
+                                    style={styles.video}
+                                    resizeMode={ResizeMode.CONTAIN}
+                                    onPlaybackStatusUpdate={handleVideoPlaybackStatus}
+                                    shouldPlay={false}
+                                    useNativeControls={false}
+                                    progressUpdateIntervalMillis={500}
+                                    onFullscreenUpdate={({ fullscreenUpdate }) => {
+                                        if (fullscreenUpdate === 3) { // PLAYER_DID_DISMISS
+                                            setIsFullscreen(false);
+                                        } else if (fullscreenUpdate === 1) { // PLAYER_WILL_PRESENT
+                                            setIsFullscreen(true);
                                         }
                                     }}
-                                    onPressOut={handleVideoLongPressEnd}
-                                    delayLongPress={300}
+                                    onError={(error) => {
+                                        console.error('Video playback error:', error);
+                                        // Detect various error types
+                                        const errorStr = String(error);
+                                        let errorMsg = 'Unable to play video.';
+                                        if (errorStr.includes('SSL') || errorStr.includes('certificate') || errorStr.includes('SSLPeerUnverifiedException')) {
+                                            errorMsg = 'SSL Certificate Error: The video server has an invalid certificate.';
+                                        } else if (errorStr.includes('404') || errorStr.includes('not found')) {
+                                            errorMsg = 'Video not found. The file may have been moved or deleted.';
+                                        } else if (errorStr.includes('network') || errorStr.includes('connection')) {
+                                            errorMsg = 'Network error. Please check your internet connection.';
+                                        } else if (errorStr.includes('Decoder') || errorStr.includes('codec') || errorStr.includes('c2.qti')) {
+                                            // Hardware decoder error - suggest retry
+                                            errorMsg = 'Video decoder error. The video format may not be supported. Try again or contact support.';
+                                        }
+                                        setVideoError(errorMsg);
+                                        setIsBuffering(false);
+                                    }}
+                                    onLoad={() => {
+                                        setVideoError(null);
+                                        setIsBuffering(false);
+                                    }}
+                                    onReadyForDisplay={() => {
+                                        // Video is ready to display
+                                        setIsBuffering(false);
+                                    }}
                                 />
-                            </View>
 
-                            {/* Skip indicator (shows -10s or +10s) */}
-                            {skipIndicator.visible && (
-                                <View 
-                                    style={[
-                                        styles.skipIndicator,
-                                        skipIndicator.side === 'left' ? styles.skipIndicatorLeft : styles.skipIndicatorRight
-                                    ]}
-                                    pointerEvents="none"
-                                >
-                                    <Ionicons 
-                                        name={skipIndicator.side === 'left' ? "play-back" : "play-forward"} 
-                                        size={22} 
-                                        color="#fff" 
+                                {/* Transparent touch overlay for gestures - positioned below top bar */}
+                                <View style={styles.videoGestureContainer} pointerEvents="box-none">
+                                    {/* Left tap zone - double tap to rewind, single tap toggle controls */}
+                                    <Pressable
+                                        style={styles.videoTapZoneLeft}
+                                        onPress={handleVideoAreaTap}
                                     />
-                                    <Text style={styles.skipIndicatorText}>
-                                        {Math.abs(skipIndicator.seconds)}s
-                                    </Text>
-                                </View>
-                            )}
 
-                            {/* Speed boost indicator */}
-                            {isSpeedBoosted && (
-                                <View style={styles.speedBoostIndicator} pointerEvents="none">
-                                    <Ionicons name="speedometer" size={14} color="#fff" />
-                                    <Text style={styles.speedBoostText}>2×</Text>
-                                </View>
-                            )}
+                                    {/* Center tap zone - toggle controls */}
+                                    <Pressable
+                                        style={styles.videoTapZoneCenter}
+                                        onPress={() => setShowControls(prev => !prev)}
+                                    />
 
-                            {/* Buffering indicator - pointerEvents none so it doesn't block touches */}
-                            {isBuffering && (
-                                <View style={styles.bufferingOverlay} pointerEvents="none">
-                                    <ActivityIndicator size="large" color="#fff" />
-                                </View>
-                            )}
-
-                            {/* Video Controls Overlay - pointerEvents box-none allows taps to pass through to gesture layer */}
-                            {showControls && (
-                                <View style={styles.controlsOverlay} pointerEvents="box-none">
-                                    {/* Top bar */}
-                                    <View style={styles.topBar}>
-                                        <TouchableOpacity 
-                                            style={styles.topBarButton}
-                                            onPress={async () => {
-                                                // If in fullscreen, exit fullscreen first
-                                                if (isFullscreen && videoRef.current) {
-                                                    await videoRef.current.dismissFullscreenPlayer();
-                                                    setIsFullscreen(false);
-                                                } else {
-                                                    await stopAllMedia(true);
-                                                    router.back();
+                                    {/* Right tap zone - double tap to forward, long press for 2x */}
+                                    <Pressable
+                                        style={styles.videoTapZoneRight}
+                                        onPress={handleVideoAreaTap}
+                                        onLongPress={async () => {
+                                            if (videoRef.current && isPlaying) {
+                                                setNormalSpeed(playbackSpeed);
+                                                setIsSpeedBoosted(true);
+                                                try {
+                                                    await videoRef.current.setRateAsync(2.0, true);
+                                                } catch (e) {
+                                                    console.warn('Could not set playback rate:', e);
                                                 }
-                                            }}
-                                        >
-                                            <Ionicons name="arrow-back" size={24} color="#fff" />
-                                        </TouchableOpacity>
-                                        <View style={styles.topBarRight}>
-                                            {currentLesson.video_url && !useEmbeddedPlayer && (
-                                                <TouchableOpacity 
-                                                    style={styles.topBarButton}
-                                                    onPress={() => {
-                                                        if (downloadState?.isDownloaded) {
-                                                            deleteLessonDownload(currentLesson.id);
-                                                            setDownloadStates(prev => {
-                                                                const newMap = new Map(prev);
-                                                                newMap.set(currentLesson.id, { isDownloaded: false, isDownloading: false, progress: 0 });
-                                                                return newMap;
-                                                            });
-                                                        } else if (!downloadState?.isDownloading) {
-                                                            handleDownload(currentLesson.id, currentLesson.video_url!);
-                                                        }
-                                                    }}
-                                                >
-                                                    {downloadState?.isDownloading ? (
-                                                        <ActivityIndicator size="small" color="#fff" />
-                                                    ) : (
-                                                        <Ionicons 
-                                                            name={downloadState?.isDownloaded ? "checkmark-circle" : "cloud-download-outline"} 
-                                                            size={24} 
-                                                            color={downloadState?.isDownloaded ? COLORS.success : "#fff"} 
-                                                        />
-                                                    )}
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
-                                    </View>
+                                            }
+                                        }}
+                                        onPressOut={handleVideoLongPressEnd}
+                                        delayLongPress={300}
+                                    />
+                                </View>
 
-                                    {/* Center play button */}
-                                    <TouchableOpacity 
-                                        style={styles.centerPlayButton}
-                                        onPress={togglePlayPause}
+                                {/* Skip indicator (shows -10s or +10s) */}
+                                {skipIndicator.visible && (
+                                    <View
+                                        style={[
+                                            styles.skipIndicator,
+                                            skipIndicator.side === 'left' ? styles.skipIndicatorLeft : styles.skipIndicatorRight
+                                        ]}
+                                        pointerEvents="none"
                                     >
-                                        <View style={styles.playButtonCircle}>
-                                            <Ionicons 
-                                                name={isPlaying ? "pause" : "play"} 
-                                                size={36} 
-                                                color="#fff" 
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
+                                        <Ionicons
+                                            name={skipIndicator.side === 'left' ? "play-back" : "play-forward"}
+                                            size={22}
+                                            color="#fff"
+                                        />
+                                        <Text style={styles.skipIndicatorText}>
+                                            {Math.abs(skipIndicator.seconds)}s
+                                        </Text>
+                                    </View>
+                                )}
 
-                                    {/* Bottom controls - Netflix/YouTube style */}
-                                    <View style={[styles.bottomControlsContainer]}>
-                                        {/* Gradient background for better visibility */}
-                                        <View style={styles.bottomGradient} />
-                                        
-                                        {/* Seekable progress bar - larger touch area */}
-                                        <View style={styles.progressContainer}>
-                                            <View 
-                                                style={styles.progressBar}
-                                                onStartShouldSetResponder={() => true}
-                                                onMoveShouldSetResponder={() => true}
-                                                onResponderGrant={(e) => {
-                                                    const { locationX } = e.nativeEvent;
-                                                    const barWidth = SCREEN_WIDTH - 32;
-                                                    const percent = Math.max(0, Math.min(1, locationX / barWidth));
-                                                    seekVideo(percent * videoDuration);
-                                                }}
-                                                onResponderMove={(e) => {
-                                                    const { locationX } = e.nativeEvent;
-                                                    const barWidth = SCREEN_WIDTH - 32;
-                                                    const percent = Math.max(0, Math.min(1, locationX / barWidth));
-                                                    seekVideo(percent * videoDuration);
+                                {/* Speed boost indicator */}
+                                {isSpeedBoosted && (
+                                    <View style={styles.speedBoostIndicator} pointerEvents="none">
+                                        <Ionicons name="speedometer" size={14} color="#fff" />
+                                        <Text style={styles.speedBoostText}>2×</Text>
+                                    </View>
+                                )}
+
+                                {/* Buffering indicator - pointerEvents none so it doesn't block touches */}
+                                {isBuffering && (
+                                    <View style={styles.bufferingOverlay} pointerEvents="none">
+                                        <ActivityIndicator size="large" color="#fff" />
+                                    </View>
+                                )}
+
+                                {/* Video Controls Overlay - pointerEvents box-none allows taps to pass through to gesture layer */}
+                                {showControls && (
+                                    <View style={styles.controlsOverlay} pointerEvents="box-none">
+                                        {/* Top bar */}
+                                        <View style={styles.topBar}>
+                                            <TouchableOpacity
+                                                style={styles.topBarButton}
+                                                onPress={async () => {
+                                                    // If in fullscreen, exit fullscreen first
+                                                    if (isFullscreen && videoRef.current) {
+                                                        await videoRef.current.dismissFullscreenPlayer();
+                                                        setIsFullscreen(false);
+                                                    } else {
+                                                        await stopAllMedia(true);
+                                                        router.back();
+                                                    }
                                                 }}
                                             >
-                                                <View style={styles.progressTrack}>
-                                                    <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
-                                                    {/* Draggable thumb */}
-                                                    <View style={[styles.progressThumb, { left: `${progressPercent}%` }]} />
+                                                <Ionicons name="arrow-back" size={24} color="#fff" />
+                                            </TouchableOpacity>
+                                            <View style={styles.topBarRight}>
+                                                {currentLesson.video_url && !useEmbeddedPlayer && (
+                                                    <TouchableOpacity
+                                                        style={styles.topBarButton}
+                                                        onPress={() => {
+                                                            if (downloadState?.isDownloaded) {
+                                                                deleteLessonDownload(currentLesson.id);
+                                                                setDownloadStates(prev => {
+                                                                    const newMap = new Map(prev);
+                                                                    newMap.set(currentLesson.id, { isDownloaded: false, isDownloading: false, progress: 0 });
+                                                                    return newMap;
+                                                                });
+                                                            } else if (!downloadState?.isDownloading) {
+                                                                handleDownload(currentLesson.id, currentLesson.video_url!);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {downloadState?.isDownloading ? (
+                                                            <ActivityIndicator size="small" color="#fff" />
+                                                        ) : (
+                                                            <Ionicons
+                                                                name={downloadState?.isDownloaded ? "checkmark-circle" : "cloud-download-outline"}
+                                                                size={24}
+                                                                color={downloadState?.isDownloaded ? COLORS.success : "#fff"}
+                                                            />
+                                                        )}
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+
+                                        {/* Center play button */}
+                                        <TouchableOpacity
+                                            style={styles.centerPlayButton}
+                                            onPress={togglePlayPause}
+                                        >
+                                            <View style={styles.playButtonCircle}>
+                                                <Ionicons
+                                                    name={isPlaying ? "pause" : "play"}
+                                                    size={36}
+                                                    color="#fff"
+                                                />
+                                            </View>
+                                        </TouchableOpacity>
+
+                                        {/* Bottom controls - Netflix/YouTube style */}
+                                        <View style={[styles.bottomControlsContainer]}>
+                                            {/* Gradient background for better visibility */}
+                                            <View style={styles.bottomGradient} />
+
+                                            {/* Seekable progress bar - larger touch area */}
+                                            <View style={styles.progressContainer}>
+                                                <View
+                                                    style={styles.progressBar}
+                                                    onStartShouldSetResponder={() => true}
+                                                    onMoveShouldSetResponder={() => true}
+                                                    onResponderGrant={(e) => {
+                                                        const { locationX } = e.nativeEvent;
+                                                        const barWidth = SCREEN_WIDTH - 32;
+                                                        const percent = Math.max(0, Math.min(1, locationX / barWidth));
+                                                        seekVideo(percent * videoDuration);
+                                                    }}
+                                                    onResponderMove={(e) => {
+                                                        const { locationX } = e.nativeEvent;
+                                                        const barWidth = SCREEN_WIDTH - 32;
+                                                        const percent = Math.max(0, Math.min(1, locationX / barWidth));
+                                                        seekVideo(percent * videoDuration);
+                                                    }}
+                                                >
+                                                    <View style={styles.progressTrack}>
+                                                        <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+                                                        {/* Draggable thumb */}
+                                                        <View style={[styles.progressThumb, { left: `${progressPercent}%` }]} />
+                                                    </View>
+                                                </View>
+                                            </View>
+
+                                            {/* Time and controls row */}
+                                            <View style={[styles.timeRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                                                <Text style={styles.timeText}>
+                                                    {formatTime(videoProgress)} / {formatTime(videoDuration)}
+                                                </Text>
+                                                <View style={styles.bottomRightControls}>
+                                                    <TouchableOpacity
+                                                        style={styles.controlIconButton}
+                                                        onPress={() => seekVideo(Math.max(0, videoProgress - 10000))}
+                                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    >
+                                                        <Ionicons name="play-back" size={22} color="#fff" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        style={styles.controlIconButton}
+                                                        onPress={() => seekVideo(Math.min(videoDuration, videoProgress + 10000))}
+                                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    >
+                                                        <Ionicons name="play-forward" size={22} color="#fff" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        style={styles.speedPill}
+                                                        onPress={() => setShowSpeedMenu(true)}
+                                                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+                                                    >
+                                                        <Text style={styles.speedPillText}>{playbackSpeed}x</Text>
+                                                    </TouchableOpacity>
+                                                    {/* Landscape/Portrait rotation button */}
+                                                    <TouchableOpacity
+                                                        style={styles.controlIconButton}
+                                                        onPress={toggleLandscape}
+                                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    >
+                                                        <Ionicons
+                                                            name="phone-landscape-outline"
+                                                            size={22}
+                                                            color="#fff"
+                                                        />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        style={styles.controlIconButton}
+                                                        onPress={toggleFullscreen}
+                                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    >
+                                                        <Ionicons
+                                                            name={isFullscreen ? "contract" : "expand"}
+                                                            size={22}
+                                                            color="#fff"
+                                                        />
+                                                    </TouchableOpacity>
                                                 </View>
                                             </View>
                                         </View>
-
-                                        {/* Time and controls row */}
-                                        <View style={[styles.timeRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-                                            <Text style={styles.timeText}>
-                                                {formatTime(videoProgress)} / {formatTime(videoDuration)}
-                                            </Text>
-                                            <View style={styles.bottomRightControls}>
-                                                <TouchableOpacity 
-                                                    style={styles.controlIconButton}
-                                                    onPress={() => seekVideo(Math.max(0, videoProgress - 10000))}
-                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                                >
-                                                    <Ionicons name="play-back" size={22} color="#fff" />
-                                                </TouchableOpacity>
-                                                <TouchableOpacity 
-                                                    style={styles.controlIconButton}
-                                                    onPress={() => seekVideo(Math.min(videoDuration, videoProgress + 10000))}
-                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                                >
-                                                    <Ionicons name="play-forward" size={22} color="#fff" />
-                                                </TouchableOpacity>
-                                                <TouchableOpacity 
-                                                    style={styles.speedPill}
-                                                    onPress={() => setShowSpeedMenu(true)}
-                                                    hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
-                                                >
-                                                    <Text style={styles.speedPillText}>{playbackSpeed}x</Text>
-                                                </TouchableOpacity>
-                                                {/* Landscape/Portrait rotation button */}
-                                                <TouchableOpacity 
-                                                    style={styles.controlIconButton}
-                                                    onPress={toggleLandscape}
-                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                                >
-                                                    <Ionicons 
-                                                        name="phone-landscape-outline" 
-                                                        size={22} 
-                                                        color="#fff" 
-                                                    />
-                                                </TouchableOpacity>
-                                                <TouchableOpacity 
-                                                    style={styles.controlIconButton}
-                                                    onPress={toggleFullscreen}
-                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                                >
-                                                    <Ionicons 
-                                                        name={isFullscreen ? "contract" : "expand"} 
-                                                        size={22} 
-                                                        color="#fff" 
-                                                    />
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
                                     </View>
-                                </View>
-                            )}
-                        </View>
+                                )}
+                            </View>
                         )
                     ) : null}
                 </View>
             ) : (
                 /* Non-video header area (quiz, text, etc.) */
                 <View style={[styles.nonVideoHeader, { paddingTop: insets.top }]}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.backButtonAlt}
                         onPress={async () => {
                             await stopAllMedia(true);
@@ -2406,7 +2407,7 @@ export default function CoursePlayerScreen() {
                     </TouchableOpacity>
                     <View style={styles.headerContent}>
                         <View style={styles.headerIconContainer}>
-                            <Ionicons 
+                            <Ionicons
                                 name={currentLesson?.content_type === 'quiz' ? 'school' : getLessonIcon(currentLesson?.content_type || 'document') as any}
                                 size={32}
                                 color="#fff"
@@ -2414,8 +2415,8 @@ export default function CoursePlayerScreen() {
                         </View>
                         <Text style={styles.headerTitle} numberOfLines={2}>{currentLesson?.title}</Text>
                         <Text style={styles.headerSubtitle}>
-                            {currentLesson?.content_type === 'quiz' ? 'Interactive Quiz' : 
-                             currentLesson?.content_type === 'text' ? 'Reading Material' : 'Lesson Content'}
+                            {currentLesson?.content_type === 'quiz' ? 'Interactive Quiz' :
+                                currentLesson?.content_type === 'text' ? 'Reading Material' : 'Lesson Content'}
                         </Text>
                     </View>
                 </View>
@@ -2462,7 +2463,7 @@ export default function CoursePlayerScreen() {
                     </View>
                     <View style={styles.lessonHeaderButtons}>
                         {/* Download Course Button */}
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[
                                 styles.downloadCourseButton,
                                 isCourseDownloaded && styles.downloadCourseButtonActive,
@@ -2474,14 +2475,14 @@ export default function CoursePlayerScreen() {
                             {isCourseDownloading ? (
                                 <ActivityIndicator size="small" color={COLORS.primary} />
                             ) : (
-                                <Ionicons 
-                                    name={isCourseDownloaded ? "checkmark-circle" : "cloud-download-outline"} 
-                                    size={22} 
-                                    color={isCourseDownloaded ? COLORS.success : COLORS.primary} 
+                                <Ionicons
+                                    name={isCourseDownloaded ? "checkmark-circle" : "cloud-download-outline"}
+                                    size={22}
+                                    color={isCourseDownloaded ? COLORS.success : COLORS.primary}
                                 />
                             )}
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.outlineButton}
                             onPress={toggleSidebar}
                         >
@@ -2491,7 +2492,7 @@ export default function CoursePlayerScreen() {
                 </View>
 
                 {/* Content based on lesson type */}
-                <ScrollView 
+                <ScrollView
                     style={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContentInner}
@@ -2516,7 +2517,7 @@ export default function CoursePlayerScreen() {
                                 <Text style={styles.quizDescription}>
                                     {currentLesson.quiz_data?.description || 'Test your understanding of the material covered in this section.'}
                                 </Text>
-                                
+
                                 <View style={styles.quizStats}>
                                     <View style={styles.quizStatItem}>
                                         <Ionicons name="help-circle-outline" size={20} color={COLORS.textSecondary} />
@@ -2539,8 +2540,8 @@ export default function CoursePlayerScreen() {
                                         </Text>
                                     </View>
                                 </View>
-                                
-                                <TouchableOpacity 
+
+                                <TouchableOpacity
                                     style={styles.startQuizButton}
                                     onPress={() => {
                                         if (currentLesson) prepareQuiz(currentLesson);
@@ -2560,10 +2561,10 @@ export default function CoursePlayerScreen() {
                             <Text style={styles.descriptionText}>
                                 {currentLesson.description || 'Watch the video above to learn about this topic.'}
                             </Text>
-                            
+
                             {currentLesson.video_url && (
                                 <View style={styles.videoActions}>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={[
                                             styles.actionButton,
                                             downloadState?.isDownloaded && styles.actionButtonActive
@@ -2591,10 +2592,10 @@ export default function CoursePlayerScreen() {
                                             </>
                                         ) : (
                                             <>
-                                                <Ionicons 
-                                                    name={downloadState?.isDownloaded ? "checkmark-circle" : "cloud-download-outline"} 
-                                                    size={20} 
-                                                    color={downloadState?.isDownloaded ? COLORS.success : COLORS.primary} 
+                                                <Ionicons
+                                                    name={downloadState?.isDownloaded ? "checkmark-circle" : "cloud-download-outline"}
+                                                    size={20}
+                                                    color={downloadState?.isDownloaded ? COLORS.success : COLORS.primary}
                                                 />
                                                 <Text style={[
                                                     styles.actionButtonText,
@@ -2605,18 +2606,18 @@ export default function CoursePlayerScreen() {
                                             </>
                                         )}
                                     </TouchableOpacity>
-                                    
+
                                     {/* Download All Content button */}
                                     {currentLesson.blocks && currentLesson.blocks.length > 0 && (
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={styles.actionButton}
                                             onPress={() => handleFullLessonDownload(currentLesson.id)}
                                             disabled={downloadState?.isDownloading}
                                         >
-                                            <Ionicons 
-                                                name="download-outline" 
-                                                size={20} 
-                                                color={COLORS.primary} 
+                                            <Ionicons
+                                                name="download-outline"
+                                                size={20}
+                                                color={COLORS.primary}
                                             />
                                             <Text style={styles.actionButtonText}>
                                                 Download All
@@ -2627,11 +2628,11 @@ export default function CoursePlayerScreen() {
                             )}
                         </View>
                     )}
-                    
+
                     {/* Download section for non-video lessons */}
                     {currentLesson && currentLesson.content_type !== 'video' && currentLesson.blocks && currentLesson.blocks.length > 0 && (
                         <View style={styles.downloadSection}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.downloadAllButton}
                                 onPress={() => handleFullLessonDownload(currentLesson.id)}
                                 disabled={downloadState?.isDownloading}
@@ -2663,12 +2664,12 @@ export default function CoursePlayerScreen() {
                                 if (block.type === 'video' && index === 0 && currentLesson.content_type === 'video') {
                                     return null;
                                 }
-                                
+
                                 // Skip the primary quiz block ONLY if quiz is the first block (shown in main quiz prompt)
                                 if (block.type === 'quiz' && index === 0 && currentLesson.content_type === 'quiz') {
                                     return null;
                                 }
-                                
+
                                 return (
                                     <View key={block.id || index} style={styles.blockItem}>
                                         {block.type === 'text' && (block.content?.html || block.content?.text || block.content) && (
@@ -2676,11 +2677,11 @@ export default function CoursePlayerScreen() {
                                                 {block.title && <Text style={styles.textBlockTitle}>{block.title}</Text>}
                                                 <RenderHtml
                                                     contentWidth={SCREEN_WIDTH - SPACING.lg * 2 - 32}
-                                                    source={{ 
-                                                        html: block.content?.html || 
-                                                              (typeof block.content === 'string' ? `<div>${block.content}</div>` : 
-                                                               block.content?.text ? `<div>${block.content.text}</div>` : 
-                                                               '<p>No content</p>')
+                                                    source={{
+                                                        html: block.content?.html ||
+                                                            (typeof block.content === 'string' ? `<div>${block.content}</div>` :
+                                                                block.content?.text ? `<div>${block.content.text}</div>` :
+                                                                    '<p>No content</p>')
                                                     }}
                                                     tagsStyles={htmlStyles}
                                                     defaultTextProps={{
@@ -2690,7 +2691,7 @@ export default function CoursePlayerScreen() {
                                                 />
                                             </View>
                                         )}
-                                        
+
                                         {block.type === 'video' && block.content?.url && (
                                             <View style={styles.additionalVideoBlock}>
                                                 <Text style={styles.blockTitle}>{block.title || 'Video'}</Text>
@@ -2698,7 +2699,7 @@ export default function CoursePlayerScreen() {
                                                     // YouTube block with HTML + baseUrl approach
                                                     <View style={styles.embeddedVideoContainer}>
                                                         <WebView
-                                                            source={{ 
+                                                            source={{
                                                                 html: generateYouTubePlayerHTML(getYouTubeVideoId(block.content.url) || ''),
                                                                 baseUrl: 'https://www.youtube.com'
                                                             }}
@@ -2735,11 +2736,11 @@ export default function CoursePlayerScreen() {
                                                 )}
                                             </View>
                                         )}
-                                        
+
                                         {block.type === 'image' && block.content?.url && (
                                             <View style={styles.imageBlock}>
                                                 {block.title && <Text style={styles.blockTitle}>{block.title}</Text>}
-                                                <Image 
+                                                <Image
                                                     source={{ uri: block.content.url }}
                                                     style={styles.blockImage}
                                                     resizeMode="contain"
@@ -2749,9 +2750,9 @@ export default function CoursePlayerScreen() {
                                                 )}
                                             </View>
                                         )}
-                                        
+
                                         {block.type === 'file' && block.content?.url && (
-                                            <TouchableOpacity 
+                                            <TouchableOpacity
                                                 style={styles.fileBlock}
                                                 onPress={() => handleFileDownload(block.content.url, block.content.filename || block.title || 'file')}
                                             >
@@ -2763,18 +2764,18 @@ export default function CoursePlayerScreen() {
                                                 <Ionicons name="cloud-download-outline" size={20} color={COLORS.textSecondary} />
                                             </TouchableOpacity>
                                         )}
-                                        
+
                                         {/* Audio block with custom player */}
                                         {block.type === 'audio' && block.content?.url && (
                                             <View style={styles.audioBlock}>
                                                 <Text style={styles.blockTitle}>{block.title || 'Audio'}</Text>
-                                                <AudioPlayer 
+                                                <AudioPlayer
                                                     uri={block.content.url}
                                                     title={block.title || 'Audio'}
                                                 />
                                             </View>
                                         )}
-                                        
+
                                         {/* Quiz block - show inline quiz card when NOT the primary quiz prompt */}
                                         {block.type === 'quiz' && !(index === 0 && currentLesson.content_type === 'quiz') && (
                                             <View style={styles.inlineQuizCard}>
@@ -2785,7 +2786,7 @@ export default function CoursePlayerScreen() {
                                                 <Text style={styles.inlineQuizDesc}>
                                                     {block.content?.questions?.length || 0} questions
                                                 </Text>
-                                                <TouchableOpacity 
+                                                <TouchableOpacity
                                                     style={[styles.inlineQuizButton, { flexDirection: 'row', gap: 8 }]}
                                                     onPress={() => {
                                                         // Prepare quiz data from this block
@@ -2809,7 +2810,7 @@ export default function CoursePlayerScreen() {
                                                                 } else if (q.question_type) {
                                                                     questionType = q.question_type;
                                                                 }
-                                                                
+
                                                                 // Get correct answer(s)
                                                                 let correctAnswer: string | number | number[];
                                                                 if (q.question_type === 'text' || q.question_type === 'numeric') {
@@ -2822,7 +2823,7 @@ export default function CoursePlayerScreen() {
                                                                 } else {
                                                                     correctAnswer = (q.options || []).findIndex((opt: any) => opt.correct === true);
                                                                 }
-                                                                
+
                                                                 return {
                                                                     id: q.id || `${block.id}_q${idx + 1}`,
                                                                     question: q.question || 'Question',
@@ -2852,15 +2853,15 @@ export default function CoursePlayerScreen() {
 
                 {/* Navigation Footer */}
                 <View style={[styles.navigationFooter, { paddingBottom: insets.bottom + SPACING.sm }]}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.navButton, currentIndex === 0 && styles.navButtonDisabled]}
                         onPress={() => navigateLesson('prev')}
                         disabled={currentIndex === 0}
                     >
-                        <Ionicons 
-                            name="chevron-back" 
-                            size={20} 
-                            color={currentIndex === 0 ? COLORS.textTertiary : COLORS.text} 
+                        <Ionicons
+                            name="chevron-back"
+                            size={20}
+                            color={currentIndex === 0 ? COLORS.textTertiary : COLORS.text}
                         />
                         <Text style={[
                             styles.navButtonText,
@@ -2875,7 +2876,7 @@ export default function CoursePlayerScreen() {
                     </View>
 
                     {currentIndex === allLessons.length - 1 ? (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.navButton, styles.navButtonComplete]}
                             onPress={async () => {
                                 // Mark course as complete (100%)
@@ -2898,7 +2899,7 @@ export default function CoursePlayerScreen() {
                             <Ionicons name="checkmark-circle" size={20} color="#fff" />
                         </TouchableOpacity>
                     ) : (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.navButton, styles.navButtonNext]}
                             onPress={() => navigateLesson('next')}
                         >
@@ -2931,7 +2932,7 @@ export default function CoursePlayerScreen() {
                         <View style={styles.courseProgress}>
                             <View style={styles.courseProgressBar}>
                                 <View style={[
-                                    styles.courseProgressFill, 
+                                    styles.courseProgressFill,
                                     { width: `${((currentIndex + 1) / allLessons.length) * 100}%` }
                                 ]} />
                             </View>
@@ -2941,16 +2942,16 @@ export default function CoursePlayerScreen() {
                         </View>
 
                         <FlatList
-                            data={course.modules}
+                            data={course.chapters}
                             keyExtractor={(item) => item.id}
                             showsVerticalScrollIndicator={false}
-                            renderItem={({ item: module, index: moduleIndex }) => (
+                            renderItem={({ item: chapter, index: moduleIndex }) => (
                                 <View style={styles.moduleSection}>
                                     <View style={styles.moduleSectionHeader}>
-                                        <Text style={styles.moduleSectionNumber}>Module {moduleIndex + 1}</Text>
-                                        <Text style={styles.moduleSectionTitle}>{module.title}</Text>
+                                        <Text style={styles.moduleSectionNumber}>Chapter {moduleIndex + 1}</Text>
+                                        <Text style={styles.moduleSectionTitle}>{chapter.title}</Text>
                                     </View>
-                                    {module.lessons.map((lesson: Lesson, lessonIndex: number) => {
+                                    {(chapter.lessons || []).map((lesson: Lesson, lessonIndex: number) => {
                                         const flatIndex = allLessons.findIndex(l => l.id === lesson.id);
                                         const isActive = flatIndex === currentIndex;
                                         const isCompleted = flatIndex < currentIndex;
@@ -2973,7 +2974,7 @@ export default function CoursePlayerScreen() {
                                                     {isCompleted ? (
                                                         <Ionicons name="checkmark" size={14} color="#fff" />
                                                     ) : (
-                                                        <Ionicons 
+                                                        <Ionicons
                                                             name={getLessonIcon(lesson.content_type) as any}
                                                             size={14}
                                                             color={isActive ? '#fff' : COLORS.textSecondary}
@@ -3007,7 +3008,7 @@ export default function CoursePlayerScreen() {
                                                 </View>
                                                 {/* Download button for individual lesson */}
                                                 {!dState?.isDownloaded && !dState?.isDownloading && (
-                                                    <TouchableOpacity 
+                                                    <TouchableOpacity
                                                         style={styles.sidebarDownloadBtn}
                                                         onPress={(e) => {
                                                             e.stopPropagation();
@@ -3076,7 +3077,7 @@ export default function CoursePlayerScreen() {
                 <View style={styles.pdfViewerContainer}>
                     {/* Header */}
                     <View style={[styles.pdfHeader, { paddingTop: insets.top }]}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.pdfCloseButton}
                             onPress={() => {
                                 setPdfViewerVisible(false);
@@ -3089,7 +3090,7 @@ export default function CoursePlayerScreen() {
                         <View style={styles.pdfTitleContainer}>
                             <Text style={styles.pdfTitle} numberOfLines={1}>{currentPdfTitle}</Text>
                         </View>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.pdfShareButton}
                             onPress={async () => {
                                 if (currentPdfLocalPath) {
@@ -3108,7 +3109,7 @@ export default function CoursePlayerScreen() {
                             <Ionicons name="share-outline" size={24} color={COLORS.primary} />
                         </TouchableOpacity>
                     </View>
-                    
+
                     {/* PDF Content - Native offline viewer using pdf.js */}
                     <View style={styles.pdfContent}>
                         {pdfLoading && (
@@ -3117,7 +3118,7 @@ export default function CoursePlayerScreen() {
                                 <Text style={styles.pdfLoadingText}>Loading PDF...</Text>
                             </View>
                         )}
-                        
+
                         {pdfBase64 ? (
                             // Native PDF viewer using pdf.js embedded in WebView
                             // pdf.js gets cached after first load for offline use
@@ -3310,8 +3311,8 @@ export default function CoursePlayerScreen() {
                                         'Could not render PDF. Try sharing it to another app.',
                                         [
                                             { text: 'Close', onPress: () => setPdfViewerVisible(false) },
-                                            { 
-                                                text: 'Share', 
+                                            {
+                                                text: 'Share',
                                                 onPress: async () => {
                                                     if (currentPdfLocalPath) {
                                                         const canShare = await isAvailableAsync();
@@ -3348,11 +3349,11 @@ export default function CoursePlayerScreen() {
                             {fileDownloadProgress.filename}
                         </Text>
                         <View style={styles.downloadProgressBarContainer}>
-                            <View 
+                            <View
                                 style={[
-                                    styles.downloadProgressBar, 
+                                    styles.downloadProgressBar,
                                     { width: `${Math.round(fileDownloadProgress.progress * 100)}%` }
-                                ]} 
+                                ]}
                             />
                         </View>
                         <Text style={styles.downloadProgressPercent}>
@@ -3589,7 +3590,7 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'transparent',
     },
-    
+
     // World-class embedded video player styles (YouTube, Vimeo, etc.)
     embeddedVideoWrapper: {
         width: '100%',
@@ -3631,7 +3632,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 5,
     },
-    
+
     topBar: {
         position: 'absolute',
         top: 0,
@@ -3689,7 +3690,7 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.3)',
     },
-    
+
     // Netflix/YouTube style bottom controls
     bottomControlsContainer: {
         position: 'absolute',
@@ -3903,7 +3904,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    
+
     // Non-video header (for quiz, text content)
     nonVideoHeader: {
         backgroundColor: '#1a1a2e',
@@ -4026,7 +4027,7 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.lg,
         padding: SPACING.lg,
     },
-    
+
     // Text block container for rich HTML content
     textBlockContainer: {
         backgroundColor: COLORS.surface,
@@ -4169,7 +4170,7 @@ const styles = StyleSheet.create({
     actionButtonTextActive: {
         color: COLORS.success,
     },
-    
+
     // Download Section for non-video lessons
     downloadSection: {
         marginTop: SPACING.lg,
@@ -4394,7 +4395,7 @@ const styles = StyleSheet.create({
         padding: SPACING.xs,
         marginLeft: 'auto',
     },
-    
+
     // Additional Block styles for video/image/file blocks
     blockTitle: {
         fontSize: FONT_SIZE.md,

@@ -6,9 +6,10 @@ import { useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AuthProvider } from '../src/features/auth/AuthContext';
+import { AuthProvider, useAuth } from '../src/features/auth/AuthContext';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { NotificationProvider } from '../src/context/NotificationContext';
+import { ImpersonationProvider } from '../src/context/ImpersonationContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,23 +18,34 @@ function RootLayoutContent() {
 
   return (
     <>
-      <StatusBar 
-        style={isDark ? 'light' : 'dark'} 
+      <StatusBar
+        style={isDark ? 'light' : 'dark'}
         backgroundColor={colors.background}
         translucent={Platform.OS === 'android'}
       />
-      <Stack 
-        screenOptions={{ 
+      <Stack
+        screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
           animation: 'slide_from_right',
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen name="(student)" options={{ headerShown: false }} />
         <Stack.Screen name="course/[id]" options={{ presentation: 'modal' }} />
       </Stack>
     </>
+  );
+}
+
+// Wrapper to provide impersonation context with user ID
+function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
+  return (
+    <ImpersonationProvider currentUserId={session?.user?.id || null}>
+      {children}
+    </ImpersonationProvider>
   );
 }
 
@@ -66,9 +78,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <NotificationProvider>
-              <RootLayoutContent />
-            </NotificationProvider>
+            <ImpersonationWrapper>
+              <NotificationProvider>
+                <RootLayoutContent />
+              </NotificationProvider>
+            </ImpersonationWrapper>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

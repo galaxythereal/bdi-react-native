@@ -1,19 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { 
-    ActivityIndicator, 
-    Alert, 
-    Animated, 
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
     Dimensions,
-    Image, 
+    Image,
     Platform,
-    RefreshControl, 
+    RefreshControl,
     ScrollView,
-    StyleSheet, 
-    Text, 
-    TouchableOpacity, 
-    View 
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/features/auth/AuthContext';
@@ -39,7 +39,7 @@ interface CourseCardProps {
 const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
     const cardAnim = useRef(new Animated.Value(0)).current;
     const progress = Math.round(item.progress || 0);
-    const course = typeof item.course === 'object' ? item.course : null;
+    const diploma = item.diploma;
 
     useEffect(() => {
         Animated.spring(cardAnim, {
@@ -84,22 +84,22 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                 },
             ]}
         >
-            <TouchableOpacity 
+            <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.9}
                 style={styles.card}
             >
                 {/* Thumbnail */}
                 <View style={styles.thumbnailContainer}>
-                    {course?.thumbnail_url ? (
+                    {diploma?.thumbnail_url ? (
                         <Image
-                            source={{ uri: course.thumbnail_url }}
+                            source={{ uri: diploma.thumbnail_url }}
                             style={styles.thumbnail}
                             resizeMode="cover"
                         />
                     ) : (
                         <View style={styles.thumbnailPlaceholder}>
-                            <Ionicons name="book" size={28} color={COLORS.primary} />
+                            <Ionicons name="school" size={28} color={COLORS.primary} />
                         </View>
                     )}
                     {/* Progress badge */}
@@ -113,13 +113,13 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                         </View>
                     )}
                 </View>
-                
+
                 {/* Info */}
                 <View style={styles.cardInfo}>
                     <Text style={styles.cardTitle} numberOfLines={2}>
-                        {course?.title || 'Untitled Course'}
+                        {diploma?.title || 'Untitled Diploma'}
                     </Text>
-                    
+
                     {/* Status */}
                     <View style={styles.statusRow}>
                         <View style={[styles.statusDot, { backgroundColor: getProgressColor() }]} />
@@ -127,11 +127,11 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                             {getStatusLabel()}
                         </Text>
                     </View>
-                    
+
                     {/* Progress bar */}
                     <View style={styles.progressContainer}>
                         <View style={styles.progressBar}>
-                            <View 
+                            <View
                                 style={[
                                     styles.progressFill,
                                     { width: `${progress}%`, backgroundColor: getProgressColor() }
@@ -185,7 +185,7 @@ export default function CoursesScreen() {
         try {
             const data = await fetchMyEnrollments();
             setEnrollments(data || []);
-            
+
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 400,
@@ -259,35 +259,35 @@ export default function CoursesScreen() {
             {/* Filter chips */}
             {enrollments.length > 0 && (
                 <View style={styles.filtersWrapper}>
-                    <ScrollView 
-                        horizontal 
+                    <ScrollView
+                        horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.filtersContainer}
                         bounces={false}
                     >
-                        <FilterChip 
-                            label="All" 
-                            count={counts.all} 
-                            active={filter === 'all'} 
-                            onPress={() => setFilter('all')} 
+                        <FilterChip
+                            label="All"
+                            count={counts.all}
+                            active={filter === 'all'}
+                            onPress={() => setFilter('all')}
                         />
-                        <FilterChip 
-                            label="In Progress" 
-                            count={counts.in_progress} 
-                            active={filter === 'in_progress'} 
-                            onPress={() => setFilter('in_progress')} 
+                        <FilterChip
+                            label="In Progress"
+                            count={counts.in_progress}
+                            active={filter === 'in_progress'}
+                            onPress={() => setFilter('in_progress')}
                         />
-                        <FilterChip 
-                            label="Completed" 
-                            count={counts.completed} 
-                            active={filter === 'completed'} 
-                            onPress={() => setFilter('completed')} 
+                        <FilterChip
+                            label="Completed"
+                            count={counts.completed}
+                            active={filter === 'completed'}
+                            onPress={() => setFilter('completed')}
                         />
-                        <FilterChip 
-                            label="Not Started" 
-                            count={counts.not_started} 
-                            active={filter === 'not_started'} 
-                            onPress={() => setFilter('not_started')} 
+                        <FilterChip
+                            label="Not Started"
+                            count={counts.not_started}
+                            active={filter === 'not_started'}
+                            onPress={() => setFilter('not_started')}
                         />
                     </ScrollView>
                 </View>
@@ -296,9 +296,9 @@ export default function CoursesScreen() {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl 
-                        refreshing={refreshing} 
-                        onRefresh={onRefresh} 
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
                         tintColor={COLORS.primary}
                         colors={[COLORS.primary]}
                     />
@@ -310,37 +310,40 @@ export default function CoursesScreen() {
             >
                 {filteredEnrollments.length > 0 ? (
                     <View style={styles.coursesGrid}>
-                        {filteredEnrollments.map((item, index) => (
-                            <CourseCard
-                                key={item.id}
-                                item={item}
-                                index={index}
-                                onPress={() => router.push(`/course/${item.course_id}`)}
-                            />
-                        ))}
+                        {filteredEnrollments.map((item, index) => {
+                            const firstCourse = item.courses?.[0];
+                            return (
+                                <CourseCard
+                                    key={item.id}
+                                    item={item}
+                                    index={index}
+                                    onPress={() => router.push(`/course/${firstCourse?.id || item.diploma_id}`)}
+                                />
+                            );
+                        })}
                     </View>
                 ) : (
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconContainer}>
-                            <Ionicons 
+                            <Ionicons
                                 name={
                                     filter === 'completed' ? 'trophy-outline' :
-                                    filter === 'in_progress' ? 'hourglass-outline' :
-                                    filter === 'not_started' ? 'flag-outline' :
-                                    'library-outline'
-                                } 
-                                size={48} 
-                                color={COLORS.textTertiary} 
+                                        filter === 'in_progress' ? 'hourglass-outline' :
+                                            filter === 'not_started' ? 'flag-outline' :
+                                                'library-outline'
+                                }
+                                size={48}
+                                color={COLORS.textTertiary}
                             />
                         </View>
                         <Text style={styles.emptyTitle}>
                             {filter === 'all' ? 'No courses yet' :
-                             filter === 'completed' ? 'No completed courses' :
-                             filter === 'in_progress' ? 'No courses in progress' :
-                             'All courses started!'}
+                                filter === 'completed' ? 'No completed courses' :
+                                    filter === 'in_progress' ? 'No courses in progress' :
+                                        'All courses started!'}
                         </Text>
                         <Text style={styles.emptyText}>
-                            {filter === 'all' 
+                            {filter === 'all'
                                 ? 'Enroll in courses to start learning'
                                 : 'Try selecting a different filter'}
                         </Text>
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         marginTop: SPACING.sm,
     },
-    
+
     // Header
     header: {
         backgroundColor: COLORS.surface,
@@ -386,7 +389,7 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZE.sm,
         color: COLORS.textSecondary,
     },
-    
+
     // Filters
     filtersWrapper: {
         backgroundColor: COLORS.background,
@@ -442,12 +445,12 @@ const styles = StyleSheet.create({
     filterChipCountActive: {
         color: '#fff',
     },
-    
+
     // List
     listContent: {
         padding: SPACING.lg,
     },
-    
+
     // Course Grid
     coursesGrid: {
         flexDirection: 'row',
@@ -538,7 +541,7 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 2,
     },
-    
+
     // Empty State
     emptyState: {
         padding: SPACING.xxl,

@@ -5,6 +5,14 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
+interface UserProfile {
+    id: string;
+    role: 'admin' | 'instructor' | 'support' | 'support_manager' | 'student';
+    email: string;
+    full_name: string | null;
+    status: string;
+}
+
 interface AuthContextType {
     session: Session | null;
     isLoading: boolean;
@@ -13,6 +21,9 @@ interface AuthContextType {
     signOut: () => Promise<void>;
     isAuthenticated: boolean;
     forceSignOut: () => Promise<void>;
+    userProfile: UserProfile | null;
+    userRole: 'admin' | 'instructor' | 'support' | 'support_manager' | 'student' | null;
+    isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,6 +34,9 @@ const AuthContext = createContext<AuthContextType>({
     signOut: async () => { },
     isAuthenticated: false,
     forceSignOut: async () => { },
+    userProfile: null,
+    userRole: null,
+    isAdmin: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -30,18 +44,18 @@ export const useAuth = () => useContext(AuthContext);
 // Helper to check if error is a refresh token error
 const isRefreshTokenError = (error: any): boolean => {
     return error?.message?.includes('Refresh Token') ||
-           error?.message?.includes('refresh_token') ||
-           error?.message?.includes('Invalid Refresh Token') ||
-           error?.code === 'refresh_token_not_found' ||
-           error?.code === 'invalid_grant';
+        error?.message?.includes('refresh_token') ||
+        error?.message?.includes('Invalid Refresh Token') ||
+        error?.code === 'refresh_token_not_found' ||
+        error?.code === 'invalid_grant';
 };
 
 // Clear all auth-related storage
 const clearAuthStorage = async () => {
     try {
         const keys = await AsyncStorage.getAllKeys();
-        const authKeys = keys.filter(key => 
-            key.includes('supabase') || 
+        const authKeys = keys.filter(key =>
+            key.includes('supabase') ||
             key.includes('auth') ||
             key.includes('token') ||
             key.includes('session')
@@ -57,12 +71,33 @@ const clearAuthStorage = async () => {
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [session, setSession] = useState<Session | null>(null);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
     const segments = useSegments();
     const navigationState = useRootNavigationState();
     const hasNavigated = useRef(false);
     const appState = useRef(AppState.currentState);
+
+    // Helper to fetch user profile
+    const fetchUserProfile = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, role, email, full_name, status')
+                .eq('id', userId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching profile:', error);
+                return null;
+            }
+            return data as UserProfile;
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+            return null;
+        }
+    };
 
     // Force sign out - clears everything and redirects
     const forceSignOut = useCallback(async () => {
@@ -83,7 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const initAuth = async () => {
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
-                
+
                 if (error) {
                     console.error('Error getting session:', error);
                     // If refresh token is invalid, clear storage and continue as signed out
@@ -117,27 +152,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('Auth state changed:', event, session?.user?.email || 'no user');
-            
+
             // Handle token refresh errors
             if (event === 'TOKEN_REFRESHED' && !session) {
                 console.log('Token refresh failed, forcing sign out');
                 await clearAuthStorage();
                 setSession(null);
+                setUserProfile(null);
                 setIsLoading(false);
                 router.replace('/(auth)/login');
                 return;
             }
-            
+
             // Handle explicit sign out
             if (event === 'SIGNED_OUT') {
                 console.log('User signed out, redirecting to login');
                 setSession(null);
+                setUserProfile(null);
                 setIsLoading(false);
                 hasNavigated.current = false;
                 router.replace('/(auth)/login');
                 return;
             }
-            
+
+            // Fetch profile when user signs in
+            if (session?.user?.id) {
+                const profile = await fetchUserProfile(session.user.id);
+                setUserProfile(profile);
+            }
+
             setSession(session);
             setIsLoading(false);
         });
@@ -169,23 +212,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         // Don't navigate while loading
         if (isLoading) return;
-        
+
         // Wait for navigation state to be ready
         if (!navigationState?.key) return;
-        
+
         const inAuthGroup = segments[0] === '(auth)';
-        
+
         if (!session && !inAuthGroup) {
             // Not authenticated and not on auth screen - redirect to login
             console.log('Not authenticated, redirecting to login');
             router.replace('/(auth)/login');
         } else if (session && inAuthGroup && !hasNavigated.current) {
-            // Authenticated and on auth screen - redirect to dashboard
-            console.log('Authenticated, redirecting to dashboard');
+            // Authenticated and on auth screen - redirect based on role
             hasNavigated.current = true;
-            router.replace('/(student)/dashboard');
+            if (userProfile?.role === 'admin') {
+                console.log('Admin authenticated, redirecting to admin dashboard');
+                router.replace('/(admin)/dashboard');
+            } else {
+                console.log('User authenticated, redirecting to student dashboard');
+                router.replace('/(student)/dashboard');
+            }
         }
-    }, [session, isLoading, segments, navigationState?.key, router]);
+    }, [session, isLoading, segments, navigationState?.key, router, userProfile]);
 
     const signInWithPassword = async (email: string, password: string) => {
         hasNavigated.current = false;
@@ -237,6 +285,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 signOut,
                 isAuthenticated: !!session,
                 forceSignOut,
+                userProfile,
+                userRole: userProfile?.role || null,
+                isAdmin: userProfile?.role === 'admin',
             }}
         >
             {children}
