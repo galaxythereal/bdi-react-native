@@ -1,17 +1,18 @@
+import { Theme } from '@/constants/theme';
+import Constants from 'expo-constants';
+import { ChevronRight, Info, LogOut, Moon, Shield, Sun } from 'lucide-react-native';
 import React from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
     Alert,
     ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
-import { LogOut, Shield, Info, Moon, Sun, ChevronRight } from 'lucide-react-native';
-import Constants from 'expo-constants';
 
 export default function AdminSettings() {
     const { colors, isDark, toggleTheme } = useTheme();
@@ -158,7 +159,7 @@ export default function AdminSettings() {
                         <Text style={styles.sectionTitle}>Preferences</Text>
                         <View style={styles.card}>
                             <TouchableOpacity style={[styles.row, styles.lastRow]} onPress={toggleTheme}>
-                                <View style={[styles.rowIcon, { backgroundColor: isDark ? '#fbbf2420' : '#3b82f620' }]}>
+                                <View style={[styles.rowIcon, { backgroundColor: isDark ? 'rgba(251, 191, 36, 0.1)' : 'rgba(59, 130, 246, 0.1)' }]}>
                                     {isDark ? <Sun color="#fbbf24" size={20} /> : <Moon color="#3b82f6" size={20} />}
                                 </View>
                                 <View style={styles.rowContent}>
@@ -175,7 +176,7 @@ export default function AdminSettings() {
                         <Text style={styles.sectionTitle}>About</Text>
                         <View style={styles.card}>
                             <View style={[styles.row, styles.lastRow]}>
-                                <View style={[styles.rowIcon, { backgroundColor: '#8b5cf620' }]}>
+                                <View style={[styles.rowIcon, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
                                     <Info color="#8b5cf6" size={20} />
                                 </View>
                                 <View style={styles.rowContent}>
@@ -188,7 +189,7 @@ export default function AdminSettings() {
 
                     {/* Sign Out */}
                     <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                        <LogOut color="#ef4444" size={20} />
+                        <LogOut color={Theme.colors.light.error} size={20} />
                         <Text style={styles.signOutText}>Sign Out</Text>
                     </TouchableOpacity>
 

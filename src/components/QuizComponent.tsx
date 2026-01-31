@@ -10,7 +10,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
+import Theme from '../../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 export interface QuizQuestion {
     id: string;
@@ -74,9 +75,12 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
     showResults = true,
     previousResult,
 }) => {
+    const { colors, isDark } = useTheme();
+    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
     // Validate quiz data
     const hasValidQuestions = quiz?.questions && Array.isArray(quiz.questions) && quiz.questions.length > 0;
-    
+
     const [state, setState] = useState<QuizState>(previousResult ? 'results' : 'intro');
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [answers, setAnswers] = useState<QuizAnswer[]>([]);
@@ -86,11 +90,11 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showExplanation, setShowExplanation] = useState<string | null>(null);
-    
+
     // NEW: Track which questions have been checked/submitted
     const [checkedQuestions, setCheckedQuestions] = useState<Set<number>>(new Set());
     const [questionResults, setQuestionResults] = useState<Map<number, boolean>>(new Map());
-    
+
     const progressAnim = React.useRef(new Animated.Value(0)).current;
     const questionAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -98,7 +102,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
     const questions = quiz?.questions || [];
     const currentQuestion = questions[currentQuestionIndex];
     const totalQuestions = questions.length;
-    
+
     // Early return if no valid questions (after hooks)
     // Note: We render an error state at the end instead of returning null here
     // because hooks must be called unconditionally
@@ -157,9 +161,9 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
     const startQuiz = () => {
         if (!hasValidQuestions) return;
         // Initialize answers - for multiple_select, start with empty array
-        setAnswers(questions.map((q) => ({ 
-            questionId: q.id, 
-            answer: q.type === 'multiple_select' ? [] : null 
+        setAnswers(questions.map((q) => ({
+            questionId: q.id,
+            answer: q.type === 'multiple_select' ? [] : null
         })));
         setCurrentQuestionIndex(0);
         setResult(null);
@@ -176,14 +180,14 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
         if (!currentQuestion) return;
         // Don't allow changing answer if already checked
         if (checkedQuestions.has(currentQuestionIndex)) return;
-        
+
         const newAnswers = [...answers];
-        
+
         // Handle multiple_select differently - toggle selections
         if (currentQuestion.type === 'multiple_select') {
             const currentSelections = (newAnswers[currentQuestionIndex]?.answer as number[]) || [];
             const answerIndex = answer as number;
-            
+
             // Toggle the selection
             let newSelections: number[];
             if (currentSelections.includes(answerIndex)) {
@@ -193,7 +197,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                 // Add to selections
                 newSelections = [...currentSelections, answerIndex].sort((a, b) => a - b);
             }
-            
+
             newAnswers[currentQuestionIndex] = {
                 questionId: currentQuestion.id,
                 answer: newSelections,
@@ -212,24 +216,24 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
     const checkCurrentAnswer = () => {
         if (!currentQuestion || !isCurrentAnswered) return;
         if (checkedQuestions.has(currentQuestionIndex)) return;
-        
+
         const userAnswer = answers[currentQuestionIndex]?.answer;
         let isCorrect = false;
-        
+
         if (currentQuestion.type === 'multiple_select') {
             // For multiple_select, check if arrays match (both should be sorted)
             const userSelections = (userAnswer as number[]) || [];
-            const correctAnswers = Array.isArray(currentQuestion.correct_answer) 
+            const correctAnswers = Array.isArray(currentQuestion.correct_answer)
                 ? (currentQuestion.correct_answer as number[]).sort((a, b) => a - b)
                 : [currentQuestion.correct_answer as number];
-            
+
             // Check if arrays are equal
             isCorrect = userSelections.length === correctAnswers.length &&
                 userSelections.every((val, idx) => val === correctAnswers[idx]);
         } else {
             isCorrect = String(userAnswer) === String(currentQuestion.correct_answer);
         }
-        
+
         // Mark this question as checked
         setCheckedQuestions(prev => new Set(prev).add(currentQuestionIndex));
         setQuestionResults(prev => new Map(prev).set(currentQuestionIndex, isCorrect));
@@ -269,16 +273,16 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
             const points = question.points || 1;
             totalPoints += points;
             const userAnswer = answers[index]?.answer;
-            
+
             let isCorrect = false;
-            
+
             if (question.type === 'multiple_select') {
                 // For multiple_select, check if arrays match
                 const userSelections = (userAnswer as number[]) || [];
-                const correctAnswers = Array.isArray(question.correct_answer) 
+                const correctAnswers = Array.isArray(question.correct_answer)
                     ? (question.correct_answer as number[]).sort((a, b) => a - b)
                     : [question.correct_answer as number];
-                
+
                 isCorrect = userSelections.length === correctAnswers.length &&
                     userSelections.every((val, idx) => val === correctAnswers[idx]);
             } else {
@@ -345,7 +349,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
         return (
             <View style={styles.container}>
                 <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle-outline" size={64} color={COLORS.error} />
+                    <Ionicons name="alert-circle-outline" size={64} color={colors.error} />
                     <Text style={styles.errorTitle}>Quiz Not Available</Text>
                     <Text style={styles.errorText}>
                         This quiz doesn't have any questions yet. Please check back later.
@@ -366,32 +370,32 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
             <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
                 <View style={styles.introCard}>
                     <View style={styles.quizIconContainer}>
-                        <Ionicons name="clipboard" size={48} color={COLORS.primary} />
+                        <Ionicons name="clipboard" size={48} color={colors.primary} />
                     </View>
-                    
+
                     <Text style={styles.quizTitle}>{quiz.title}</Text>
-                    
+
                     {quiz.description && (
                         <Text style={styles.quizDescription}>{quiz.description}</Text>
                     )}
 
                     <View style={styles.quizStats}>
                         <View style={styles.statItem}>
-                            <Ionicons name="help-circle-outline" size={24} color={COLORS.primary} />
+                            <Ionicons name="help-circle-outline" size={24} color={colors.primary} />
                             <Text style={styles.statValue}>{totalQuestions}</Text>
                             <Text style={styles.statLabel}>Questions</Text>
                         </View>
-                        
+
                         {quiz.time_limit && (
                             <View style={styles.statItem}>
-                                <Ionicons name="time-outline" size={24} color={COLORS.warning} />
+                                <Ionicons name="time-outline" size={24} color={colors.warning} />
                                 <Text style={styles.statValue}>{quiz.time_limit}</Text>
                                 <Text style={styles.statLabel}>Minutes</Text>
                             </View>
                         )}
-                        
+
                         <View style={styles.statItem}>
-                            <Ionicons name="checkmark-circle-outline" size={24} color={COLORS.success} />
+                            <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} />
                             <Text style={styles.statValue}>{quiz.passing_score || 70}%</Text>
                             <Text style={styles.statLabel}>To Pass</Text>
                         </View>
@@ -400,9 +404,9 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity style={styles.startButton} onPress={startQuiz}>
                             <Text style={styles.startButtonText}>Start Quiz</Text>
-                            <Ionicons name="arrow-forward" size={20} color={COLORS.surface} />
+                            <Ionicons name="arrow-forward" size={20} color={colors.surface} />
                         </TouchableOpacity>
-                        
+
                         {onCancel && (
                             <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
                                 <Text style={styles.cancelButtonText}>Go Back</Text>
@@ -421,19 +425,19 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                 <View style={styles.resultsCard}>
                     <View style={[
                         styles.resultIconContainer,
-                        { backgroundColor: result.passed ? COLORS.success + '20' : COLORS.error + '20' }
+                        { backgroundColor: result.passed ? colors.success + '20' : colors.error + '20' }
                     ]}>
                         <Ionicons
                             name={result.passed ? 'trophy' : 'refresh-circle'}
                             size={64}
-                            color={result.passed ? COLORS.success : COLORS.error}
+                            color={result.passed ? colors.success : colors.error}
                         />
                     </View>
 
                     <Text style={styles.resultTitle}>
                         {result.passed ? 'Congratulations!' : 'Keep Trying!'}
                     </Text>
-                    
+
                     <Text style={styles.resultSubtitle}>
                         {result.passed
                             ? 'You have passed this quiz.'
@@ -444,7 +448,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                         <View style={styles.scoreCircle}>
                             <Text style={[
                                 styles.scorePercentage,
-                                { color: result.passed ? COLORS.success : COLORS.error }
+                                { color: result.passed ? colors.success : colors.error }
                             ]}>
                                 {result.percentage}%
                             </Text>
@@ -470,12 +474,12 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                         <View style={styles.reviewHeader}>
                                             <View style={[
                                                 styles.reviewIcon,
-                                                { backgroundColor: answerResult.correct ? COLORS.success + '20' : COLORS.error + '20' }
+                                                { backgroundColor: answerResult.correct ? colors.success + '20' : colors.error + '20' }
                                             ]}>
                                                 <Ionicons
                                                     name={answerResult.correct ? 'checkmark' : 'close'}
                                                     size={16}
-                                                    color={answerResult.correct ? COLORS.success : COLORS.error}
+                                                    color={answerResult.correct ? colors.success : colors.error}
                                                 />
                                             </View>
                                             <Text style={styles.reviewQuestion} numberOfLines={2}>
@@ -484,17 +488,17 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                             <Ionicons
                                                 name={showExplanation === question.id ? 'chevron-up' : 'chevron-down'}
                                                 size={20}
-                                                color={COLORS.textSecondary}
+                                                color={colors.textSecondary}
                                             />
                                         </View>
-                                        
+
                                         {showExplanation === question.id && (
                                             <View style={styles.explanationContainer}>
                                                 <Text style={styles.answerLabel}>
                                                     Your answer: {' '}
                                                     <Text style={{
-                                                        color: answerResult.correct ? COLORS.success : COLORS.error,
-                                                        fontWeight: FONT_WEIGHT.bold,
+                                                        color: answerResult.correct ? colors.success : colors.error,
+                                                        fontWeight: Theme.fontWeight.bold,
                                                     }}>
                                                         {question.type === 'multiple_select'
                                                             ? (Array.isArray(answerResult.userAnswer) && answerResult.userAnswer.length > 0
@@ -508,7 +512,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                                 {!answerResult.correct && (
                                                     <Text style={styles.correctAnswer}>
                                                         Correct answer: {' '}
-                                                        <Text style={{ color: COLORS.success, fontWeight: FONT_WEIGHT.bold }}>
+                                                        <Text style={{ color: colors.success, fontWeight: Theme.fontWeight.bold }}>
                                                             {question.type === 'multiple_select'
                                                                 ? (Array.isArray(answerResult.correctAnswer)
                                                                     ? (answerResult.correctAnswer as number[]).map(i => getOptionText(question.options?.[i])).join(', ')
@@ -535,15 +539,15 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                     <View style={styles.resultButtonContainer}>
                         {quiz.allow_retry !== false && !result.passed && (
                             <TouchableOpacity style={styles.retryButton} onPress={retakeQuiz}>
-                                <Ionicons name="refresh" size={20} color={COLORS.surface} />
+                                <Ionicons name="refresh" size={20} color={colors.surface} />
                                 <Text style={styles.retryButtonText}>Retry Quiz</Text>
                             </TouchableOpacity>
                         )}
-                        
+
                         {onCancel && (
                             <TouchableOpacity style={styles.continueButton} onPress={onCancel}>
                                 <Text style={styles.continueButtonText}>Continue</Text>
-                                <Ionicons name="arrow-forward" size={20} color={COLORS.primary} />
+                                <Ionicons name="arrow-forward" size={20} color={colors.primary} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -559,9 +563,9 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
             <View style={styles.quizHeader}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity onPress={onCancel} style={styles.exitButton}>
-                        <Ionicons name="close" size={24} color={COLORS.text} />
+                        <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
-                    
+
                     {timeRemaining !== null && (
                         <View style={[
                             styles.timerContainer,
@@ -570,7 +574,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                             <Ionicons
                                 name="time-outline"
                                 size={18}
-                                color={timeRemaining < 60 ? COLORS.error : COLORS.text}
+                                color={timeRemaining < 60 ? colors.error : colors.text}
                             />
                             <Text style={[
                                 styles.timerText,
@@ -596,7 +600,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                         ]}
                     />
                 </View>
-                
+
                 <Text style={styles.progressText}>
                     Question {currentQuestionIndex + 1} of {totalQuestions}
                 </Text>
@@ -630,7 +634,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                     const isCorrectOption = index === Number(currentQuestion.correct_answer);
                                     const showCorrect = isCurrentChecked && isCorrectOption;
                                     const showWrong = isCurrentChecked && isSelected && !isCorrectOption;
-                                    
+
                                     return (
                                         <TouchableOpacity
                                             key={index}
@@ -651,11 +655,11 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                                 showWrong && styles.optionIndicatorWrong,
                                             ]}>
                                                 {showCorrect ? (
-                                                    <Ionicons name="checkmark" size={14} color={COLORS.surface} />
+                                                    <Ionicons name="checkmark" size={14} color={colors.surface} />
                                                 ) : showWrong ? (
-                                                    <Ionicons name="close" size={14} color={COLORS.surface} />
+                                                    <Ionicons name="close" size={14} color={colors.surface} />
                                                 ) : isSelected ? (
-                                                    <Ionicons name="checkmark" size={14} color={COLORS.surface} />
+                                                    <Ionicons name="checkmark" size={14} color={colors.surface} />
                                                 ) : (
                                                     <Text style={styles.optionLetter}>
                                                         {String.fromCharCode(65 + index)}
@@ -685,7 +689,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                     const optionText = typeof option === 'object' ? option.text : option;
                                     const selectedAnswers = (currentAnswer as number[]) || [];
                                     const isSelected = selectedAnswers.includes(index);
-                                    
+
                                     // Get all correct answer indices
                                     const correctAnswers = Array.isArray(currentQuestion.correct_answer)
                                         ? (currentQuestion.correct_answer as number[])
@@ -694,7 +698,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                     const showCorrect = isCurrentChecked && isCorrectOption;
                                     const showWrong = isCurrentChecked && isSelected && !isCorrectOption;
                                     const showMissed = isCurrentChecked && !isSelected && isCorrectOption;
-                                    
+
                                     return (
                                         <TouchableOpacity
                                             key={index}
@@ -717,11 +721,11 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                                 showMissed && styles.optionIndicatorMissed,
                                             ]}>
                                                 {showCorrect || (isSelected && !isCurrentChecked) ? (
-                                                    <Ionicons name="checkmark" size={14} color={COLORS.surface} />
+                                                    <Ionicons name="checkmark" size={14} color={colors.surface} />
                                                 ) : showWrong ? (
-                                                    <Ionicons name="close" size={14} color={COLORS.surface} />
+                                                    <Ionicons name="close" size={14} color={colors.surface} />
                                                 ) : showMissed ? (
-                                                    <Ionicons name="checkmark" size={14} color={COLORS.success} />
+                                                    <Ionicons name="checkmark" size={14} color={colors.success} />
                                                 ) : null}
                                             </View>
                                             <Text style={[
@@ -738,14 +742,14 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                                 </View>
                                             )}
                                             {showMissed && (
-                                                <View style={[styles.correctBadge, { backgroundColor: COLORS.warning }]}>
+                                                <View style={[styles.correctBadge, { backgroundColor: colors.warning }]}>
                                                     <Text style={styles.correctBadgeText}>Missed</Text>
                                                 </View>
                                             )}
                                         </TouchableOpacity>
                                     );
                                 })}
-                            
+
                             {/* Show hint for multiple select */}
                             {currentQuestion.type === 'multiple_select' && !isCurrentChecked && (
                                 <Text style={styles.multiSelectHint}>
@@ -760,7 +764,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                         const isCorrectOption = value === String(currentQuestion.correct_answer);
                                         const showCorrect = isCurrentChecked && isCorrectOption;
                                         const showWrong = isCurrentChecked && isSelected && !isCorrectOption;
-                                        
+
                                         return (
                                             <TouchableOpacity
                                                 key={value}
@@ -777,10 +781,10 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                                     name={value === 'true' ? "checkmark-circle" : "close-circle"}
                                                     size={32}
                                                     color={
-                                                        showCorrect ? COLORS.surface :
-                                                        showWrong ? COLORS.surface :
-                                                        isSelected ? COLORS.surface :
-                                                        value === 'true' ? COLORS.success : COLORS.error
+                                                        showCorrect ? colors.surface :
+                                                            showWrong ? colors.surface :
+                                                                isSelected ? colors.surface :
+                                                                    value === 'true' ? colors.success : colors.error
                                                     }
                                                 />
                                                 <Text style={[
@@ -804,7 +808,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                             isCurrentChecked && styles.shortAnswerInputDisabled,
                                         ]}
                                         placeholder="Type your answer here..."
-                                        placeholderTextColor={COLORS.textTertiary}
+                                        placeholderTextColor={colors.textTertiary}
                                         value={currentAnswer?.toString() || ''}
                                         onChangeText={(text) => selectAnswer(text)}
                                         multiline={true}
@@ -821,18 +825,18 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                 </View>
                             )}
                         </View>
-                        
+
                         {/* Check Answer Button - Shows above the feedback */}
                         {isCurrentAnswered && !isCurrentChecked && (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.checkAnswerButton}
                                 onPress={checkCurrentAnswer}
                             >
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.surface} />
+                                <Ionicons name="checkmark-circle" size={20} color={colors.surface} />
                                 <Text style={styles.checkAnswerButtonText}>Check Answer</Text>
                             </TouchableOpacity>
                         )}
-                        
+
                         {/* Feedback - Show after checking answer */}
                         {isCurrentChecked && (
                             <View style={[
@@ -840,14 +844,14 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                                 currentQuestionResult ? styles.answerFeedbackCorrect : styles.answerFeedbackWrong,
                             ]}>
                                 <View style={styles.feedbackHeader}>
-                                    <Ionicons 
-                                        name={currentQuestionResult ? "checkmark-circle" : "close-circle"} 
-                                        size={24} 
-                                        color={currentQuestionResult ? COLORS.success : COLORS.error} 
+                                    <Ionicons
+                                        name={currentQuestionResult ? "checkmark-circle" : "close-circle"}
+                                        size={24}
+                                        color={currentQuestionResult ? colors.success : colors.error}
                                     />
                                     <Text style={[
                                         styles.feedbackTitle,
-                                        { color: currentQuestionResult ? COLORS.success : COLORS.error }
+                                        { color: currentQuestionResult ? colors.success : colors.error }
                                     ]}>
                                         {currentQuestionResult ? 'Correct!' : 'Incorrect'}
                                     </Text>
@@ -862,12 +866,12 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                     {/* Question Navigator - Moved outside the card for better visibility */}
                 </Animated.View>
             </ScrollView>
-            
+
             {/* Question Navigator Bar - Fixed position above footer */}
             <View style={styles.questionNavigatorBar}>
                 <Text style={styles.navigatorLabel}>Questions:</Text>
-                <ScrollView 
-                    horizontal 
+                <ScrollView
+                    horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.navigatorContent}
                 >
@@ -910,7 +914,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                     <Ionicons
                         name="chevron-back"
                         size={20}
-                        color={currentQuestionIndex === 0 ? COLORS.textTertiary : COLORS.text}
+                        color={currentQuestionIndex === 0 ? colors.textTertiary : colors.text}
                     />
                     <Text style={[
                         styles.navButtonText,
@@ -930,7 +934,7 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                     {currentQuestionIndex < totalQuestions - 1 ? (
                         <TouchableOpacity style={styles.nextButton} onPress={goToNextQuestion}>
                             <Text style={styles.nextButtonText}>Next</Text>
-                            <Ionicons name="chevron-forward" size={20} color={COLORS.surface} />
+                            <Ionicons name="chevron-forward" size={20} color={colors.surface} />
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity
@@ -939,11 +943,11 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (
-                                <ActivityIndicator color={COLORS.surface} />
+                                <ActivityIndicator color={colors.surface} />
                             ) : (
                                 <>
                                     <Text style={styles.finishButtonText}>Finish Quiz</Text>
-                                    <Ionicons name="trophy" size={20} color={COLORS.surface} />
+                                    <Ionicons name="trophy" size={20} color={colors.surface} />
                                 </>
                             )}
                         </TouchableOpacity>
@@ -954,568 +958,568 @@ export const QuizComponent: React.FC<QuizComponentProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
     },
     contentContainer: {
-        padding: SPACING.lg,
-        paddingBottom: SPACING.xxxl,
+        padding: Theme.spacing.lg,
+        paddingBottom: Theme.spacing['3xl'],
     },
     introCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.xl,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.xl,
+        padding: Theme.spacing.xl,
         alignItems: 'center',
-        ...SHADOWS.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
     },
     quizIconContainer: {
         width: 96,
         height: 96,
         borderRadius: 48,
-        backgroundColor: COLORS.primary + '15',
+        backgroundColor: colors.primary + '15',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     quizTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.xxl,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
         textAlign: 'center',
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
     },
     quizDescription: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
-        marginBottom: SPACING.xl,
+        marginBottom: Theme.spacing.xl,
     },
     quizStats: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         width: '100%',
-        paddingVertical: SPACING.lg,
+        paddingVertical: Theme.spacing.lg,
         borderTopWidth: 1,
         borderBottomWidth: 1,
-        borderColor: COLORS.border,
-        marginBottom: SPACING.xl,
+        borderColor: colors.border,
+        marginBottom: Theme.spacing.xl,
     },
     statItem: {
         alignItems: 'center',
     },
     statValue: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginTop: SPACING.xs,
+        fontSize: Theme.fontSize.xl,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginTop: Theme.spacing.xs,
     },
     statLabel: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.xs,
+        color: colors.textSecondary,
         marginTop: 2,
     },
     buttonContainer: {
         width: '100%',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     startButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.sm,
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
-        ...SHADOWS.md,
+        gap: Theme.spacing.sm,
+        backgroundColor: colors.primary,
+        paddingVertical: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     startButtonText: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.surface,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.surface,
     },
     cancelButton: {
-        paddingVertical: SPACING.md,
+        paddingVertical: Theme.spacing.md,
         alignItems: 'center',
     },
     cancelButtonText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
     },
     quizHeader: {
-        backgroundColor: COLORS.surface,
-        paddingHorizontal: SPACING.lg,
-        paddingTop: SPACING.md,
-        paddingBottom: SPACING.lg,
-        ...SHADOWS.sm,
+        backgroundColor: colors.surface,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingTop: Theme.spacing.md,
+        paddingBottom: Theme.spacing.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.md,
+        marginBottom: Theme.spacing.md,
     },
     exitButton: {
-        padding: SPACING.xs,
+        padding: Theme.spacing.xs,
     },
     timerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
-        backgroundColor: COLORS.backgroundSecondary,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.md,
+        gap: Theme.spacing.xs,
+        backgroundColor: colors.backgroundSecondary,
+        paddingHorizontal: Theme.spacing.md,
+        paddingVertical: Theme.spacing.xs,
+        borderRadius: Theme.borderRadius.md,
     },
     timerWarning: {
-        backgroundColor: COLORS.error + '20',
+        backgroundColor: colors.error + '20',
     },
     timerText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
     },
     timerWarningText: {
-        color: COLORS.error,
+        color: colors.error,
     },
     progressBarContainer: {
         height: 6,
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         borderRadius: 3,
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
         overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         borderRadius: 3,
     },
     progressText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
     },
     questionContainer: {
         flex: 1,
-        padding: SPACING.lg,
+        padding: Theme.spacing.lg,
     },
     questionCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.xl,
-        ...SHADOWS.md,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.xl,
+        padding: Theme.spacing.xl,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     questionText: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.text,
         lineHeight: 26,
-        marginBottom: SPACING.xl,
+        marginBottom: Theme.spacing.xl,
     },
     optionsContainer: {
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     optionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.md,
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.lg,
+        padding: Theme.spacing.md,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: Theme.borderRadius.lg,
         borderWidth: 2,
         borderColor: 'transparent',
     },
     optionSelected: {
-        backgroundColor: COLORS.primary + '15',
-        borderColor: COLORS.primary,
+        backgroundColor: colors.primary + '15',
+        borderColor: colors.primary,
     },
     optionIndicator: {
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: SPACING.md,
+        marginRight: Theme.spacing.md,
         borderWidth: 1,
-        borderColor: COLORS.border,
+        borderColor: colors.border,
     },
     optionIndicatorSelected: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
     optionIndicatorCorrect: {
-        backgroundColor: COLORS.success,
-        borderColor: COLORS.success,
+        backgroundColor: colors.success,
+        borderColor: colors.success,
     },
     optionIndicatorWrong: {
-        backgroundColor: COLORS.error,
-        borderColor: COLORS.error,
+        backgroundColor: colors.error,
+        borderColor: colors.error,
     },
     optionLetter: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.textSecondary,
     },
     optionText: {
         flex: 1,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        color: colors.text,
         lineHeight: 22,
     },
     optionTextSelected: {
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.medium,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.medium,
     },
     optionTextCorrect: {
-        color: COLORS.success,
-        fontWeight: FONT_WEIGHT.medium,
+        color: colors.success,
+        fontWeight: Theme.fontWeight.medium,
     },
     optionTextWrong: {
-        color: COLORS.error,
-        fontWeight: FONT_WEIGHT.medium,
+        color: colors.error,
+        fontWeight: Theme.fontWeight.medium,
     },
     optionCorrect: {
-        backgroundColor: COLORS.success + '15',
-        borderColor: COLORS.success,
+        backgroundColor: colors.success + '15',
+        borderColor: colors.success,
     },
     optionWrong: {
-        backgroundColor: COLORS.error + '15',
-        borderColor: COLORS.error,
+        backgroundColor: colors.error + '15',
+        borderColor: colors.error,
     },
     optionMissed: {
-        backgroundColor: COLORS.warning + '10',
-        borderColor: COLORS.warning,
+        backgroundColor: colors.warning + '10',
+        borderColor: colors.warning,
         borderStyle: 'dashed',
     },
-    
+
     // Checkbox style for multiple_select
     checkboxIndicator: {
         width: 28,
         height: 28,
         borderRadius: 6,
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: SPACING.md,
+        marginRight: Theme.spacing.md,
         borderWidth: 2,
-        borderColor: COLORS.border,
+        borderColor: colors.border,
     },
     checkboxIndicatorSelected: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
     optionIndicatorMissed: {
-        backgroundColor: COLORS.warning + '30',
-        borderColor: COLORS.warning,
+        backgroundColor: colors.warning + '30',
+        borderColor: colors.warning,
     },
     multiSelectHint: {
-        marginTop: SPACING.md,
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        marginTop: Theme.spacing.md,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
         fontStyle: 'italic',
         textAlign: 'center',
     },
-    
+
     correctBadge: {
-        backgroundColor: COLORS.success,
-        paddingHorizontal: SPACING.sm,
+        backgroundColor: colors.success,
+        paddingHorizontal: Theme.spacing.sm,
         paddingVertical: 2,
-        borderRadius: BORDER_RADIUS.sm,
-        marginLeft: SPACING.sm,
+        borderRadius: Theme.borderRadius.sm,
+        marginLeft: Theme.spacing.sm,
     },
     correctBadgeText: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
+        color: colors.surface,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.bold,
     },
     trueFalseContainer: {
         flexDirection: 'row',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     trueFalseButton: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        padding: SPACING.xl,
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.lg,
+        padding: Theme.spacing.xl,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: Theme.borderRadius.lg,
         borderWidth: 2,
         borderColor: 'transparent',
     },
     trueFalseSelected: {
-        backgroundColor: COLORS.success,
-        borderColor: COLORS.success,
+        backgroundColor: colors.success,
+        borderColor: colors.success,
     },
     trueFalseSelectedFalse: {
-        backgroundColor: COLORS.error,
-        borderColor: COLORS.error,
+        backgroundColor: colors.error,
+        borderColor: colors.error,
     },
     trueFalseCorrect: {
-        backgroundColor: COLORS.success,
-        borderColor: COLORS.success,
+        backgroundColor: colors.success,
+        borderColor: colors.success,
     },
     trueFalseWrong: {
-        backgroundColor: COLORS.error,
-        borderColor: COLORS.error,
+        backgroundColor: colors.error,
+        borderColor: colors.error,
     },
     trueFalseText: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginTop: SPACING.sm,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginTop: Theme.spacing.sm,
     },
     trueFalseTextSelected: {
-        color: COLORS.surface,
+        color: colors.surface,
     },
     shortAnswerContainer: {
         width: '100%',
     },
     shortAnswerInput: {
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.lg,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: Theme.borderRadius.lg,
         borderWidth: 2,
-        borderColor: COLORS.border,
-        padding: SPACING.lg,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
+        borderColor: colors.border,
+        padding: Theme.spacing.lg,
+        fontSize: Theme.fontSize.base,
+        color: colors.text,
         minHeight: 120,
         textAlignVertical: 'top',
     },
     shortAnswerInputDisabled: {
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         opacity: 0.7,
     },
     shortAnswerFeedback: {
-        marginTop: SPACING.md,
-        padding: SPACING.md,
-        backgroundColor: COLORS.success + '15',
-        borderRadius: BORDER_RADIUS.md,
+        marginTop: Theme.spacing.md,
+        padding: Theme.spacing.md,
+        backgroundColor: colors.success + '15',
+        borderRadius: Theme.borderRadius.md,
     },
     correctAnswerLabel: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        marginBottom: Theme.spacing.xs,
     },
     correctAnswerText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.success,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.base,
+        color: colors.success,
+        fontWeight: Theme.fontWeight.bold,
     },
     checkAnswerButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.sm,
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.md,
-        paddingHorizontal: SPACING.xl,
-        borderRadius: BORDER_RADIUS.lg,
-        marginTop: SPACING.lg,
-        ...SHADOWS.md,
+        gap: Theme.spacing.sm,
+        backgroundColor: colors.primary,
+        paddingVertical: Theme.spacing.md,
+        paddingHorizontal: Theme.spacing.xl,
+        borderRadius: Theme.borderRadius.lg,
+        marginTop: Theme.spacing.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     checkAnswerButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.surface,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.surface,
     },
     answerFeedback: {
-        marginTop: SPACING.lg,
-        padding: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
+        marginTop: Theme.spacing.lg,
+        padding: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
         borderLeftWidth: 4,
     },
     answerFeedbackCorrect: {
-        backgroundColor: COLORS.success + '15',
-        borderLeftColor: COLORS.success,
+        backgroundColor: colors.success + '15',
+        borderLeftColor: colors.success,
     },
     answerFeedbackWrong: {
-        backgroundColor: COLORS.error + '15',
-        borderLeftColor: COLORS.error,
+        backgroundColor: colors.error + '15',
+        borderLeftColor: colors.error,
     },
     instantFeedback: {
-        marginTop: SPACING.lg,
-        padding: SPACING.md,
-        backgroundColor: COLORS.warning + '15',
-        borderRadius: BORDER_RADIUS.lg,
+        marginTop: Theme.spacing.lg,
+        padding: Theme.spacing.md,
+        backgroundColor: colors.warning + '15',
+        borderRadius: Theme.borderRadius.lg,
         borderLeftWidth: 4,
-        borderLeftColor: COLORS.warning,
+        borderLeftColor: colors.warning,
     },
     feedbackHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.sm,
-        marginBottom: SPACING.sm,
+        gap: Theme.spacing.sm,
+        marginBottom: Theme.spacing.sm,
     },
     feedbackTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.warning,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.warning,
     },
     feedbackText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.sm,
+        color: colors.text,
         lineHeight: 20,
     },
     questionNavigatorBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.backgroundSecondary,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.md,
+        backgroundColor: colors.backgroundSecondary,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.md,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: colors.border,
     },
     navigatorLabel: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.textSecondary,
-        marginRight: SPACING.sm,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.textSecondary,
+        marginRight: Theme.spacing.sm,
     },
     navigatorContent: {
-        paddingRight: SPACING.md,
+        paddingRight: Theme.spacing.md,
     },
     questionNavigator: {
-        marginTop: SPACING.xl,
-        paddingVertical: SPACING.md,
+        marginTop: Theme.spacing.xl,
+        paddingVertical: Theme.spacing.md,
     },
     navDot: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: SPACING.sm,
+        marginRight: Theme.spacing.sm,
         borderWidth: 2,
         borderColor: 'transparent',
     },
     navDotAnswered: {
-        backgroundColor: COLORS.warning + '30',
+        backgroundColor: colors.warning + '30',
     },
     navDotCorrect: {
-        backgroundColor: COLORS.success,
+        backgroundColor: colors.success,
     },
     navDotWrong: {
-        backgroundColor: COLORS.error,
+        backgroundColor: colors.error,
     },
     navDotCurrent: {
-        borderColor: COLORS.primary,
+        borderColor: colors.primary,
         borderWidth: 3,
     },
     navDotText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.textSecondary,
     },
     navDotTextActive: {
-        color: COLORS.surface,
+        color: colors.surface,
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: SPACING.md,
-        backgroundColor: COLORS.surface,
+        padding: Theme.spacing.md,
+        backgroundColor: colors.surface,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: colors.border,
     },
     footerCenter: {
         flex: 1,
         alignItems: 'center',
     },
     footerProgress: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
     },
     footerButtons: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.sm,
+        gap: Theme.spacing.sm,
     },
     navButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
-        padding: SPACING.md,
+        gap: Theme.spacing.xs,
+        padding: Theme.spacing.md,
     },
     navButtonDisabled: {
         opacity: 0.5,
     },
     navButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.medium,
+        color: colors.text,
     },
     navButtonTextDisabled: {
-        color: COLORS.textTertiary,
+        color: colors.textTertiary,
     },
     nextButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.lg,
-        borderRadius: BORDER_RADIUS.lg,
+        gap: Theme.spacing.xs,
+        backgroundColor: colors.primary,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.lg,
+        borderRadius: Theme.borderRadius.lg,
     },
     nextButtonText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.surface,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.surface,
     },
     finishButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
-        backgroundColor: COLORS.success,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.lg,
-        borderRadius: BORDER_RADIUS.lg,
+        gap: Theme.spacing.xs,
+        backgroundColor: colors.success,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.lg,
+        borderRadius: Theme.borderRadius.lg,
     },
     finishButtonText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.surface,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.surface,
     },
     finishHint: {
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.md,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.md,
     },
     finishHintText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textTertiary,
+        fontSize: Theme.fontSize.xs,
+        color: colors.textTertiary,
         fontStyle: 'italic',
     },
     submitButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
-        backgroundColor: COLORS.success,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.lg,
-        borderRadius: BORDER_RADIUS.lg,
+        gap: Theme.spacing.xs,
+        backgroundColor: colors.success,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.lg,
+        borderRadius: Theme.borderRadius.lg,
     },
     submitButtonDisabled: {
         opacity: 0.7,
     },
     submitButtonPartial: {
-        backgroundColor: COLORS.warning,
+        backgroundColor: colors.warning,
     },
     submitButtonText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.surface,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.surface,
     },
     resultsCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.xl,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.xl,
+        padding: Theme.spacing.xl,
         alignItems: 'center',
-        ...SHADOWS.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
     },
     resultIconContainer: {
         width: 120,
@@ -1523,57 +1527,57 @@ const styles = StyleSheet.create({
         borderRadius: 60,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     resultTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.xxl,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.xs,
     },
     resultSubtitle: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.xl,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
+        marginBottom: Theme.spacing.xl,
     },
     scoreContainer: {
-        marginBottom: SPACING.xl,
+        marginBottom: Theme.spacing.xl,
     },
     scoreCircle: {
         alignItems: 'center',
     },
     scorePercentage: {
-        fontSize: FONT_SIZE.display,
-        fontWeight: FONT_WEIGHT.black,
+        fontSize: Theme.fontSize.display,
+        fontWeight: Theme.fontWeight.black,
     },
     scoreLabel: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
     },
     answersReview: {
         width: '100%',
-        marginTop: SPACING.lg,
+        marginTop: Theme.spacing.lg,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-        paddingTop: SPACING.lg,
+        borderTopColor: colors.border,
+        paddingTop: Theme.spacing.lg,
     },
     reviewTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.md,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.md,
     },
     reviewItem: {
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.md,
-        marginBottom: SPACING.sm,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: Theme.borderRadius.md,
+        marginBottom: Theme.spacing.sm,
         overflow: 'hidden',
     },
     reviewHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.md,
+        padding: Theme.spacing.md,
     },
     reviewIcon: {
         width: 28,
@@ -1581,104 +1585,104 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: SPACING.sm,
+        marginRight: Theme.spacing.sm,
     },
     reviewQuestion: {
         flex: 1,
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.text,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.text,
+        fontWeight: Theme.fontWeight.medium,
     },
     explanationContainer: {
-        padding: SPACING.md,
+        padding: Theme.spacing.md,
         paddingTop: 0,
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
     },
     answerLabel: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        marginBottom: Theme.spacing.xs,
     },
     correctAnswer: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        marginBottom: Theme.spacing.sm,
     },
     explanation: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.info,
+        fontSize: Theme.fontSize.sm,
+        color: colors.info,
         fontStyle: 'italic',
-        marginTop: SPACING.sm,
-        padding: SPACING.sm,
-        backgroundColor: COLORS.info + '10',
-        borderRadius: BORDER_RADIUS.sm,
+        marginTop: Theme.spacing.sm,
+        padding: Theme.spacing.sm,
+        backgroundColor: colors.info + '10',
+        borderRadius: Theme.borderRadius.sm,
     },
     resultButtonContainer: {
         width: '100%',
         flexDirection: 'row',
-        gap: SPACING.md,
-        marginTop: SPACING.xl,
+        gap: Theme.spacing.md,
+        marginTop: Theme.spacing.xl,
     },
     retryButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.xs,
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
+        gap: Theme.spacing.xs,
+        backgroundColor: colors.primary,
+        paddingVertical: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
     },
     retryButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.surface,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.surface,
     },
     continueButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.xs,
-        backgroundColor: COLORS.backgroundSecondary,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
+        gap: Theme.spacing.xs,
+        backgroundColor: colors.backgroundSecondary,
+        paddingVertical: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
         borderWidth: 1,
-        borderColor: COLORS.primary,
+        borderColor: colors.primary,
     },
     continueButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.primary,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.primary,
     },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: SPACING.xl,
+        padding: Theme.spacing.xl,
     },
     errorTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginTop: SPACING.lg,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize.xl,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginTop: Theme.spacing.lg,
+        marginBottom: Theme.spacing.sm,
     },
     errorText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
         textAlign: 'center',
-        marginBottom: SPACING.xl,
+        marginBottom: Theme.spacing.xl,
     },
     errorBackButton: {
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.xl,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
+        backgroundColor: colors.primary,
+        paddingHorizontal: Theme.spacing.xl,
+        paddingVertical: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
     },
     errorBackButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
     },
 });

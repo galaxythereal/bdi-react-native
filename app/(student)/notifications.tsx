@@ -1,3 +1,4 @@
+import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -13,8 +14,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotifications } from '../../src/context/NotificationContext';
 import { useTheme } from '../../src/context/ThemeContext';
-import { NotificationItem, EmptyNotifications } from '../../src/features/notifications/NotificationComponents';
-import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
+import { EmptyNotifications, NotificationItem } from '../../src/features/notifications/NotificationComponents';
 
 export default function NotificationsScreen() {
     const router = useRouter();
@@ -81,15 +81,15 @@ export default function NotificationsScreen() {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-                <TouchableOpacity 
+            <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }, Theme.shadows[isDark ? 'dark' : 'light'].sm]}>
+                <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => router.back()}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
-                
+
                 <View style={styles.headerCenter}>
                     <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
                     {unreadCount > 0 && (
@@ -100,7 +100,7 @@ export default function NotificationsScreen() {
                 </View>
 
                 {unreadCount > 0 ? (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.markAllButton}
                         onPress={handleMarkAllRead}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -127,7 +127,7 @@ export default function NotificationsScreen() {
                     keyExtractor={keyExtractor}
                     contentContainerStyle={[
                         styles.listContent,
-                        { paddingBottom: TAB_BAR_HEIGHT + SPACING.lg },
+                        { paddingBottom: TAB_BAR_HEIGHT + Theme.spacing.lg },
                         notifications.length === 0 && styles.emptyListContent,
                     ]}
                     refreshControl={
@@ -157,10 +157,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
+        paddingHorizontal: Theme.spacing.md,
+        paddingVertical: Theme.spacing.sm,
         borderBottomWidth: 1,
-        ...SHADOWS.sm,
+
     },
     backButton: {
         width: 40,
@@ -174,12 +174,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.xs,
+        gap: Theme.spacing.xs,
     },
     headerTitle: {
-        fontSize: FONT_SIZE.lg,
+        fontSize: Theme.fontSize.lg,
         fontFamily: 'Inter-SemiBold',
-        fontWeight: FONT_WEIGHT.semibold as any,
+        fontWeight: Theme.fontWeight.semibold as any,
     },
     unreadBadge: {
         paddingHorizontal: 8,
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 12,
         fontFamily: 'Inter-Bold',
-        fontWeight: FONT_WEIGHT.bold as any,
+        fontWeight: Theme.fontWeight.bold as any,
     },
     markAllButton: {
         width: 40,
@@ -208,20 +208,20 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     loadingText: {
-        fontSize: FONT_SIZE.sm,
+        fontSize: Theme.fontSize.sm,
         fontFamily: 'Inter-Regular',
     },
     listContent: {
-        paddingTop: SPACING.xs,
+        paddingTop: Theme.spacing.xs,
     },
     emptyListContent: {
         flex: 1,
     },
     separator: {
         height: 1,
-        marginLeft: SPACING.lg + 48, // Align with content after icon
+        marginLeft: Theme.spacing.md + 48, // Align with content after icon
     },
 });

@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Animated,
     Dimensions,
-    FlatList,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -16,9 +15,11 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Theme from '../../constants/theme';
+import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import {
     createTicket,
@@ -28,8 +29,6 @@ import {
     getTicketStatusColor,
     sendTicketMessage,
 } from '../../src/features/support/supportService';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
-import { useTheme } from '../../src/context/ThemeContext';
 import { SupportTicket, TicketMessage } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -39,9 +38,10 @@ interface TicketCardProps {
     ticket: SupportTicket;
     index: number;
     onPress: () => void;
+    styles: any;
 }
 
-const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress }) => {
+const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles }) => {
     const cardAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -93,11 +93,11 @@ const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress }) => {
                         </Text>
                     </View>
                 </View>
-                
+
                 <Text style={styles.cardDescription} numberOfLines={2}>
                     {ticket.description}
                 </Text>
-                
+
                 <View style={styles.cardFooter}>
                     <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
                         <Text style={[styles.statusText, { color: statusColor }]}>
@@ -126,7 +126,7 @@ export default function SupportScreen() {
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
-    
+
     // New ticket form
     const [newTicket, setNewTicket] = useState({
         subject: '',
@@ -134,19 +134,20 @@ export default function SupportScreen() {
         priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
     });
     const [creatingTicket, setCreatingTicket] = useState(false);
-    
+
     const { session } = useAuth();
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const messagesScrollRef = useRef<ScrollView>(null);
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = async () => {
         try {
             const data = await fetchMyTickets();
             setTickets(data);
-            
+
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 400,
@@ -167,7 +168,7 @@ export default function SupportScreen() {
         try {
             const messages = await fetchTicketMessages(ticketId);
             setTicketMessages(messages);
-            
+
             // Scroll to bottom
             setTimeout(() => {
                 messagesScrollRef.current?.scrollToEnd({ animated: false });
@@ -225,7 +226,7 @@ export default function SupportScreen() {
             setNewMessage('');
             await loadMessages(selectedTicket.id);
             loadData(); // Refresh ticket list to update status
-            
+
             // Scroll to bottom
             setTimeout(() => {
                 messagesScrollRef.current?.scrollToEnd({ animated: true });
@@ -261,7 +262,7 @@ export default function SupportScreen() {
                     </Text>
                 </View>
                 <TouchableOpacity
-                    style={[styles.createButton, { backgroundColor: colors.primary }]}
+                    style={styles.createButton}
                     onPress={() => setShowCreateModal(true)}
                 >
                     <Ionicons name="add" size={24} color="#fff" />
@@ -308,6 +309,7 @@ export default function SupportScreen() {
                                 ticket={ticket}
                                 index={index}
                                 onPress={() => handleViewTicket(ticket)}
+                                styles={styles}
                             />
                         ))}
                     </Animated.View>
@@ -329,7 +331,7 @@ export default function SupportScreen() {
                         <Text style={styles.modalTitle}>New Ticket</Text>
                         <TouchableOpacity onPress={handleCreateTicket} disabled={creatingTicket}>
                             {creatingTicket ? (
-                                <ActivityIndicator size="small" color={COLORS.primary} />
+                                <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
                                 <Text style={styles.modalSubmit}>Create</Text>
                             )}
@@ -342,7 +344,7 @@ export default function SupportScreen() {
                             <TextInput
                                 style={styles.formInput}
                                 placeholder="Brief summary of your issue"
-                                placeholderTextColor={COLORS.textTertiary}
+                                placeholderTextColor={colors.textTertiary}
                                 value={newTicket.subject}
                                 onChangeText={(text) => setNewTicket(prev => ({ ...prev, subject: text }))}
                             />
@@ -377,7 +379,7 @@ export default function SupportScreen() {
                             <TextInput
                                 style={[styles.formInput, styles.formTextArea]}
                                 placeholder="Please describe your issue in detail..."
-                                placeholderTextColor={COLORS.textTertiary}
+                                placeholderTextColor={colors.textTertiary}
                                 value={newTicket.description}
                                 onChangeText={(text) => setNewTicket(prev => ({ ...prev, description: text }))}
                                 multiline
@@ -402,7 +404,7 @@ export default function SupportScreen() {
                             style={styles.detailCloseButton}
                             onPress={() => setShowTicketDetail(false)}
                         >
-                            <Ionicons name="close" size={24} color={COLORS.text} />
+                            <Ionicons name="close" size={24} color={colors.text} />
                         </TouchableOpacity>
                         <View style={styles.detailHeaderContent}>
                             <Text style={styles.detailTitle} numberOfLines={1}>
@@ -446,7 +448,7 @@ export default function SupportScreen() {
                         >
                             {loadingMessages ? (
                                 <View style={styles.messagesLoading}>
-                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                    <ActivityIndicator size="small" color={colors.primary} />
                                     <Text style={styles.messagesLoadingText}>Loading messages...</Text>
                                 </View>
                             ) : ticketMessages.length === 0 ? (
@@ -491,11 +493,11 @@ export default function SupportScreen() {
                         </ScrollView>
 
                         {/* Message Input */}
-                        <View style={[styles.messageInputContainer, { paddingBottom: insets.bottom || SPACING.md }]}>
+                        <View style={[styles.messageInputContainer, { paddingBottom: insets.bottom || Theme.spacing.md }]}>
                             <TextInput
                                 style={styles.messageInput}
                                 placeholder="Type a message..."
-                                placeholderTextColor={COLORS.textTertiary}
+                                placeholderTextColor={colors.textTertiary}
                                 value={newMessage}
                                 onChangeText={setNewMessage}
                                 multiline
@@ -522,385 +524,387 @@ export default function SupportScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        marginTop: SPACING.md,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: SPACING.lg,
-        paddingTop: SPACING.md,
-    },
-    headerTitle: {
-        fontSize: FONT_SIZE.xxxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-    },
-    headerSubtitle: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginTop: 4,
-    },
-    createButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: COLORS.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...SHADOWS.md,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: SPACING.lg,
-        paddingTop: 0,
-    },
-    cardWrapper: {
-        marginBottom: SPACING.md,
-    },
-    card: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.lg,
-        ...SHADOWS.md,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginBottom: SPACING.sm,
-    },
-    statusIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: SPACING.md,
-    },
-    cardHeaderText: {
-        flex: 1,
-    },
-    cardTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginBottom: 4,
-    },
-    cardDate: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textTertiary,
-    },
-    cardDescription: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.md,
-        lineHeight: 20,
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        gap: SPACING.sm,
-    },
-    statusBadge: {
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: 4,
-        borderRadius: BORDER_RADIUS.sm,
-    },
-    statusText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
-    },
-    priorityBadge: {
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: 4,
-        borderRadius: BORDER_RADIUS.sm,
-    },
-    priorityText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
-    },
-    emptyState: {
-        alignItems: 'center',
-        paddingVertical: SPACING.xxxl,
-    },
-    emptyIcon: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: COLORS.surface,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: SPACING.lg,
-    },
-    emptyTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
-    },
-    emptyText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        paddingHorizontal: SPACING.xl,
-        marginBottom: SPACING.lg,
-    },
-    emptyButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.lg,
-        backgroundColor: COLORS.primary,
-        borderRadius: BORDER_RADIUS.round,
-        gap: SPACING.xs,
-    },
-    emptyButtonText: {
-        fontSize: FONT_SIZE.md,
-        color: '#fff',
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-    // Modal styles
-    modalContainer: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: SPACING.md,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    modalCancel: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-    },
-    modalTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-    },
-    modalSubmit: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-    modalContent: {
-        flex: 1,
-        padding: SPACING.lg,
-    },
-    formGroup: {
-        marginBottom: SPACING.lg,
-    },
-    formLabel: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
-    },
-    formInput: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-    },
-    formTextArea: {
-        height: 150,
-        textAlignVertical: 'top',
-    },
-    priorityOptions: {
-        flexDirection: 'row',
-        gap: SPACING.sm,
-    },
-    priorityOption: {
-        flex: 1,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
-        borderWidth: 2,
-        alignItems: 'center',
-        backgroundColor: COLORS.surface,
-    },
-    priorityOptionActive: {
-        backgroundColor: COLORS.background,
-    },
-    priorityOptionText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.textSecondary,
-    },
-    // Detail modal
-    detailContainer: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    detailHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: SPACING.md,
-        backgroundColor: COLORS.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    detailCloseButton: {
-        padding: SPACING.sm,
-    },
-    detailHeaderContent: {
-        flex: 1,
-        marginLeft: SPACING.sm,
-    },
-    detailTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-    },
-    detailBadges: {
-        flexDirection: 'row',
-        marginTop: 4,
-    },
-    detailBadge: {
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: 2,
-        borderRadius: BORDER_RADIUS.sm,
-    },
-    detailBadgeText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
-    },
-    originalMessage: {
-        padding: SPACING.lg,
-        backgroundColor: COLORS.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    originalLabel: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textTertiary,
-        marginBottom: SPACING.xs,
-        textTransform: 'uppercase',
-        fontWeight: FONT_WEIGHT.bold,
-    },
-    originalText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-        lineHeight: 22,
-    },
-    originalDate: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textTertiary,
-        marginTop: SPACING.sm,
-    },
-    messagesContainer: {
-        flex: 1,
-    },
-    messagesList: {
-        flex: 1,
-    },
-    messagesContent: {
-        padding: SPACING.md,
-    },
-    messagesLoading: {
-        alignItems: 'center',
-        padding: SPACING.xl,
-    },
-    messagesLoadingText: {
-        marginTop: SPACING.sm,
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-    },
-    noMessages: {
-        alignItems: 'center',
-        padding: SPACING.xl,
-    },
-    noMessagesText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textTertiary,
-    },
-    messageBubble: {
-        maxWidth: '80%',
-        padding: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
-        marginBottom: SPACING.sm,
-    },
-    messageBubbleMe: {
-        alignSelf: 'flex-end',
-        backgroundColor: COLORS.primary,
-        borderBottomRightRadius: 4,
-    },
-    messageBubbleOther: {
-        alignSelf: 'flex-start',
-        backgroundColor: COLORS.surface,
-        borderBottomLeftRadius: 4,
-    },
-    messageAuthor: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
-        marginBottom: 4,
-    },
-    messageText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-        lineHeight: 20,
-    },
-    messageTextMe: {
-        color: '#fff',
-    },
-    messageTime: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textTertiary,
-        marginTop: 4,
-        alignSelf: 'flex-end',
-    },
-    messageTimeMe: {
-        color: 'rgba(255,255,255,0.7)',
-    },
-    messageInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        padding: SPACING.md,
-        backgroundColor: COLORS.surface,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-        gap: SPACING.sm,
-    },
-    messageInput: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-        borderRadius: BORDER_RADIUS.lg,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-        maxHeight: 100,
-    },
-    sendButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: COLORS.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    sendButtonDisabled: {
-        opacity: 0.5,
-    },
-});
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        loadingContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        loadingText: {
+            marginTop: Theme.spacing.md,
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+        },
+        header: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: Theme.spacing.lg,
+            paddingTop: Theme.spacing.md,
+        },
+        headerTitle: {
+            fontSize: Theme.fontSize['3xl'],
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+        },
+        headerSubtitle: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginTop: 4,
+        },
+        createButton: {
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            backgroundColor: colors.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+            ...Theme.shadows[isDark ? 'dark' : 'light'].md,
+        },
+        scrollView: {
+            flex: 1,
+        },
+        scrollContent: {
+            padding: Theme.spacing.lg,
+            paddingTop: 0,
+        },
+        cardWrapper: {
+            marginBottom: Theme.spacing.md,
+        },
+        card: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.xl,
+            padding: Theme.spacing.lg,
+            ...Theme.shadows[isDark ? 'dark' : 'light'].md,
+        },
+        cardHeader: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            marginBottom: Theme.spacing.sm,
+        },
+        statusIcon: {
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: Theme.spacing.md,
+        },
+        cardHeaderText: {
+            flex: 1,
+        },
+        cardTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+            marginBottom: 4,
+        },
+        cardDate: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textTertiary,
+        },
+        cardDescription: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginBottom: Theme.spacing.md,
+            lineHeight: 20,
+        },
+        cardFooter: {
+            flexDirection: 'row',
+            gap: Theme.spacing.sm,
+        },
+        statusBadge: {
+            paddingHorizontal: Theme.spacing.sm,
+            paddingVertical: 4,
+            borderRadius: Theme.borderRadius.sm,
+        },
+        statusText: {
+            fontSize: Theme.fontSize.xs,
+            fontWeight: Theme.fontWeight.bold,
+        },
+        priorityBadge: {
+            paddingHorizontal: Theme.spacing.sm,
+            paddingVertical: 4,
+            borderRadius: Theme.borderRadius.sm,
+        },
+        priorityText: {
+            fontSize: Theme.fontSize.xs,
+            fontWeight: Theme.fontWeight.bold,
+        },
+        emptyState: {
+            alignItems: 'center',
+            paddingVertical: Theme.spacing['3xl'],
+        },
+        emptyIcon: {
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            backgroundColor: colors.surface,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: Theme.spacing.lg,
+        },
+        emptyTitle: {
+            fontSize: Theme.fontSize.xl,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginBottom: Theme.spacing.sm,
+        },
+        emptyText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            textAlign: 'center',
+            paddingHorizontal: Theme.spacing.xl,
+            marginBottom: Theme.spacing.lg,
+        },
+        emptyButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.sm,
+            paddingHorizontal: Theme.spacing.lg,
+            backgroundColor: colors.primary,
+            borderRadius: Theme.borderRadius.full,
+            gap: Theme.spacing.xs,
+        },
+        emptyButtonText: {
+            fontSize: Theme.fontSize.base,
+            color: '#fff',
+            fontWeight: Theme.fontWeight.semibold,
+        },
+        // Modal styles
+        modalContainer: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        modalHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: Theme.spacing.md,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        modalCancel: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+        },
+        modalTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+        },
+        modalSubmit: {
+            fontSize: Theme.fontSize.base,
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.semibold,
+        },
+        modalContent: {
+            flex: 1,
+            padding: Theme.spacing.lg,
+        },
+        formGroup: {
+            marginBottom: Theme.spacing.lg,
+        },
+        formLabel: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.text,
+            marginBottom: Theme.spacing.sm,
+        },
+        formInput: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.md,
+            fontSize: Theme.fontSize.base,
+            color: colors.text,
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        formTextArea: {
+            height: 150,
+            textAlignVertical: 'top',
+        },
+        priorityOptions: {
+            flexDirection: 'row',
+            gap: Theme.spacing.sm,
+        },
+        priorityOption: {
+            flex: 1,
+            paddingVertical: Theme.spacing.sm,
+            paddingHorizontal: Theme.spacing.sm,
+            borderRadius: Theme.borderRadius.md,
+            borderWidth: 2,
+            alignItems: 'center',
+            backgroundColor: colors.surface,
+        },
+        priorityOptionActive: {
+            backgroundColor: colors.background,
+        },
+        priorityOptionText: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.textSecondary,
+        },
+        // Detail modal
+        detailContainer: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        detailHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: Theme.spacing.md,
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        detailCloseButton: {
+            padding: Theme.spacing.sm,
+        },
+        detailHeaderContent: {
+            flex: 1,
+            marginLeft: Theme.spacing.sm,
+        },
+        detailTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+        },
+        detailBadges: {
+            flexDirection: 'row',
+            marginTop: 4,
+        },
+        detailBadge: {
+            paddingHorizontal: Theme.spacing.sm,
+            paddingVertical: 2,
+            borderRadius: Theme.borderRadius.sm,
+        },
+        detailBadgeText: {
+            fontSize: Theme.fontSize.xs,
+            fontWeight: Theme.fontWeight.bold,
+        },
+        originalMessage: {
+            padding: Theme.spacing.lg,
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        originalLabel: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textTertiary,
+            marginBottom: Theme.spacing.xs,
+            textTransform: 'uppercase',
+            fontWeight: Theme.fontWeight.bold,
+        },
+        originalText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.text,
+            lineHeight: 22,
+        },
+        originalDate: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textTertiary,
+            marginTop: Theme.spacing.sm,
+        },
+        messagesContainer: {
+            flex: 1,
+        },
+        messagesList: {
+            flex: 1,
+        },
+        messagesContent: {
+            padding: Theme.spacing.md,
+        },
+        messagesLoading: {
+            alignItems: 'center',
+            padding: Theme.spacing.xl,
+        },
+        messagesLoadingText: {
+            marginTop: Theme.spacing.sm,
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+        },
+        noMessages: {
+            alignItems: 'center',
+            padding: Theme.spacing.xl,
+        },
+        noMessagesText: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textTertiary,
+        },
+        messageBubble: {
+            maxWidth: '80%',
+            padding: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.lg,
+            marginBottom: Theme.spacing.sm,
+        },
+        messageBubbleMe: {
+            alignSelf: 'flex-end',
+            backgroundColor: colors.primary,
+            borderBottomRightRadius: 4,
+        },
+        messageBubbleOther: {
+            alignSelf: 'flex-start',
+            backgroundColor: colors.surface,
+            borderBottomLeftRadius: 4,
+        },
+        messageAuthor: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.semibold,
+            marginBottom: 4,
+        },
+        messageText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.text,
+            lineHeight: 20,
+        },
+        messageTextMe: {
+            color: '#fff',
+        },
+        messageTime: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textTertiary,
+            marginTop: 4,
+            alignSelf: 'flex-end',
+        },
+        messageTimeMe: {
+            color: 'rgba(255,255,255,0.7)',
+        },
+        messageInputContainer: {
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            padding: Theme.spacing.md,
+            backgroundColor: colors.surface,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            gap: Theme.spacing.sm,
+        },
+        messageInput: {
+            flex: 1,
+            backgroundColor: colors.background,
+            borderRadius: Theme.borderRadius.lg,
+            paddingHorizontal: Theme.spacing.md,
+            paddingVertical: Theme.spacing.sm,
+            fontSize: Theme.fontSize.base,
+            color: colors.text,
+            maxHeight: 100,
+        },
+        sendButton: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: colors.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        sendButtonDisabled: {
+            opacity: 0.5,
+        },
+    });
+}

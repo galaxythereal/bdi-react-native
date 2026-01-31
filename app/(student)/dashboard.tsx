@@ -1,12 +1,15 @@
+import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Animated,
     Dimensions,
     Image,
+    Linking,
     Modal,
     Platform,
     RefreshControl,
@@ -15,22 +18,19 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useNotifications } from '../../src/context/NotificationContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
-import { fetchUpcomingLiveSessions, fetchDiplomaCatalog } from '../../src/features/diplomas/diplomaService';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
-import { useTheme } from '../../src/context/ThemeContext';
-import { useNotifications } from '../../src/context/NotificationContext';
+import { fetchDiplomaCatalog, fetchUpcomingLiveSessions } from '../../src/features/diplomas/diplomaService';
 import { NotificationBell } from '../../src/features/notifications/NotificationComponents';
-import { Enrollment, LiveSession, CatalogDiploma } from '../../src/types';
+import { CatalogDiploma, Enrollment, LiveSession } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
-const CARD_WIDTH = (SCREEN_WIDTH - SPACING.lg * 2 - CARD_GAP) / 2;
+const CARD_WIDTH = (SCREEN_WIDTH - Theme.spacing.lg * 2 - CARD_GAP) / 2;
 
 // Compact Course Card for Grid
 interface CourseCardProps {
@@ -40,6 +40,8 @@ interface CourseCardProps {
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const progress = Math.round(item.progress || 0);
     const diploma = item.diploma;
@@ -66,9 +68,9 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
 
     // Progress color based on completion
     const getProgressColor = () => {
-        if (progress >= 100) return COLORS.success;
-        if (progress >= 50) return COLORS.primary;
-        return COLORS.warning;
+        if (progress >= 100) return colors.success;
+        if (progress >= 50) return colors.primary;
+        return Theme.colors.light.warning;
     };
 
     return (
@@ -96,7 +98,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                         />
                     ) : (
                         <View style={styles.thumbnailPlaceholder}>
-                            <Ionicons name="school" size={28} color={COLORS.primary} />
+                            <Ionicons name="school" size={28} color={colors.primary} />
                         </View>
                     )}
                     {/* Progress badge */}
@@ -124,7 +126,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                     </View>
 
                     {/* Action text */}
-                    <Text style={styles.actionText}>
+                    <Text style={[styles.actionText, { color: colors.primary }]}>
                         {progress > 0 ? 'Continue' : 'Start'} →
                     </Text>
                 </View>
@@ -141,15 +143,19 @@ interface StatCardProps {
     color: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, value, label, color }) => (
-    <View style={styles.statCard}>
-        <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
-            <Ionicons name={icon} size={20} color={color} />
+const StatCard: React.FC<StatCardProps> = ({ icon, value, label, color }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    return (
+        <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
+            <View style={[styles.statIconContainer, { backgroundColor: color + '20' }]}>
+                <Ionicons name={icon} size={20} color={color} />
+            </View>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>{value}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
         </View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-    </View>
-);
+    );
+};
 
 export default function DashboardScreen() {
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -164,7 +170,8 @@ export default function DashboardScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = async () => {
         try {
@@ -252,15 +259,15 @@ export default function DashboardScreen() {
                         colors={[colors.primary]}
                     />
                 }
-                contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + SPACING.lg }}
+                contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + Theme.spacing.lg }}
             >
                 <Animated.View style={{ opacity: fadeAnim }}>
                     {/* Header */}
-                    <View style={styles.header}>
+                    <View style={[styles.header, { backgroundColor: colors.surface }]}>
                         <View style={styles.headerTop}>
                             <View style={styles.headerTextContainer}>
-                                <Text style={styles.greeting}>{getGreeting()},</Text>
-                                <Text style={styles.userName}>{getUserName()} 👋</Text>
+                                <Text style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()},</Text>
+                                <Text style={[styles.userName, { color: colors.textPrimary }]}>{getUserName()} 👋</Text>
                             </View>
                             <View style={styles.headerActions}>
                                 <NotificationBell
@@ -268,11 +275,11 @@ export default function DashboardScreen() {
                                     count={unreadCount}
                                 />
                                 <TouchableOpacity
-                                    style={styles.avatar}
+                                    style={[styles.avatar, { backgroundColor: colors.primary }]}
                                     onPress={() => router.push('/(student)/profile')}
                                     activeOpacity={0.8}
                                 >
-                                    <Text style={styles.avatarText}>
+                                    <Text style={[styles.avatarText, { color: colors.textInverse }]}>
                                         {session?.user.email?.charAt(0).toUpperCase() || 'S'}
                                     </Text>
                                 </TouchableOpacity>
@@ -286,19 +293,19 @@ export default function DashboardScreen() {
                                     icon="book"
                                     value={totalCourses}
                                     label="Courses"
-                                    color={COLORS.primary}
+                                    color={Theme.colors.light.primary}
                                 />
                                 <StatCard
                                     icon="trending-up"
                                     value={`${avgProgress}%`}
                                     label="Progress"
-                                    color={COLORS.info}
+                                    color={Theme.colors.light.info}
                                 />
                                 <StatCard
                                     icon="checkmark-circle"
                                     value={completedCourses}
                                     label="Completed"
-                                    color={COLORS.success}
+                                    color={Theme.colors.light.success}
                                 />
                             </View>
                         )}
@@ -347,7 +354,7 @@ export default function DashboardScreen() {
                                         activeOpacity={0.9}
                                     >
                                         <LinearGradient
-                                            colors={isLive ? ['#EF4444', '#DC2626'] : [COLORS.primary, '#7C3AED']}
+                                            colors={isLive ? ['#EF4444', '#DC2626'] : [colors.primary, colors.primaryLight]}
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 1 }}
                                             style={styles.liveSessionGradient}
@@ -388,7 +395,7 @@ export default function DashboardScreen() {
                                                 <View style={styles.liveSessionAction}>
                                                     {isLive ? (
                                                         <View style={styles.joinNowButton}>
-                                                            <Ionicons name="videocam" size={18} color={COLORS.error} />
+                                                            <Ionicons name="videocam" size={18} color={Theme.colors.light.error} />
                                                             <Text style={styles.joinNowText}>Join</Text>
                                                         </View>
                                                     ) : diff > 0 && diff < 86400000 ? (
@@ -400,7 +407,7 @@ export default function DashboardScreen() {
                                                         </View>
                                                     ) : (
                                                         <View style={styles.joinNowButton}>
-                                                            <Ionicons name="arrow-forward" size={18} color={COLORS.primary} />
+                                                            <Ionicons name="arrow-forward" size={18} color={Theme.colors.light.primary} />
                                                         </View>
                                                     )}
                                                 </View>
@@ -432,7 +439,7 @@ export default function DashboardScreen() {
                                         key={enrollment.id}
                                         style={[
                                             styles.enrolledDiplomaCard,
-                                            enrollmentIndex > 0 && { marginTop: SPACING.md }
+                                            enrollmentIndex > 0 && { marginTop: Theme.spacing.md }
                                         ]}
                                         onPress={() => {
                                             // Find this diploma in catalog for richer data
@@ -465,7 +472,7 @@ export default function DashboardScreen() {
                                                 />
                                             ) : (
                                                 <LinearGradient
-                                                    colors={[COLORS.primary, COLORS.primaryDark]}
+                                                    colors={[Theme.colors.light.primary, Theme.colors.light.primaryDark]}
                                                     style={styles.enrolledDiplomaImage}
                                                 >
                                                     <Ionicons name="school" size={48} color="#fff" />
@@ -476,7 +483,7 @@ export default function DashboardScreen() {
                                                 style={styles.enrolledDiplomaOverlay}
                                             >
                                                 <View style={styles.enrolledDiplomaBadge}>
-                                                    <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
+                                                    <Ionicons name="checkmark-circle" size={14} color={Theme.colors.light.success} />
                                                     <Text style={styles.enrolledDiplomaBadgeText}>Enrolled</Text>
                                                 </View>
                                                 <Text style={styles.enrolledDiplomaTitle} numberOfLines={2}>
@@ -500,7 +507,7 @@ export default function DashboardScreen() {
                                                         styles.progressBarFillLarge,
                                                         {
                                                             width: `${overallProgress}%`,
-                                                            backgroundColor: overallProgress >= 100 ? COLORS.success : COLORS.primary
+                                                            backgroundColor: overallProgress >= 100 ? colors.success : colors.primary
                                                         }
                                                     ]}
                                                 />
@@ -525,7 +532,7 @@ export default function DashboardScreen() {
                                                             <Text style={styles.coursePreviewName} numberOfLines={2}>
                                                                 {course.title}
                                                             </Text>
-                                                            <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+                                                            <Ionicons name="chevron-forward" size={16} color={Theme.colors.light.primary} />
                                                         </TouchableOpacity>
                                                     ))}
                                                     {courses.length > 3 && (
@@ -542,7 +549,7 @@ export default function DashboardScreen() {
                                         {/* View Details Button */}
                                         <View style={styles.viewDetailsButton}>
                                             <Text style={styles.viewDetailsText}>View Diploma Details</Text>
-                                            <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+                                            <Ionicons name="chevron-forward" size={18} color={Theme.colors.light.primary} />
                                         </View>
                                     </TouchableOpacity>
                                 );
@@ -553,11 +560,11 @@ export default function DashboardScreen() {
                         <View style={styles.section}>
                             <View style={styles.emptyStateCard}>
                                 <LinearGradient
-                                    colors={[COLORS.primary + '15', COLORS.primaryLight + '10']}
+                                    colors={[Theme.colors.light.primary + '15', Theme.colors.light.primaryLight + '10']}
                                     style={styles.emptyStateGradient}
                                 >
                                     <View style={styles.emptyStateIcon}>
-                                        <Ionicons name="school" size={40} color={COLORS.primary} />
+                                        <Ionicons name="school" size={40} color={Theme.colors.light.primary} />
                                     </View>
                                     <Text style={styles.emptyStateTitle}>Start Your Learning Journey</Text>
                                     <Text style={styles.emptyStateText}>
@@ -618,7 +625,7 @@ export default function DashboardScreen() {
                                                     />
                                                 ) : (
                                                     <LinearGradient
-                                                        colors={isEnrolled ? [COLORS.primary, COLORS.primaryLight] : ['#9CA3AF', '#6B7280']}
+                                                        colors={isEnrolled ? [Theme.colors.light.primary, Theme.colors.light.primaryLight] : ['#9CA3AF', '#6B7280']}
                                                         style={styles.diplomaThumbnail}
                                                     >
                                                         <Ionicons name="school" size={32} color="#fff" />
@@ -631,7 +638,7 @@ export default function DashboardScreen() {
                                                         <Ionicons name="lock-closed" size={12} color="#fff" />
                                                     </View>
                                                 ) : progress > 0 && (
-                                                    <View style={[styles.progressBadge, { backgroundColor: progress >= 100 ? COLORS.success : COLORS.primary }]}>
+                                                    <View style={[styles.progressBadge, { backgroundColor: progress >= 100 ? colors.success : colors.primary }]}>
                                                         <Text style={styles.progressBadgeText}>{progress}%</Text>
                                                     </View>
                                                 )}
@@ -650,7 +657,7 @@ export default function DashboardScreen() {
                                                 </Text>
                                                 {isEnrolled ? (
                                                     <View style={styles.enrolledBadge}>
-                                                        <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
+                                                        <Ionicons name="checkmark-circle" size={12} color={Theme.colors.light.success} />
                                                         <Text style={styles.enrolledText}>Enrolled</Text>
                                                     </View>
                                                 ) : (
@@ -674,7 +681,7 @@ export default function DashboardScreen() {
                         <View style={styles.section}>
                             <View style={styles.motivationCard}>
                                 <View style={styles.motivationIcon}>
-                                    <Ionicons name="rocket" size={24} color={COLORS.primary} />
+                                    <Ionicons name="rocket" size={24} color={Theme.colors.light.primary} />
                                 </View>
                                 <View style={styles.motivationContent}>
                                     <Text style={styles.motivationTitle}>
@@ -710,7 +717,7 @@ export default function DashboardScreen() {
                                 style={styles.modalCloseButton}
                                 onPress={() => setShowDiplomaModal(false)}
                             >
-                                <Ionicons name="close" size={24} color={COLORS.text} />
+                                <Ionicons name="close" size={24} color={Theme.colors.light.text} />
                             </TouchableOpacity>
                         </View>
 
@@ -730,7 +737,7 @@ export default function DashboardScreen() {
                                         />
                                     ) : (
                                         <LinearGradient
-                                            colors={[COLORS.primary, COLORS.primaryLight]}
+                                            colors={[Theme.colors.light.primary, Theme.colors.light.primaryLight]}
                                             style={styles.modalHeroImage}
                                         >
                                             <Ionicons name="school" size={48} color="#fff" />
@@ -804,9 +811,9 @@ export default function DashboardScreen() {
                                                     </Text>
                                                 </View>
                                                 {isEnrolled ? (
-                                                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                                                    <Ionicons name="chevron-forward" size={20} color={Theme.colors.light.primary} />
                                                 ) : (
-                                                    <Ionicons name="lock-closed" size={18} color={COLORS.textTertiary} />
+                                                    <Ionicons name="lock-closed" size={18} color={Theme.colors.light.textTertiary} />
                                                 )}
                                             </TouchableOpacity>
                                         );
@@ -839,38 +846,35 @@ export default function DashboardScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     loadingText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.sm,
+        fontSize: Theme.fontSize.base,
+        marginTop: Theme.spacing.sm,
     },
 
     // Header
     header: {
-        backgroundColor: COLORS.surface,
-        paddingHorizontal: SPACING.lg,
-        paddingTop: SPACING.md,
-        paddingBottom: SPACING.xl,
-        borderBottomLeftRadius: BORDER_RADIUS.xxl,
-        borderBottomRightRadius: BORDER_RADIUS.xxl,
-        ...SHADOWS.sm,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingTop: Theme.spacing.md,
+        paddingBottom: Theme.spacing.xl,
+        borderBottomLeftRadius: Theme.borderRadius['2xl'],
+        borderBottomRightRadius: Theme.borderRadius['2xl'],
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     headerTextContainer: {
         flex: 1,
@@ -878,44 +882,39 @@ const styles = StyleSheet.create({
     headerActions: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.sm,
+        gap: Theme.spacing.sm,
     },
     greeting: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.medium,
     },
     userName: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize['2xl'],
+        fontWeight: Theme.fontWeight.bold,
         marginTop: 2,
     },
     avatar: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: COLORS.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        ...SHADOWS.md,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     avatarText: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
     },
 
     // Stats
     statsRow: {
         flexDirection: 'row',
-        gap: SPACING.sm,
+        gap: Theme.spacing.sm,
     },
     statCard: {
         flex: 1,
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
+        borderRadius: Theme.borderRadius.lg,
+        padding: Theme.spacing.md,
         alignItems: 'center',
     },
     statIconContainer: {
@@ -924,55 +923,54 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
     },
     statValue: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.xl,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
     },
     statLabel: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.xs,
         marginTop: 2,
     },
 
     // Section
     section: {
-        paddingHorizontal: SPACING.lg,
-        marginTop: SPACING.xl,
+        paddingHorizontal: Theme.spacing.lg,
+        marginTop: Theme.spacing.xl,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.md,
+        marginBottom: Theme.spacing.md,
     },
     sectionTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
     },
     seeAllText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
+        fontSize: Theme.fontSize.sm,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.semibold,
     },
 
     // Featured Card (Continue Learning)
     featuredCard: {
-        borderRadius: BORDER_RADIUS.xl,
+        borderRadius: Theme.borderRadius.xl,
         overflow: 'hidden',
-        backgroundColor: COLORS.surface,
-        ...SHADOWS.lg,
-        marginTop: SPACING.xs,
+        backgroundColor: colors.surface,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
+        marginTop: Theme.spacing.xs,
     },
     featuredImage: {
         width: '100%',
         height: 200,
     },
     featuredPlaceholder: {
-        backgroundColor: COLORS.primary + '15',
+        backgroundColor: colors.primary + '15',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -981,24 +979,24 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
-        paddingBottom: SPACING.lg,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.md,
+        paddingBottom: Theme.spacing.lg,
         backgroundColor: 'rgba(0,0,0,0.75)',
     },
     featuredContent: {
-        gap: SPACING.sm,
+        gap: Theme.spacing.sm,
     },
     featuredTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.xl,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
         lineHeight: 28,
     },
     featuredProgressRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     featuredProgressBar: {
         flex: 1,
@@ -1009,30 +1007,30 @@ const styles = StyleSheet.create({
     },
     featuredProgressFill: {
         height: '100%',
-        backgroundColor: COLORS.success,
+        backgroundColor: colors.success,
         borderRadius: 3,
     },
     featuredProgressText: {
-        fontSize: FONT_SIZE.md,
+        fontSize: Theme.fontSize.base,
         color: '#fff',
-        fontWeight: FONT_WEIGHT.bold,
+        fontWeight: Theme.fontWeight.bold,
         minWidth: 45,
     },
     featuredButton: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.sm + 2,
-        borderRadius: BORDER_RADIUS.round,
-        gap: SPACING.sm,
-        marginTop: SPACING.xs,
+        backgroundColor: colors.primary,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.sm + 2,
+        borderRadius: Theme.borderRadius.round,
+        gap: Theme.spacing.sm,
+        marginTop: Theme.spacing.xs,
     },
     featuredButtonText: {
         color: '#fff',
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
     },
 
     // Course Grid
@@ -1045,15 +1043,15 @@ const styles = StyleSheet.create({
         width: CARD_WIDTH,
     },
     card: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.lg,
         overflow: 'hidden',
-        ...SHADOWS.md,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     thumbnailContainer: {
         position: 'relative',
         height: 100,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
     },
     thumbnail: {
         width: '100%',
@@ -1064,38 +1062,37 @@ const styles = StyleSheet.create({
         height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: COLORS.primary + '10',
+        backgroundColor: colors.primary + '10',
     },
     progressBadge: {
         position: 'absolute',
-        top: SPACING.xs,
-        right: SPACING.xs,
-        paddingHorizontal: SPACING.sm,
+        top: Theme.spacing.xs,
+        right: Theme.spacing.xs,
+        paddingHorizontal: Theme.spacing.sm,
         paddingVertical: 3,
-        borderRadius: BORDER_RADIUS.sm,
+        borderRadius: Theme.borderRadius.sm,
     },
     progressBadgeText: {
         color: '#fff',
         fontSize: 10,
-        fontWeight: FONT_WEIGHT.bold,
+        fontWeight: Theme.fontWeight.bold,
     },
     cardInfo: {
-        padding: SPACING.sm,
+        padding: Theme.spacing.sm,
     },
     cardTitle: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.semibold,
+        marginBottom: Theme.spacing.xs,
         lineHeight: 18,
         minHeight: 36,
     },
     progressContainer: {
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
     },
     progressBar: {
         height: 4,
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         borderRadius: 2,
         overflow: 'hidden',
     },
@@ -1104,34 +1101,34 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     actionText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
+        fontSize: Theme.fontSize.xs,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.semibold,
     },
 
     // Empty State
     emptyState: {
-        padding: SPACING.xxl,
+        padding: Theme.spacing['2xl'],
         alignItems: 'center',
     },
     emptyIconContainer: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     emptyTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.xs,
     },
     emptyText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
         textAlign: 'center',
         lineHeight: 20,
     },
@@ -1139,17 +1136,17 @@ const styles = StyleSheet.create({
     // Motivation Card
     motivationCard: {
         flexDirection: 'row',
-        backgroundColor: COLORS.primary + '10',
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
+        backgroundColor: colors.primary + '10',
+        borderRadius: Theme.borderRadius.lg,
+        padding: Theme.spacing.md,
         alignItems: 'center',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     motivationIcon: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -1157,47 +1154,47 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     motivationTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
         marginBottom: 2,
     },
     motivationText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
     },
 
     // Live Sessions on Home
     sectionTitleRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.sm,
+        gap: Theme.spacing.sm,
     },
     liveDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: COLORS.error,
+        backgroundColor: colors.error,
     },
     liveSessionCard: {
-        borderRadius: BORDER_RADIUS.xl,
+        borderRadius: Theme.borderRadius.xl,
         overflow: 'hidden',
-        marginBottom: SPACING.md,
-        ...SHADOWS.lg,
+        marginBottom: Theme.spacing.md,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
     },
     liveSessionGradient: {
-        padding: SPACING.lg,
+        padding: Theme.spacing.lg,
     },
     liveNowBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
         backgroundColor: 'rgba(255,255,255,0.25)',
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.full,
-        gap: SPACING.xs,
-        marginBottom: SPACING.sm,
+        paddingHorizontal: Theme.spacing.sm,
+        paddingVertical: Theme.spacing.xs,
+        borderRadius: Theme.borderRadius.full,
+        gap: Theme.spacing.xs,
+        marginBottom: Theme.spacing.sm,
     },
     liveNowDot: {
         width: 6,
@@ -1206,8 +1203,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     liveNowText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
         letterSpacing: 1,
     },
@@ -1218,22 +1215,22 @@ const styles = StyleSheet.create({
     },
     liveSessionInfo: {
         flex: 1,
-        marginRight: SPACING.md,
+        marginRight: Theme.spacing.md,
     },
     liveSessionTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
     },
     liveSessionMeta: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
+        gap: Theme.spacing.xs,
         marginTop: 4,
     },
     liveSessionMetaText: {
-        fontSize: FONT_SIZE.sm,
+        fontSize: Theme.fontSize.sm,
         color: 'rgba(255,255,255,0.85)',
     },
     liveSessionAction: {
@@ -1243,42 +1240,42 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#fff',
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.round,
-        gap: SPACING.xs,
-        ...SHADOWS.md,
+        paddingHorizontal: Theme.spacing.md,
+        paddingVertical: Theme.spacing.sm,
+        borderRadius: Theme.borderRadius.round,
+        gap: Theme.spacing.xs,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     joinNowText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.error,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.error,
     },
     countdownBox: {
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
+        paddingHorizontal: Theme.spacing.md,
+        paddingVertical: Theme.spacing.sm,
+        borderRadius: Theme.borderRadius.md,
     },
     countdownValue: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
     },
     countdownLabel: {
-        fontSize: FONT_SIZE.xs,
+        fontSize: Theme.fontSize.xs,
         color: 'rgba(255,255,255,0.8)',
     },
 
     // Enrolled Diploma Card - Premium Design
     enrolledDiplomaCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xxl,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius['2xl'],
         overflow: 'hidden',
-        ...SHADOWS.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
         borderWidth: 1,
-        borderColor: COLORS.borderLight,
+        borderColor: colors.borderLight,
     },
     enrolledDiplomaHero: {
         height: 160,
@@ -1295,61 +1292,61 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        padding: SPACING.lg,
-        paddingTop: SPACING.xxxl,
+        padding: Theme.spacing.lg,
+        paddingTop: Theme.spacing['3xl'],
     },
     enrolledDiplomaBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.95)',
-        paddingHorizontal: SPACING.sm,
+        paddingHorizontal: Theme.spacing.sm,
         paddingVertical: 4,
-        borderRadius: BORDER_RADIUS.round,
+        borderRadius: Theme.borderRadius.round,
         alignSelf: 'flex-start',
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
         gap: 4,
     },
     enrolledDiplomaBadgeText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.success,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.success,
     },
     enrolledDiplomaTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.xl,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
         marginBottom: 4,
         letterSpacing: -0.3,
     },
     enrolledDiplomaCourseCount: {
-        fontSize: FONT_SIZE.sm,
+        fontSize: Theme.fontSize.sm,
         color: 'rgba(255,255,255,0.85)',
     },
     enrolledDiplomaProgress: {
-        padding: SPACING.lg,
-        paddingBottom: SPACING.md,
+        padding: Theme.spacing.lg,
+        paddingBottom: Theme.spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight,
+        borderBottomColor: colors.borderLight,
     },
     progressHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
     },
     progressLabel: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
     },
     progressPercentage: {
-        fontSize: FONT_SIZE.lg,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.lg,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.bold,
     },
     progressBarLarge: {
         height: 10,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: 5,
         overflow: 'hidden',
     },
@@ -1358,139 +1355,139 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     coursePreviewSection: {
-        padding: SPACING.lg,
-        paddingTop: SPACING.md,
+        padding: Theme.spacing.lg,
+        paddingTop: Theme.spacing.md,
     },
     coursePreviewTitle: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.textSecondary,
+        marginBottom: Theme.spacing.sm,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     coursePreviewGrid: {
-        gap: SPACING.sm,
+        gap: Theme.spacing.sm,
     },
     coursePreviewItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
-        gap: SPACING.md,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: Theme.borderRadius.lg,
+        padding: Theme.spacing.md,
+        gap: Theme.spacing.md,
     },
     coursePreviewNumber: {
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     coursePreviewNumberText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
     },
     coursePreviewName: {
         flex: 1,
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.medium,
+        color: colors.text,
     },
     coursePreviewMore: {
         alignItems: 'center',
-        paddingVertical: SPACING.sm,
+        paddingVertical: Theme.spacing.sm,
     },
     coursePreviewMoreText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
+        fontSize: Theme.fontSize.sm,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.semibold,
     },
     viewDetailsButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: SPACING.md,
+        padding: Theme.spacing.md,
         borderTopWidth: 1,
-        borderTopColor: COLORS.borderLight,
-        gap: SPACING.xs,
+        borderTopColor: colors.borderLight,
+        gap: Theme.spacing.xs,
     },
     viewDetailsText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
+        fontSize: Theme.fontSize.base,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.semibold,
     },
 
     // Empty State Card
     emptyStateCard: {
-        borderRadius: BORDER_RADIUS.xxl,
+        borderRadius: Theme.borderRadius['2xl'],
         overflow: 'hidden',
     },
     emptyStateGradient: {
-        padding: SPACING.xl,
+        padding: Theme.spacing.xl,
         alignItems: 'center',
     },
     emptyStateIcon: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.lg,
-        ...SHADOWS.sm,
+        marginBottom: Theme.spacing.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     emptyStateTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize.xl,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.sm,
         textAlign: 'center',
     },
     emptyStateText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
         textAlign: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
         lineHeight: 22,
     },
     emptyStateButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
-        gap: SPACING.sm,
-        ...SHADOWS.md,
+        backgroundColor: colors.primary,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
+        gap: Theme.spacing.sm,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     emptyStateButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
     },
 
     // Browse All Diplomas Section - Premium Design
     diplomasScrollContent: {
-        paddingRight: SPACING.lg,
-        paddingLeft: SPACING.xs,
-        paddingVertical: SPACING.sm,
-        gap: SPACING.md,
+        paddingRight: Theme.spacing.lg,
+        paddingLeft: Theme.spacing.xs,
+        paddingVertical: Theme.spacing.sm,
+        gap: Theme.spacing.md,
     },
     diplomaCard: {
         width: 200,
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.xl,
         overflow: 'hidden',
-        ...SHADOWS.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
         borderWidth: 1,
-        borderColor: COLORS.borderLight,
+        borderColor: colors.borderLight,
     },
     diplomaCardLocked: {
         opacity: 0.75,
-        borderColor: COLORS.border,
+        borderColor: colors.border,
     },
     diplomaThumbnailContainer: {
         position: 'relative',
@@ -1504,8 +1501,8 @@ const styles = StyleSheet.create({
     },
     lockBadge: {
         position: 'absolute',
-        top: SPACING.sm,
-        right: SPACING.sm,
+        top: Theme.spacing.sm,
+        right: Theme.spacing.sm,
         width: 28,
         height: 28,
         borderRadius: 14,
@@ -1516,24 +1513,24 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.2)',
     },
     diplomaInfo: {
-        padding: SPACING.md,
-        paddingTop: SPACING.sm,
+        padding: Theme.spacing.md,
+        paddingTop: Theme.spacing.sm,
     },
     diplomaTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
         marginBottom: 6,
         minHeight: 42,
         lineHeight: 20,
     },
     diplomaTitleLocked: {
-        color: COLORS.textSecondary,
+        color: colors.textSecondary,
     },
     diplomaCourseCount: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textTertiary,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.xs,
+        color: colors.textTertiary,
+        marginBottom: Theme.spacing.xs,
     },
     enrolledBadge: {
         flexDirection: 'row',
@@ -1541,14 +1538,14 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     enrolledText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.success,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.xs,
+        color: colors.success,
+        fontWeight: Theme.fontWeight.medium,
     },
     diplomaPrice: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.sm,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.bold,
     },
 
     // Modal Styles - Premium Design
@@ -1558,43 +1555,43 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContainer: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         maxHeight: '92%',
         minHeight: '65%',
-        ...SHADOWS.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
     },
     modalHeader: {
         alignItems: 'center',
-        paddingTop: SPACING.md,
-        paddingHorizontal: SPACING.lg,
-        paddingBottom: SPACING.xs,
+        paddingTop: Theme.spacing.md,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingBottom: Theme.spacing.xs,
     },
     modalDragHandle: {
         width: 48,
         height: 5,
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         borderRadius: 3,
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
     },
     modalCloseButton: {
         position: 'absolute',
-        top: SPACING.md,
-        right: SPACING.md,
+        top: Theme.spacing.md,
+        right: Theme.spacing.md,
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         alignItems: 'center',
         justifyContent: 'center',
-        ...SHADOWS.sm,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     modalScroll: {
         flex: 1,
     },
     modalScrollContent: {
-        paddingBottom: SPACING.xxxl + 20,
+        paddingBottom: Theme.spacing['3xl'] + 20,
     },
     modalHero: {
         position: 'relative',
@@ -1612,19 +1609,19 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.lg,
-        paddingTop: SPACING.xxxl,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.lg,
+        paddingTop: Theme.spacing['3xl'],
     },
     modalDiplomaTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize['2xl'],
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
     },
     modalDiplomaMeta: {
         flexDirection: 'row',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     modalMetaItem: {
         flexDirection: 'row',
@@ -1632,80 +1629,80 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     modalMetaText: {
-        fontSize: FONT_SIZE.sm,
+        fontSize: Theme.fontSize.sm,
         color: '#fff',
-        fontWeight: FONT_WEIGHT.medium,
+        fontWeight: Theme.fontWeight.medium,
     },
     modalSection: {
-        padding: SPACING.lg,
-        paddingTop: SPACING.lg,
+        padding: Theme.spacing.lg,
+        paddingTop: Theme.spacing.lg,
     },
     modalSectionTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.md,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.md,
         letterSpacing: -0.3,
     },
     modalDescription: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
         lineHeight: 24,
     },
     courseListItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
-        marginBottom: SPACING.sm,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.lg,
+        padding: Theme.spacing.md,
+        marginBottom: Theme.spacing.sm,
         borderWidth: 1,
-        borderColor: COLORS.border,
-        ...SHADOWS.sm,
+        borderColor: colors.border,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     courseListItemLocked: {
         opacity: 0.65,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
     },
     courseListNumber: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: SPACING.md,
+        marginRight: Theme.spacing.md,
     },
     courseListNumberText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
     },
     courseListContent: {
         flex: 1,
     },
     courseListTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.medium,
+        color: colors.text,
     },
     courseListTitleLocked: {
-        color: COLORS.textSecondary,
+        color: colors.textSecondary,
     },
     modalActionSection: {
-        padding: SPACING.lg,
+        padding: Theme.spacing.lg,
         paddingTop: 0,
     },
     enrollButton: {
-        backgroundColor: COLORS.primary,
-        borderRadius: BORDER_RADIUS.lg,
-        paddingVertical: SPACING.md,
+        backgroundColor: colors.primary,
+        borderRadius: Theme.borderRadius.lg,
+        paddingVertical: Theme.spacing.md,
         alignItems: 'center',
-        ...SHADOWS.md,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     enrollButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.bold,
         color: '#fff',
     },
 });

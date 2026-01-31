@@ -1,20 +1,20 @@
-// 2026 Design System - Warm, Emotional, Minimalist
+// 2026 Design System - Modern, Clean, Professional
 export const COLORS = {
-    // Primary - Warm Burgundy with emotional depth
-    primary: '#8B1538', // Warmer, more vibrant burgundy
-    primaryLight: '#B01E4A', // Lighter, warmer tone
-    primaryDark: '#6B0F28', // Deeper, richer dark
-    primaryGradient: ['#8B1538', '#A01E4A'], // Gradient for modern feel
+    // Primary - Vibrant Red
+    primary: '#db0011', // Vibrant red
+    primaryLight: '#ff2d42', // Lighter red for hover states
+    primaryDark: '#b0000e', // Deeper red for active states
+    primaryGradient: ['#db0011', '#ff2d42'], // Gradient for modern feel
     
     // Secondary - Warm Gold
     secondary: '#D4AF37', // Warmer gold
     secondaryLight: '#E5C158', // Softer gold
     secondaryDark: '#B8941F', // Deeper gold
     
-    // Backgrounds - Airy and spacious
-    background: '#FAFAFA', // Softer, warmer white
-    backgroundSecondary: '#F5F5F7', // Subtle variation
-    backgroundTertiary: '#F0F0F2', // Even softer
+    // Backgrounds - Clean and modern
+    background: '#FFFFFF', // Pure white
+    backgroundSecondary: '#F8F9FA', // Subtle gray
+    backgroundTertiary: '#F1F3F5', // Light gray
     
     // Surfaces - Clean and elevated
     surface: '#FFFFFF',
@@ -22,16 +22,16 @@ export const COLORS = {
     surfaceSubtle: '#FEFEFE',
     
     // Text - Better hierarchy
-    text: '#0A0A0A', // Softer black
+    text: '#0F0F0F', // Near black
     textPrimary: '#1A1A1A',
-    textSecondary: '#6B6B6B', // Warmer gray
-    textTertiary: '#9B9B9B', // Softer gray
+    textSecondary: '#6B7280', // Medium gray
+    textTertiary: '#9CA3AF', // Light gray
     textInverse: '#FFFFFF',
     
     // Borders - Subtle and refined
-    border: '#E8E8E8', // Softer border
-    borderLight: '#F2F2F2', // Very light
-    borderSubtle: '#F8F8F8', // Almost invisible
+    border: '#E5E7EB', // Light border
+    borderLight: '#F3F4F6', // Very light
+    borderSubtle: '#F9FAFB', // Almost invisible
     
     // Semantic colors - Warm and friendly
     error: '#E63946', // Warmer red
@@ -40,8 +40,8 @@ export const COLORS = {
     info: '#219EBC', // Friendly blue
     
     // Accents
-    accent: '#8B1538',
-    accentLight: '#A01E4A',
+    accent: '#db0011',
+    accentLight: '#ff2d42',
 };
 
 export const SPACING = {
@@ -89,30 +89,30 @@ export const BORDER_RADIUS = {
 export const SHADOWS = {
     sm: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
         elevation: 2,
     },
     md: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
         elevation: 4,
     },
     lg: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
         elevation: 8,
     },
     xl: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.18,
+        shadowRadius: 28,
         elevation: 12,
     },
 };

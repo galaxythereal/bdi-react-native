@@ -1,5 +1,6 @@
+import { Theme } from '@/constants/theme';
 import { Tabs } from 'expo-router';
-import { BarChart3, Users, Settings, Eye } from 'lucide-react-native';
+import { BarChart3, Settings, Users } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
 
 export default function AdminLayout() {
@@ -20,9 +21,9 @@ export default function AdminLayout() {
                 tabBarActiveTintColor: colors.primary,
                 tabBarInactiveTintColor: colors.textSecondary,
                 tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontWeight: '600',
-                    marginTop: 4,
+                    fontSize: Theme.fontSize.xs,
+                    fontWeight: Theme.fontWeight.semibold,
+                    marginTop: Theme.spacing.xs,
                 },
             }}
         >

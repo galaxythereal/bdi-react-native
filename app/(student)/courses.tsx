@@ -1,6 +1,7 @@
+import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -16,15 +17,14 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
-import { useTheme } from '../../src/context/ThemeContext';
 import { Enrollment } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
-const CARD_WIDTH = (SCREEN_WIDTH - SPACING.lg * 2 - CARD_GAP) / 2;
+const CARD_WIDTH = (SCREEN_WIDTH - Theme.spacing.lg * 2 - CARD_GAP) / 2;
 
 // Filter types
 type FilterType = 'all' | 'in_progress' | 'completed' | 'not_started';
@@ -37,6 +37,8 @@ interface CourseCardProps {
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const progress = Math.round(item.progress || 0);
     const diploma = item.diploma;
@@ -62,10 +64,10 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
     });
 
     const getProgressColor = () => {
-        if (progress >= 100) return COLORS.success;
-        if (progress >= 50) return COLORS.primary;
-        if (progress > 0) return COLORS.warning;
-        return COLORS.textTertiary;
+        if (progress >= 100) return colors.success;
+        if (progress >= 50) return colors.primary;
+        if (progress > 0) return colors.warning;
+        return colors.textTertiary;
     };
 
     const getStatusLabel = () => {
@@ -99,7 +101,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                         />
                     ) : (
                         <View style={styles.thumbnailPlaceholder}>
-                            <Ionicons name="school" size={28} color={COLORS.primary} />
+                            <Ionicons name="school" size={28} color={colors.primary} />
                         </View>
                     )}
                     {/* Progress badge */}
@@ -109,7 +111,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                     {/* Completed checkmark */}
                     {progress >= 100 && (
                         <View style={styles.completedBadge}>
-                            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                         </View>
                     )}
                 </View>
@@ -153,22 +155,27 @@ interface FilterChipProps {
     onPress: () => void;
 }
 
-const FilterChip: React.FC<FilterChipProps> = ({ label, count, active, onPress }) => (
-    <TouchableOpacity
-        style={[styles.filterChip, active && styles.filterChipActive]}
-        onPress={onPress}
-        activeOpacity={0.8}
-    >
-        <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-            {label}
-        </Text>
-        <View style={[styles.filterChipBadge, active && styles.filterChipBadgeActive]}>
-            <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>
-                {count}
+const FilterChip: React.FC<FilterChipProps> = ({ label, count, active, onPress }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
+    return (
+        <TouchableOpacity
+            style={[styles.filterChip, active && styles.filterChipActive]}
+            onPress={onPress}
+            activeOpacity={0.8}
+        >
+            <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {label}
             </Text>
-        </View>
-    </TouchableOpacity>
-);
+            <View style={[styles.filterChipBadge, active && styles.filterChipBadgeActive]}>
+                <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>
+                    {count}
+                </Text>
+            </View>
+        </TouchableOpacity>
+    );
+};
 
 export default function CoursesScreen() {
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -179,7 +186,8 @@ export default function CoursesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = async () => {
         try {
@@ -299,13 +307,13 @@ export default function CoursesScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        tintColor={COLORS.primary}
-                        colors={[COLORS.primary]}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
                     />
                 }
                 contentContainerStyle={[
                     styles.listContent,
-                    { paddingBottom: TAB_BAR_HEIGHT + SPACING.lg }
+                    { paddingBottom: TAB_BAR_HEIGHT + Theme.spacing.lg }
                 ]}
             >
                 {filteredEnrollments.length > 0 ? (
@@ -333,7 +341,7 @@ export default function CoursesScreen() {
                                                 'library-outline'
                                 }
                                 size={48}
-                                color={COLORS.textTertiary}
+                                color={colors.textTertiary}
                             />
                         </View>
                         <Text style={styles.emptyTitle}>
@@ -354,93 +362,93 @@ export default function CoursesScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     loadingText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.sm,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
+        marginTop: Theme.spacing.sm,
     },
 
     // Header
     header: {
-        backgroundColor: COLORS.surface,
-        paddingHorizontal: SPACING.lg,
-        paddingTop: SPACING.md,
-        paddingBottom: SPACING.lg,
-        ...SHADOWS.sm,
+        backgroundColor: colors.surface,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingTop: Theme.spacing.md,
+        paddingBottom: Theme.spacing.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     headerTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize['2xl'],
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
         marginBottom: 2,
     },
     headerSubtitle: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
     },
 
     // Filters
     filtersWrapper: {
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor: colors.border,
         zIndex: 10,
     },
     filtersContainer: {
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.md,
         flexDirection: 'row',
         alignItems: 'center',
     },
     filterChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.surface,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.round,
+        backgroundColor: colors.surface,
+        paddingHorizontal: Theme.spacing.md,
+        paddingVertical: Theme.spacing.sm,
+        borderRadius: Theme.borderRadius.round,
         borderWidth: 1,
-        borderColor: COLORS.border,
-        marginRight: SPACING.sm,
+        borderColor: colors.border,
+        marginRight: Theme.spacing.sm,
         minHeight: 36,
     },
     filterChipActive: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
     filterChipText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
-        marginRight: SPACING.xs,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
+        marginRight: Theme.spacing.xs,
     },
     filterChipTextActive: {
         color: '#fff',
     },
     filterChipBadge: {
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         paddingHorizontal: 6,
         paddingVertical: 2,
-        borderRadius: BORDER_RADIUS.sm,
+        borderRadius: Theme.borderRadius.sm,
     },
     filterChipBadgeActive: {
         backgroundColor: 'rgba(255,255,255,0.2)',
     },
     filterChipCount: {
         fontSize: 10,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.bold,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.bold,
     },
     filterChipCountActive: {
         color: '#fff',
@@ -448,7 +456,7 @@ const styles = StyleSheet.create({
 
     // List
     listContent: {
-        padding: SPACING.lg,
+        padding: Theme.spacing.lg,
     },
 
     // Course Grid
@@ -461,15 +469,15 @@ const styles = StyleSheet.create({
         width: CARD_WIDTH,
     },
     card: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.lg,
         overflow: 'hidden',
-        ...SHADOWS.md,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     thumbnailContainer: {
         position: 'relative',
         height: 100,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
     },
     thumbnail: {
         width: '100%',
@@ -480,36 +488,36 @@ const styles = StyleSheet.create({
         height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: COLORS.primary + '10',
+        backgroundColor: colors.primary + '10',
     },
     progressBadge: {
         position: 'absolute',
-        top: SPACING.xs,
-        right: SPACING.xs,
-        paddingHorizontal: SPACING.sm,
+        top: Theme.spacing.xs,
+        right: Theme.spacing.xs,
+        paddingHorizontal: Theme.spacing.sm,
         paddingVertical: 3,
-        borderRadius: BORDER_RADIUS.sm,
+        borderRadius: Theme.borderRadius.sm,
     },
     progressBadgeText: {
         color: '#fff',
         fontSize: 10,
-        fontWeight: FONT_WEIGHT.bold,
+        fontWeight: Theme.fontWeight.bold,
     },
     completedBadge: {
         position: 'absolute',
-        top: SPACING.xs,
-        left: SPACING.xs,
+        top: Theme.spacing.xs,
+        left: Theme.spacing.xs,
         backgroundColor: '#fff',
         borderRadius: 12,
     },
     cardInfo: {
-        padding: SPACING.sm,
+        padding: Theme.spacing.sm,
     },
     cardTitle: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.text,
+        marginBottom: Theme.spacing.xs,
         lineHeight: 18,
         minHeight: 36,
     },
@@ -517,7 +525,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
     },
     statusDot: {
         width: 6,
@@ -526,14 +534,14 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 10,
-        fontWeight: FONT_WEIGHT.semibold,
+        fontWeight: Theme.fontWeight.semibold,
     },
     progressContainer: {
         marginTop: 2,
     },
     progressBar: {
         height: 4,
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         borderRadius: 2,
         overflow: 'hidden',
     },
@@ -544,28 +552,28 @@ const styles = StyleSheet.create({
 
     // Empty State
     emptyState: {
-        padding: SPACING.xxl,
+        padding: Theme.spacing['2xl'],
         alignItems: 'center',
-        marginTop: SPACING.xxl,
+        marginTop: Theme.spacing['2xl'],
     },
     emptyIconContainer: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     emptyTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.xs,
     },
     emptyText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
         textAlign: 'center',
         lineHeight: 20,
     },

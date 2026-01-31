@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Animated,
     Dimensions,
     Image,
@@ -13,15 +14,14 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
-    Linking,
-    Alert,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
-import { CatalogDiploma, Enrollment } from '../../src/types';
-import { fetchDiplomaCatalog, fetchMyEnrollments, submitDiplomaInquiry } from '../../src/features/diplomas/diplomaService';
+import Theme from '../../constants/theme';
+import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
+import { fetchDiplomaCatalog, fetchMyEnrollments, submitDiplomaInquiry } from '../../src/features/diplomas/diplomaService';
+import { CatalogDiploma, Enrollment } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -43,6 +43,8 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
     onPress,
     onInquire,
 }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const totalCourses = diploma.courses?.length || 0;
     const totalChapters = diploma.courses?.reduce((sum, c) => sum + (c.chapters?.length || 0), 0) || 0;
@@ -80,7 +82,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                         />
                     ) : (
                         <View style={styles.thumbnailPlaceholder}>
-                            <Ionicons name="school" size={48} color={COLORS.primary} />
+                            <Ionicons name="school" size={48} color={colors.primary} />
                         </View>
                     )}
 
@@ -122,16 +124,16 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                     {/* Stats */}
                     <View style={styles.statsRow}>
                         <View style={styles.statItem}>
-                            <Ionicons name="book-outline" size={16} color={COLORS.textSecondary} />
+                            <Ionicons name="book-outline" size={16} color={colors.textSecondary} />
                             <Text style={styles.statText}>{totalCourses} Courses</Text>
                         </View>
                         <View style={styles.statItem}>
-                            <Ionicons name="list-outline" size={16} color={COLORS.textSecondary} />
+                            <Ionicons name="list-outline" size={16} color={colors.textSecondary} />
                             <Text style={styles.statText}>{totalChapters} Chapters</Text>
                         </View>
                         {diploma.duration_weeks && (
                             <View style={styles.statItem}>
-                                <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
+                                <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
                                 <Text style={styles.statText}>{diploma.duration_weeks} Weeks</Text>
                             </View>
                         )}
@@ -151,8 +153,8 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                                         {
                                             width: `${enrollmentProgress}%`,
                                             backgroundColor: enrollmentProgress >= 100
-                                                ? COLORS.success
-                                                : COLORS.primary,
+                                                ? colors.success
+                                                : colors.primary,
                                         }
                                     ]}
                                 />
@@ -192,6 +194,8 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
     onInquire,
     onContinue,
 }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
 
     if (!diploma) return null;
@@ -219,7 +223,7 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                 {/* Header */}
                 <View style={styles.modalHeader}>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Ionicons name="close" size={24} color={COLORS.text} />
+                        <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.modalTitle}>Diploma Outline</Text>
                     <View style={{ width: 40 }} />
@@ -293,7 +297,7 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                                     <Ionicons
                                         name={expandedCourses.has(course.id) ? 'chevron-up' : 'chevron-down'}
                                         size={20}
-                                        color={COLORS.textSecondary}
+                                        color={colors.textSecondary}
                                     />
                                 </TouchableOpacity>
 
@@ -304,9 +308,9 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                                             <View key={chapter.id} style={styles.chapterItem}>
                                                 <View style={styles.chapterBullet}>
                                                     {isEnrolled ? (
-                                                        <Ionicons name="play-circle" size={16} color={COLORS.primary} />
+                                                        <Ionicons name="play-circle" size={16} color={colors.primary} />
                                                     ) : (
-                                                        <Ionicons name="lock-closed" size={14} color={COLORS.textTertiary} />
+                                                        <Ionicons name="lock-closed" size={14} color={colors.textTertiary} />
                                                     )}
                                                 </View>
                                                 <Text style={[
@@ -372,6 +376,8 @@ interface InquiryModalProps {
 }
 
 const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, onSubmit }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const { session } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
@@ -413,7 +419,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
             <SafeAreaView style={styles.modalContainer}>
                 <View style={styles.modalHeader}>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Ionicons name="close" size={24} color={COLORS.text} />
+                        <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.modalTitle}>Enrollment Inquiry</Text>
                     <View style={{ width: 40 }} />
@@ -431,7 +437,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                             value={formData.name}
                             onChangeText={(text) => setFormData({ ...formData, name: text })}
                             placeholder="Enter your full name"
-                            placeholderTextColor={COLORS.textTertiary}
+                            placeholderTextColor={colors.textTertiary}
                         />
                     </View>
 
@@ -442,7 +448,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                             value={formData.email}
                             onChangeText={(text) => setFormData({ ...formData, email: text })}
                             placeholder="Enter your email"
-                            placeholderTextColor={COLORS.textTertiary}
+                            placeholderTextColor={colors.textTertiary}
                             keyboardType="email-address"
                             autoCapitalize="none"
                         />
@@ -455,7 +461,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                             value={formData.phone}
                             onChangeText={(text) => setFormData({ ...formData, phone: text })}
                             placeholder="Enter your phone number"
-                            placeholderTextColor={COLORS.textTertiary}
+                            placeholderTextColor={colors.textTertiary}
                             keyboardType="phone-pad"
                         />
                     </View>
@@ -467,7 +473,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                             value={formData.whatsapp_number}
                             onChangeText={(text) => setFormData({ ...formData, whatsapp_number: text })}
                             placeholder="Enter your WhatsApp number"
-                            placeholderTextColor={COLORS.textTertiary}
+                            placeholderTextColor={colors.textTertiary}
                             keyboardType="phone-pad"
                         />
                     </View>
@@ -479,7 +485,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                             value={formData.message}
                             onChangeText={(text) => setFormData({ ...formData, message: text })}
                             placeholder="Any questions or comments?"
-                            placeholderTextColor={COLORS.textTertiary}
+                            placeholderTextColor={colors.textTertiary}
                             multiline
                             numberOfLines={4}
                             textAlignVertical="top"
@@ -519,7 +525,9 @@ export default function DiplomaCatalogScreen() {
     const [selectedDiploma, setSelectedDiploma] = useState<CatalogDiploma | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showInquiryModal, setShowInquiryModal] = useState(false);
+    const { colors, isDark } = useTheme();
     const router = useRouter();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = useCallback(async () => {
         try {
@@ -572,7 +580,7 @@ export default function DiplomaCatalogScreen() {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+                <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingText}>Loading diplomas...</Text>
             </View>
         );
@@ -592,17 +600,17 @@ export default function DiplomaCatalogScreen() {
 
             {/* Search */}
             <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color={COLORS.textSecondary} />
+                <Ionicons name="search" size={20} color={colors.textSecondary} />
                 <TextInput
                     style={styles.searchInput}
                     placeholder="Search diplomas..."
-                    placeholderTextColor={COLORS.textTertiary}
+                    placeholderTextColor={colors.textTertiary}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
                 {searchQuery.length > 0 && (
                     <TouchableOpacity onPress={() => setSearchQuery('')}>
-                        <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
+                        <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
                 )}
             </View>
@@ -615,7 +623,7 @@ export default function DiplomaCatalogScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        tintColor={COLORS.primary}
+                        tintColor={colors.primary}
                     />
                 }
                 showsVerticalScrollIndicator={false}
@@ -640,7 +648,7 @@ export default function DiplomaCatalogScreen() {
                     ))
                 ) : (
                     <View style={styles.emptyState}>
-                        <Ionicons name="school-outline" size={64} color={COLORS.textTertiary} />
+                        <Ionicons name="school-outline" size={64} color={colors.textTertiary} />
                         <Text style={styles.emptyTitle}>No diplomas found</Text>
                         <Text style={styles.emptySubtitle}>
                             {searchQuery ? 'Try a different search term' : 'Check back later for new programs'}
@@ -675,456 +683,458 @@ export default function DiplomaCatalogScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: COLORS.background,
-    },
-    loadingText: {
-        marginTop: SPACING.md,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-    },
-    header: {
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
-    },
-    headerTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-    },
-    headerSubtitle: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.xs,
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.surface,
-        marginHorizontal: SPACING.lg,
-        paddingHorizontal: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        ...SHADOWS.sm,
-    },
-    searchInput: {
-        flex: 1,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.sm,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: SPACING.lg,
-    },
-    diplomaCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        marginBottom: SPACING.md,
-        overflow: 'hidden',
-        ...SHADOWS.md,
-    },
-    thumbnailContainer: {
-        height: 160,
-        position: 'relative',
-    },
-    thumbnail: {
-        width: '100%',
-        height: '100%',
-    },
-    thumbnailPlaceholder: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: COLORS.backgroundSecondary,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    statusBadge: {
-        position: 'absolute',
-        top: SPACING.sm,
-        left: SPACING.sm,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.full,
-        gap: 4,
-    },
-    enrolledBadge: {
-        backgroundColor: COLORS.success,
-    },
-    lockedBadge: {
-        backgroundColor: COLORS.textSecondary,
-    },
-    statusBadgeText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: '#fff',
-    },
-    priceBadge: {
-        position: 'absolute',
-        top: SPACING.sm,
-        right: SPACING.sm,
-        backgroundColor: COLORS.secondary,
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.full,
-    },
-    priceText: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
-        color: '#fff',
-    },
-    cardContent: {
-        padding: SPACING.md,
-    },
-    diplomaTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
-    },
-    diplomaDescription: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        lineHeight: 20,
-        marginBottom: SPACING.sm,
-    },
-    statsRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: SPACING.md,
-        marginBottom: SPACING.md,
-    },
-    statItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.xs,
-    },
-    statText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-    },
-    progressSection: {
-        marginTop: SPACING.xs,
-    },
-    progressHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: SPACING.xs,
-    },
-    progressLabel: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-    },
-    progressValue: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.primary,
-    },
-    progressBar: {
-        height: 6,
-        backgroundColor: COLORS.border,
-        borderRadius: BORDER_RADIUS.full,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: BORDER_RADIUS.full,
-    },
-    inquireButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#25D366', // WhatsApp green
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
-        gap: SPACING.xs,
-    },
-    inquireButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: '#fff',
-    },
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: SPACING.xxxl,
-    },
-    emptyTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginTop: SPACING.md,
-    },
-    emptySubtitle: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.xs,
-    },
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        loadingContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: colors.background,
+        },
+        loadingText: {
+            marginTop: Theme.spacing.md,
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+        },
+        header: {
+            paddingHorizontal: Theme.spacing.lg,
+            paddingVertical: Theme.spacing.md,
+        },
+        headerTitle: {
+            fontSize: Theme.fontSize['2xl'],
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+        },
+        headerSubtitle: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            marginTop: Theme.spacing.xs,
+        },
+        searchContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.surface,
+            marginHorizontal: Theme.spacing.lg,
+            paddingHorizontal: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+            ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
+        },
+        searchInput: {
+            flex: 1,
+            paddingVertical: Theme.spacing.sm,
+            paddingHorizontal: Theme.spacing.sm,
+            fontSize: Theme.fontSize.base,
+            color: colors.text,
+        },
+        scrollView: {
+            flex: 1,
+        },
+        scrollContent: {
+            padding: Theme.spacing.lg,
+        },
+        diplomaCard: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            marginBottom: Theme.spacing.md,
+            overflow: 'hidden',
+            ...Theme.shadows[isDark ? 'dark' : 'light'].md,
+        },
+        thumbnailContainer: {
+            height: 160,
+            position: 'relative',
+        },
+        thumbnail: {
+            width: '100%',
+            height: '100%',
+        },
+        thumbnailPlaceholder: {
+            width: '100%',
+            height: '100%',
+            backgroundColor: colors.backgroundSecondary,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        statusBadge: {
+            position: 'absolute',
+            top: Theme.spacing.sm,
+            left: Theme.spacing.sm,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Theme.spacing.sm,
+            paddingVertical: Theme.spacing.xs,
+            borderRadius: Theme.borderRadius.full,
+            gap: 4,
+        },
+        enrolledBadge: {
+            backgroundColor: colors.success,
+        },
+        lockedBadge: {
+            backgroundColor: colors.textSecondary,
+        },
+        statusBadgeText: {
+            fontSize: Theme.fontSize.xs,
+            fontWeight: Theme.fontWeight.semibold,
+            color: '#fff',
+        },
+        priceBadge: {
+            position: 'absolute',
+            top: Theme.spacing.sm,
+            right: Theme.spacing.sm,
+            backgroundColor: colors.secondary,
+            paddingHorizontal: Theme.spacing.sm,
+            paddingVertical: Theme.spacing.xs,
+            borderRadius: Theme.borderRadius.full,
+        },
+        priceText: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.bold,
+            color: '#fff',
+        },
+        cardContent: {
+            padding: Theme.spacing.md,
+        },
+        diplomaTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginBottom: Theme.spacing.xs,
+        },
+        diplomaDescription: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            lineHeight: 20,
+            marginBottom: Theme.spacing.sm,
+        },
+        statsRow: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: Theme.spacing.md,
+            marginBottom: Theme.spacing.md,
+        },
+        statItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Theme.spacing.xs,
+        },
+        statText: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+        },
+        progressSection: {
+            marginTop: Theme.spacing.xs,
+        },
+        progressHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: Theme.spacing.xs,
+        },
+        progressLabel: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+        },
+        progressValue: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.primary,
+        },
+        progressBar: {
+            height: 6,
+            backgroundColor: colors.border,
+            borderRadius: Theme.borderRadius.full,
+            overflow: 'hidden',
+        },
+        progressFill: {
+            height: '100%',
+            borderRadius: Theme.borderRadius.full,
+        },
+        inquireButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#25D366', // WhatsApp green
+            paddingVertical: Theme.spacing.sm,
+            borderRadius: Theme.borderRadius.md,
+            gap: Theme.spacing.xs,
+        },
+        inquireButtonText: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: '#fff',
+        },
+        emptyState: {
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: Theme.spacing['3xl'],
+        },
+        emptyTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginTop: Theme.spacing.md,
+        },
+        emptySubtitle: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            marginTop: Theme.spacing.xs,
+        },
 
-    // Modal Styles
-    modalContainer: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    closeButton: {
-        padding: SPACING.xs,
-    },
-    modalTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-    },
-    modalContent: {
-        flex: 1,
-    },
-    diplomaInfo: {
-        padding: SPACING.lg,
-        alignItems: 'center',
-    },
-    modalThumbnail: {
-        width: '100%',
-        height: 180,
-        borderRadius: BORDER_RADIUS.lg,
-        marginBottom: SPACING.md,
-    },
-    modalDiplomaTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        textAlign: 'center',
-        marginBottom: SPACING.sm,
-    },
-    modalDescription: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        lineHeight: 22,
-    },
-    quickStats: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: SPACING.lg,
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
-        ...SHADOWS.sm,
-    },
-    quickStatItem: {
-        alignItems: 'center',
-        paddingHorizontal: SPACING.lg,
-    },
-    quickStatValue: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.primary,
-    },
-    quickStatLabel: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.xs,
-    },
-    quickStatDivider: {
-        width: 1,
-        height: 40,
-        backgroundColor: COLORS.border,
-    },
-    outlineSection: {
-        padding: SPACING.lg,
-    },
-    outlineTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.md,
-    },
-    courseItem: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.md,
-        marginBottom: SPACING.sm,
-        overflow: 'hidden',
-        ...SHADOWS.sm,
-    },
-    courseHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: SPACING.md,
-    },
-    courseNumber: {
-        width: 32,
-        height: 32,
-        borderRadius: BORDER_RADIUS.full,
-        backgroundColor: COLORS.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: SPACING.sm,
-    },
-    courseNumberText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: '#fff',
-    },
-    courseInfo: {
-        flex: 1,
-    },
-    courseTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-    },
-    courseChapters: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginTop: 2,
-    },
-    chaptersList: {
-        paddingHorizontal: SPACING.md,
-        paddingBottom: SPACING.md,
-        paddingLeft: SPACING.md + 32 + SPACING.sm,
-    },
-    chapterItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: SPACING.xs,
-    },
-    chapterBullet: {
-        marginRight: SPACING.sm,
-    },
-    chapterTitle: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.text,
-        flex: 1,
-    },
-    chapterTitleLocked: {
-        color: COLORS.textTertiary,
-    },
-    modalFooter: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: COLORS.surface,
-        padding: SPACING.lg,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-        flexDirection: 'row',
-        alignItems: 'center',
-        ...SHADOWS.lg,
-    },
-    priceInfo: {
-        marginRight: SPACING.lg,
-    },
-    priceLabel: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
-    },
-    priceAmount: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-    },
-    whatsappButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#25D366',
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        gap: SPACING.xs,
-    },
-    whatsappButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: '#fff',
-    },
-    continueButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        gap: SPACING.xs,
-    },
-    continueButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: '#fff',
-    },
+        // Modal Styles
+        modalContainer: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        modalHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: Theme.spacing.md,
+            paddingVertical: Theme.spacing.sm,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        closeButton: {
+            padding: Theme.spacing.xs,
+        },
+        modalTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+        },
+        modalContent: {
+            flex: 1,
+        },
+        diplomaInfo: {
+            padding: Theme.spacing.lg,
+            alignItems: 'center',
+        },
+        modalThumbnail: {
+            width: '100%',
+            height: 180,
+            borderRadius: Theme.borderRadius.lg,
+            marginBottom: Theme.spacing.md,
+        },
+        modalDiplomaTitle: {
+            fontSize: Theme.fontSize.xl,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            textAlign: 'center',
+            marginBottom: Theme.spacing.sm,
+        },
+        modalDescription: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            textAlign: 'center',
+            lineHeight: 22,
+        },
+        quickStats: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: Theme.spacing.lg,
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.md,
+            ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
+        },
+        quickStatItem: {
+            alignItems: 'center',
+            paddingHorizontal: Theme.spacing.lg,
+        },
+        quickStatValue: {
+            fontSize: Theme.fontSize['2xl'],
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.primary,
+        },
+        quickStatLabel: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginTop: Theme.spacing.xs,
+        },
+        quickStatDivider: {
+            width: 1,
+            height: 40,
+            backgroundColor: colors.border,
+        },
+        outlineSection: {
+            padding: Theme.spacing.lg,
+        },
+        outlineTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginBottom: Theme.spacing.md,
+        },
+        courseItem: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.md,
+            marginBottom: Theme.spacing.sm,
+            overflow: 'hidden',
+            ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
+        },
+        courseHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: Theme.spacing.md,
+        },
+        courseNumber: {
+            width: 32,
+            height: 32,
+            borderRadius: Theme.borderRadius.full,
+            backgroundColor: colors.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: Theme.spacing.sm,
+        },
+        courseNumberText: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.bold,
+            color: '#fff',
+        },
+        courseInfo: {
+            flex: 1,
+        },
+        courseTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+        },
+        courseChapters: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginTop: 2,
+        },
+        chaptersList: {
+            paddingHorizontal: Theme.spacing.md,
+            paddingBottom: Theme.spacing.md,
+            paddingLeft: Theme.spacing.md + 32 + Theme.spacing.sm,
+        },
+        chapterItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.xs,
+        },
+        chapterBullet: {
+            marginRight: Theme.spacing.sm,
+        },
+        chapterTitle: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.text,
+            flex: 1,
+        },
+        chapterTitleLocked: {
+            color: colors.textTertiary,
+        },
+        modalFooter: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: colors.surface,
+            padding: Theme.spacing.lg,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            flexDirection: 'row',
+            alignItems: 'center',
+            ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
+        },
+        priceInfo: {
+            marginRight: Theme.spacing.lg,
+        },
+        priceLabel: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textSecondary,
+        },
+        priceAmount: {
+            fontSize: Theme.fontSize.xl,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+        },
+        whatsappButton: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#25D366',
+            paddingVertical: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+            gap: Theme.spacing.xs,
+        },
+        whatsappButtonText: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: '#fff',
+        },
+        continueButton: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.primary,
+            paddingVertical: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+            gap: Theme.spacing.xs,
+        },
+        continueButtonText: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: '#fff',
+        },
 
-    // Form Styles
-    formContent: {
-        flex: 1,
-        padding: SPACING.lg,
-    },
-    formSubtitle: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.lg,
-        lineHeight: 22,
-    },
-    formGroup: {
-        marginBottom: SPACING.md,
-    },
-    formLabel: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
-    },
-    formInput: {
-        backgroundColor: COLORS.surface,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: BORDER_RADIUS.md,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-    },
-    formTextarea: {
-        minHeight: 100,
-        paddingTop: SPACING.sm,
-    },
-    submitButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        marginTop: SPACING.lg,
-        gap: SPACING.xs,
-    },
-    submitButtonDisabled: {
-        opacity: 0.6,
-    },
-    submitButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: '#fff',
-    },
-});
+        // Form Styles
+        formContent: {
+            flex: 1,
+            padding: Theme.spacing.lg,
+        },
+        formSubtitle: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            marginBottom: Theme.spacing.lg,
+            lineHeight: 22,
+        },
+        formGroup: {
+            marginBottom: Theme.spacing.md,
+        },
+        formLabel: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.text,
+            marginBottom: Theme.spacing.xs,
+        },
+        formInput: {
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: Theme.borderRadius.md,
+            paddingHorizontal: Theme.spacing.md,
+            paddingVertical: Theme.spacing.sm,
+            fontSize: Theme.fontSize.base,
+            color: colors.text,
+        },
+        formTextarea: {
+            minHeight: 100,
+            paddingTop: Theme.spacing.sm,
+        },
+        submitButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.primary,
+            paddingVertical: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+            marginTop: Theme.spacing.lg,
+            gap: Theme.spacing.xs,
+        },
+        submitButtonDisabled: {
+            opacity: 0.6,
+        },
+        submitButtonText: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: '#fff',
+        },
+    });
+}

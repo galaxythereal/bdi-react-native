@@ -1,22 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import { documentDirectory, downloadAsync, cacheDirectory, getInfoAsync, deleteAsync, readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
-import { shareAsync, isAvailableAsync } from 'expo-sharing';
-import * as Linking from 'expo-linking';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
+import { cacheDirectory, documentDirectory, EncodingType, getInfoAsync, readAsStringAsync } from 'expo-file-system/legacy';
+import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { isAvailableAsync, shareAsync } from 'expo-sharing';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+
 import {
     ActivityIndicator,
     Alert,
-    Animated,
     Dimensions,
     FlatList,
     GestureResponderEvent,
     Image,
     Modal,
-    PanResponder,
     Platform,
     Pressable,
     ScrollView,
@@ -24,36 +23,31 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import RenderHtml from 'react-native-render-html';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { QuizComponent, QuizData, QuizResult } from '../../src/components/QuizComponent';
+import { WebView } from 'react-native-webview';
+import Theme from '../../constants/theme';
 import { AudioPlayer } from '../../src/components/AudioPlayer';
+import { QuizComponent, QuizData, QuizResult } from '../../src/components/QuizComponent';
+import { useTheme } from '../../src/context/ThemeContext';
 import { fetchCourseContentWithOfflineSupport, updateEnrollmentProgress } from '../../src/features/courses/courseService';
 import {
     deleteLessonDownload,
-    downloadLessonVideo,
     downloadLessonContent,
+    downloadLessonVideo,
     getLocalLessonUri,
     isLessonDownloaded,
 } from '../../src/features/offline/downloadManager';
 import {
+    checkIsOnline,
+    CourseDownloadProgress,
     downloadCourseForOffline,
     getOfflineCourse,
-    saveCourseOffline,
-    downloadLesson as downloadLessonOffline,
-    deleteLessonDownload as deleteLessonOffline,
-    checkIsOnline,
-    syncOfflineData,
-    getLocalPath,
-    fileExists,
-    CourseDownloadProgress,
-    LessonDownloadProgress,
+    syncOfflineData
 } from '../../src/features/offline/offlineManager';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SPACING } from '../../src/lib/constants';
-import { CourseDetail, Lesson, Module } from '../../src/types';
+import { CourseDetail, Lesson } from '../../src/types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -827,6 +821,9 @@ export default function CoursePlayerScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const htmlStyles = useMemo(() => createHtmlStyles(colors), [colors]);
 
     // Core state
     const [course, setCourse] = useState<CourseDetail | null>(null);
@@ -1865,7 +1862,7 @@ export default function CoursePlayerScreen() {
         return (
             <View style={[styles.container, styles.centerContent]}>
                 <StatusBar barStyle="light-content" />
-                <ActivityIndicator size="large" color={COLORS.primary} />
+                <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingText}>Loading course...</Text>
             </View>
         );
@@ -1876,7 +1873,7 @@ export default function CoursePlayerScreen() {
         return (
             <View style={[styles.container, styles.centerContent]}>
                 <StatusBar barStyle="light-content" />
-                <Ionicons name="cloud-offline-outline" size={64} color={COLORS.textTertiary} />
+                <Ionicons name="cloud-offline-outline" size={64} color={colors.textTertiary} />
                 <Text style={styles.errorTitle}>Unable to Load Course</Text>
                 <Text style={styles.errorText}>{error || 'Course not found'}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={loadCourseContent}>
@@ -1904,8 +1901,8 @@ export default function CoursePlayerScreen() {
     // Quiz fullscreen view
     if (showQuiz && quizData) {
         return (
-            <View style={[styles.container, { paddingTop: insets.top, backgroundColor: COLORS.background }]}>
-                <StatusBar barStyle="dark-content" />
+            <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
+                <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
                 <QuizComponent
                     quiz={quizData}
                     onComplete={handleQuizComplete}
@@ -2093,7 +2090,7 @@ export default function CoursePlayerScreen() {
                             /* Video error state */
                             <View style={styles.videoWrapper}>
                                 <View style={styles.videoErrorContainer}>
-                                    <Ionicons name="alert-circle" size={48} color={COLORS.error} />
+                                    <Ionicons name="alert-circle" size={48} color={colors.error} />
                                     <Text style={styles.videoErrorTitle}>Video Unavailable</Text>
                                     <Text style={styles.videoErrorText}>{videoError}</Text>
                                     <TouchableOpacity
@@ -2280,7 +2277,7 @@ export default function CoursePlayerScreen() {
                                                             <Ionicons
                                                                 name={downloadState?.isDownloaded ? "checkmark-circle" : "cloud-download-outline"}
                                                                 size={24}
-                                                                color={downloadState?.isDownloaded ? COLORS.success : "#fff"}
+                                                                color={downloadState?.isDownloaded ? colors.success : "#fff"}
                                                             />
                                                         )}
                                                     </TouchableOpacity>
@@ -2427,7 +2424,7 @@ export default function CoursePlayerScreen() {
                 {/* Offline indicator */}
                 {!isOnline && (
                     <View style={styles.offlineIndicator}>
-                        <Ionicons name="cloud-offline" size={16} color={COLORS.warning} />
+                        <Ionicons name="cloud-offline" size={16} color={colors.warning} />
                         <Text style={styles.offlineIndicatorText}>Offline Mode</Text>
                     </View>
                 )}
@@ -2473,12 +2470,12 @@ export default function CoursePlayerScreen() {
                             disabled={isCourseDownloading}
                         >
                             {isCourseDownloading ? (
-                                <ActivityIndicator size="small" color={COLORS.primary} />
+                                <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
                                 <Ionicons
                                     name={isCourseDownloaded ? "checkmark-circle" : "cloud-download-outline"}
                                     size={22}
-                                    color={isCourseDownloaded ? COLORS.success : COLORS.primary}
+                                    color={isCourseDownloaded ? colors.success : colors.primary}
                                 />
                             )}
                         </TouchableOpacity>
@@ -2486,7 +2483,7 @@ export default function CoursePlayerScreen() {
                             style={styles.outlineButton}
                             onPress={toggleSidebar}
                         >
-                            <Ionicons name="list" size={24} color={COLORS.primary} />
+                            <Ionicons name="list" size={24} color={colors.primary} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -2500,7 +2497,7 @@ export default function CoursePlayerScreen() {
                     {currentLesson?.content_type === 'text' && currentLesson.content_html && (
                         <View style={styles.textContent}>
                             <RenderHtml
-                                contentWidth={SCREEN_WIDTH - SPACING.lg * 2}
+                                contentWidth={SCREEN_WIDTH - Theme.spacing.lg * 2}
                                 source={{ html: currentLesson.content_html }}
                                 tagsStyles={htmlStyles}
                             />
@@ -2511,7 +2508,7 @@ export default function CoursePlayerScreen() {
                         <View style={styles.quizPrompt}>
                             <View style={styles.quizCard}>
                                 <View style={styles.quizIcon}>
-                                    <Ionicons name="school" size={48} color={COLORS.primary} />
+                                    <Ionicons name="school" size={48} color={colors.primary} />
                                 </View>
                                 <Text style={styles.quizTitle}>{currentLesson.quiz_data?.title || 'Knowledge Check'}</Text>
                                 <Text style={styles.quizDescription}>
@@ -2520,21 +2517,21 @@ export default function CoursePlayerScreen() {
 
                                 <View style={styles.quizStats}>
                                     <View style={styles.quizStatItem}>
-                                        <Ionicons name="help-circle-outline" size={20} color={COLORS.textSecondary} />
+                                        <Ionicons name="help-circle-outline" size={20} color={colors.textSecondary} />
                                         <Text style={styles.quizStatText}>
                                             {currentLesson.quiz_data?.questions?.length || 0} Questions
                                         </Text>
                                     </View>
                                     {currentLesson.quiz_data?.time_limit && (
                                         <View style={styles.quizStatItem}>
-                                            <Ionicons name="time-outline" size={20} color={COLORS.textSecondary} />
+                                            <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                                             <Text style={styles.quizStatText}>
                                                 {currentLesson.quiz_data.time_limit} min
                                             </Text>
                                         </View>
                                     )}
                                     <View style={styles.quizStatItem}>
-                                        <Ionicons name="ribbon-outline" size={20} color={COLORS.textSecondary} />
+                                        <Ionicons name="ribbon-outline" size={20} color={colors.textSecondary} />
                                         <Text style={styles.quizStatText}>
                                             {currentLesson.quiz_data?.passing_score || 70}% to pass
                                         </Text>
@@ -2585,7 +2582,7 @@ export default function CoursePlayerScreen() {
                                     >
                                         {downloadState?.isDownloading ? (
                                             <>
-                                                <ActivityIndicator size="small" color={COLORS.primary} />
+                                                <ActivityIndicator size="small" color={colors.primary} />
                                                 <Text style={styles.actionButtonText}>
                                                     {Math.round((downloadState.progress || 0) * 100)}%
                                                 </Text>
@@ -2595,7 +2592,7 @@ export default function CoursePlayerScreen() {
                                                 <Ionicons
                                                     name={downloadState?.isDownloaded ? "checkmark-circle" : "cloud-download-outline"}
                                                     size={20}
-                                                    color={downloadState?.isDownloaded ? COLORS.success : COLORS.primary}
+                                                    color={downloadState?.isDownloaded ? colors.success : colors.primary}
                                                 />
                                                 <Text style={[
                                                     styles.actionButtonText,
@@ -2617,7 +2614,7 @@ export default function CoursePlayerScreen() {
                                             <Ionicons
                                                 name="download-outline"
                                                 size={20}
-                                                color={COLORS.primary}
+                                                color={colors.primary}
                                             />
                                             <Text style={styles.actionButtonText}>
                                                 Download All
@@ -2676,7 +2673,7 @@ export default function CoursePlayerScreen() {
                                             <View style={styles.textBlockContainer}>
                                                 {block.title && <Text style={styles.textBlockTitle}>{block.title}</Text>}
                                                 <RenderHtml
-                                                    contentWidth={SCREEN_WIDTH - SPACING.lg * 2 - 32}
+                                                    contentWidth={SCREEN_WIDTH - Theme.spacing.lg * 2 - 32}
                                                     source={{
                                                         html: block.content?.html ||
                                                             (typeof block.content === 'string' ? `<div>${block.content}</div>` :
@@ -2756,12 +2753,12 @@ export default function CoursePlayerScreen() {
                                                 style={styles.fileBlock}
                                                 onPress={() => handleFileDownload(block.content.url, block.content.filename || block.title || 'file')}
                                             >
-                                                <Ionicons name="document-attach" size={24} color={COLORS.primary} />
+                                                <Ionicons name="document-attach" size={24} color={colors.primary} />
                                                 <View style={styles.fileInfo}>
                                                     <Text style={styles.fileName}>{block.content.filename || block.title || 'Download File'}</Text>
                                                     <Text style={styles.fileAction}>Tap to download</Text>
                                                 </View>
-                                                <Ionicons name="cloud-download-outline" size={20} color={COLORS.textSecondary} />
+                                                <Ionicons name="cloud-download-outline" size={20} color={colors.textSecondary} />
                                             </TouchableOpacity>
                                         )}
 
@@ -2780,7 +2777,7 @@ export default function CoursePlayerScreen() {
                                         {block.type === 'quiz' && !(index === 0 && currentLesson.content_type === 'quiz') && (
                                             <View style={styles.inlineQuizCard}>
                                                 <View style={styles.inlineQuizHeader}>
-                                                    <Ionicons name="school" size={24} color={COLORS.primary} />
+                                                    <Ionicons name="school" size={24} color={colors.primary} />
                                                     <Text style={styles.inlineQuizTitle}>{block.title || 'Quiz'}</Text>
                                                 </View>
                                                 <Text style={styles.inlineQuizDesc}>
@@ -2852,7 +2849,7 @@ export default function CoursePlayerScreen() {
                 </ScrollView>
 
                 {/* Navigation Footer */}
-                <View style={[styles.navigationFooter, { paddingBottom: insets.bottom + SPACING.sm }]}>
+                <View style={[styles.navigationFooter, { paddingBottom: insets.bottom + Theme.spacing.sm }]}>
                     <TouchableOpacity
                         style={[styles.navButton, currentIndex === 0 && styles.navButtonDisabled]}
                         onPress={() => navigateLesson('prev')}
@@ -2861,7 +2858,7 @@ export default function CoursePlayerScreen() {
                         <Ionicons
                             name="chevron-back"
                             size={20}
-                            color={currentIndex === 0 ? COLORS.textTertiary : COLORS.text}
+                            color={currentIndex === 0 ? colors.textTertiary : colors.text}
                         />
                         <Text style={[
                             styles.navButtonText,
@@ -2925,7 +2922,7 @@ export default function CoursePlayerScreen() {
                         <View style={styles.sidebarHeader}>
                             <Text style={styles.sidebarTitle}>Course Content</Text>
                             <TouchableOpacity onPress={toggleSidebar} style={styles.closeSidebar}>
-                                <Ionicons name="close" size={24} color={COLORS.text} />
+                                <Ionicons name="close" size={24} color={colors.text} />
                             </TouchableOpacity>
                         </View>
 
@@ -2977,7 +2974,7 @@ export default function CoursePlayerScreen() {
                                                         <Ionicons
                                                             name={getLessonIcon(lesson.content_type) as any}
                                                             size={14}
-                                                            color={isActive ? '#fff' : COLORS.textSecondary}
+                                                            color={isActive ? '#fff' : colors.textSecondary}
                                                         />
                                                     )}
                                                 </View>
@@ -2994,14 +2991,14 @@ export default function CoursePlayerScreen() {
                                                         </Text>
                                                         {dState?.isDownloading && (
                                                             <View style={styles.downloadStatusContainer}>
-                                                                <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 4 }} />
+                                                                <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 4 }} />
                                                                 <Text style={styles.downloadProgressText}>{Math.round(dState.progress * 100)}%</Text>
                                                             </View>
                                                         )}
                                                         {dState?.isDownloaded && !dState?.isDownloading && (
                                                             <View style={styles.downloadStatusContainer}>
-                                                                <Ionicons name="cloud-done" size={14} color={COLORS.success} />
-                                                                <Text style={[styles.downloadProgressText, { color: COLORS.success }]}>Saved</Text>
+                                                                <Ionicons name="cloud-done" size={14} color={colors.success} />
+                                                                <Text style={[styles.downloadProgressText, { color: colors.success }]}>Saved</Text>
                                                             </View>
                                                         )}
                                                     </View>
@@ -3015,7 +3012,7 @@ export default function CoursePlayerScreen() {
                                                             handleFullLessonDownload(lesson.id);
                                                         }}
                                                     >
-                                                        <Ionicons name="cloud-download-outline" size={18} color={COLORS.textSecondary} />
+                                                        <Ionicons name="cloud-download-outline" size={18} color={colors.textSecondary} />
                                                     </TouchableOpacity>
                                                 )}
                                             </TouchableOpacity>
@@ -3060,7 +3057,7 @@ export default function CoursePlayerScreen() {
                                     {speed}x {speed === 1 && '(Normal)'}
                                 </Text>
                                 {playbackSpeed === speed && (
-                                    <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                                 )}
                             </TouchableOpacity>
                         ))}
@@ -3085,7 +3082,7 @@ export default function CoursePlayerScreen() {
                                 setPdfBase64(null);
                             }}
                         >
-                            <Ionicons name="close" size={24} color={COLORS.text} />
+                            <Ionicons name="close" size={24} color={colors.text} />
                         </TouchableOpacity>
                         <View style={styles.pdfTitleContainer}>
                             <Text style={styles.pdfTitle} numberOfLines={1}>{currentPdfTitle}</Text>
@@ -3106,7 +3103,7 @@ export default function CoursePlayerScreen() {
                                 }
                             }}
                         >
-                            <Ionicons name="share-outline" size={24} color={COLORS.primary} />
+                            <Ionicons name="share-outline" size={24} color={colors.primary} />
                         </TouchableOpacity>
                     </View>
 
@@ -3114,7 +3111,7 @@ export default function CoursePlayerScreen() {
                     <View style={styles.pdfContent}>
                         {pdfLoading && (
                             <View style={styles.pdfLoadingOverlay}>
-                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                <ActivityIndicator size="large" color={colors.primary} />
                                 <Text style={styles.pdfLoadingText}>Loading PDF...</Text>
                             </View>
                         )}
@@ -3330,7 +3327,7 @@ export default function CoursePlayerScreen() {
                             />
                         ) : (
                             <View style={styles.pdfEmptyState}>
-                                <Ionicons name="document-text-outline" size={64} color={COLORS.textSecondary} />
+                                <Ionicons name="document-text-outline" size={64} color={colors.textSecondary} />
                                 <Text style={styles.pdfEmptyText}>No PDF loaded</Text>
                                 <Text style={styles.pdfEmptySubtext}>Download a PDF first to view it offline</Text>
                             </View>
@@ -3343,7 +3340,7 @@ export default function CoursePlayerScreen() {
             {fileDownloadProgress.visible && (
                 <View style={styles.downloadProgressOverlay}>
                     <View style={styles.downloadProgressCard}>
-                        <ActivityIndicator size="large" color={COLORS.primary} />
+                        <ActivityIndicator size="large" color={colors.primary} />
                         <Text style={styles.downloadProgressTitle}>Downloading...</Text>
                         <Text style={styles.downloadProgressFilename} numberOfLines={1}>
                             {fileDownloadProgress.filename}
@@ -3366,91 +3363,91 @@ export default function CoursePlayerScreen() {
     );
 }
 
-const htmlStyles: any = {
+const createHtmlStyles = (colors: any): any => ({
     body: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        color: colors.text,
         lineHeight: 28,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     p: {
-        marginBottom: SPACING.md,
+        marginBottom: Theme.spacing.md,
         marginTop: 0,
         lineHeight: 28,
     },
     h1: {
         fontSize: 28,
         fontWeight: '700',
-        color: COLORS.text,
-        marginBottom: SPACING.lg,
-        marginTop: SPACING.xl,
+        color: colors.text,
+        marginBottom: Theme.spacing.lg,
+        marginTop: Theme.spacing.xl,
         lineHeight: 36,
     },
     h2: {
         fontSize: 24,
         fontWeight: '700',
-        color: COLORS.text,
-        marginBottom: SPACING.md,
-        marginTop: SPACING.lg,
+        color: colors.text,
+        marginBottom: Theme.spacing.md,
+        marginTop: Theme.spacing.lg,
         lineHeight: 32,
     },
     h3: {
         fontSize: 20,
         fontWeight: '600',
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
-        marginTop: SPACING.md,
+        color: colors.text,
+        marginBottom: Theme.spacing.sm,
+        marginTop: Theme.spacing.md,
         lineHeight: 28,
     },
     h4: {
         fontSize: 18,
         fontWeight: '600',
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
-        marginTop: SPACING.md,
+        color: colors.text,
+        marginBottom: Theme.spacing.sm,
+        marginTop: Theme.spacing.md,
         lineHeight: 26,
     },
     h5: {
         fontSize: 16,
         fontWeight: '600',
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
-        marginTop: SPACING.sm,
+        color: colors.text,
+        marginBottom: Theme.spacing.xs,
+        marginTop: Theme.spacing.sm,
     },
     h6: {
         fontSize: 14,
         fontWeight: '600',
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.xs,
-        marginTop: SPACING.sm,
+        color: colors.textSecondary,
+        marginBottom: Theme.spacing.xs,
+        marginTop: Theme.spacing.sm,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     ul: {
-        marginBottom: SPACING.md,
-        marginTop: SPACING.sm,
-        paddingLeft: SPACING.md,
+        marginBottom: Theme.spacing.md,
+        marginTop: Theme.spacing.sm,
+        paddingLeft: Theme.spacing.md,
     },
     ol: {
-        marginBottom: SPACING.md,
-        marginTop: SPACING.sm,
-        paddingLeft: SPACING.md,
+        marginBottom: Theme.spacing.md,
+        marginTop: Theme.spacing.sm,
+        paddingLeft: Theme.spacing.md,
     },
     li: {
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
         lineHeight: 26,
     },
     a: {
-        color: COLORS.primary,
+        color: colors.primary,
         textDecorationLine: 'underline',
     },
     strong: {
         fontWeight: '700',
-        color: COLORS.text,
+        color: colors.text,
     },
     b: {
         fontWeight: '700',
-        color: COLORS.text,
+        color: colors.text,
     },
     em: {
         fontStyle: 'italic',
@@ -3460,1350 +3457,1352 @@ const htmlStyles: any = {
     },
     blockquote: {
         borderLeftWidth: 4,
-        borderLeftColor: COLORS.primary,
-        paddingLeft: SPACING.md,
-        paddingVertical: SPACING.sm,
-        marginVertical: SPACING.md,
-        backgroundColor: `${COLORS.primary}10`,
-        borderRadius: BORDER_RADIUS.sm,
+        borderLeftColor: colors.primary,
+        paddingLeft: Theme.spacing.md,
+        paddingVertical: Theme.spacing.sm,
+        marginVertical: Theme.spacing.md,
+        backgroundColor: `${colors.primary}10`,
+        borderRadius: Theme.borderRadius.sm,
         marginLeft: 0,
         marginRight: 0,
     },
     code: {
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         paddingHorizontal: 6,
         paddingVertical: 3,
         borderRadius: 4,
         fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.primary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.primary,
     },
     pre: {
-        backgroundColor: COLORS.backgroundSecondary,
-        padding: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
+        backgroundColor: colors.backgroundSecondary,
+        padding: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.md,
         overflow: 'scroll',
-        marginVertical: SPACING.md,
+        marginVertical: Theme.spacing.md,
     },
     img: {
-        marginVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
+        marginVertical: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.md,
     },
     table: {
         borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: BORDER_RADIUS.md,
-        marginVertical: SPACING.md,
+        borderColor: colors.border,
+        borderRadius: Theme.borderRadius.md,
+        marginVertical: Theme.spacing.md,
     },
     th: {
-        backgroundColor: COLORS.backgroundSecondary,
-        padding: SPACING.sm,
+        backgroundColor: colors.backgroundSecondary,
+        padding: Theme.spacing.sm,
         fontWeight: '600',
     },
     td: {
-        padding: SPACING.sm,
+        padding: Theme.spacing.sm,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: colors.border,
     },
     hr: {
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         height: 1,
-        marginVertical: SPACING.lg,
+        marginVertical: Theme.spacing.lg,
     },
     mark: {
         backgroundColor: '#FEF3C7',
         paddingHorizontal: 2,
     },
-};
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    centerContent: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: SPACING.xl,
-    },
-    loadingText: {
-        marginTop: SPACING.md,
-        color: COLORS.textSecondary,
-        fontSize: FONT_SIZE.md,
-    },
-    errorTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginTop: SPACING.lg,
-    },
-    errorText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        marginTop: SPACING.sm,
-    },
-    retryButton: {
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.xl,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        marginTop: SPACING.xl,
-    },
-    retryButtonText: {
-        color: '#fff',
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-    backLink: {
-        marginTop: SPACING.md,
-    },
-    backLinkText: {
-        color: COLORS.primary,
-        fontSize: FONT_SIZE.md,
-    },
-
-    // Media Container - video player area
-    mediaContainer: {
-        backgroundColor: '#000',
-        width: '100%',
-        overflow: 'hidden',
-    },
-    videoWrapper: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        backgroundColor: '#000',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    video: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    bufferingOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-    },
-    controlsOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'transparent',
-    },
-
-    // World-class embedded video player styles (YouTube, Vimeo, etc.)
-    embeddedVideoWrapper: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        backgroundColor: '#000',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    embeddedWebView: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    embeddedLoadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#000',
-    },
-    embeddedLoadingText: {
-        color: 'rgba(255,255,255,0.8)',
-        fontSize: 14,
-        marginTop: 12,
-        fontWeight: '500',
-    },
-    embeddedBackButton: {
-        position: 'absolute',
-        top: 12,
-        left: 12,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 100,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.5,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-
-    topBar: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        zIndex: 20,
-    },
-    topBarButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-    topBarRight: {
-        flexDirection: 'row',
-        gap: SPACING.sm,
-    },
-    embeddedTopBar: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        padding: SPACING.md,
-        flexDirection: 'row',
-        justifyContent: 'flex-start',
-        zIndex: 10,
-    },
-    centerPlayButton: {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        marginTop: -36,
-        marginLeft: -36,
-        zIndex: 15,
-    },
-    playButtonCircle: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.3)',
-    },
-
-    // Netflix/YouTube style bottom controls
-    bottomControlsContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 20,
-    },
-    bottomGradient: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 120,
-        backgroundColor: 'transparent',
-        // Simulated gradient using multiple layers
-        borderTopWidth: 0,
-    },
-    bottomControls: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingHorizontal: 16,
-        paddingTop: 40,
-        paddingBottom: 12,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        zIndex: 20,
-    },
-    progressContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 8,
-        paddingBottom: 4,
-    },
-    progressBar: {
-        height: 44,
-        justifyContent: 'center',
-        paddingVertical: 16,
-    },
-    progressTrack: {
-        height: 4,
-        backgroundColor: 'rgba(255,255,255,0.3)',
-        borderRadius: 2,
-        position: 'relative',
-        overflow: 'visible',
-    },
-    progressFill: {
-        height: '100%',
-        backgroundColor: '#E50914',
-        borderRadius: 2,
-    },
-    progressThumb: {
-        position: 'absolute',
-        top: -6,
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: '#E50914',
-        marginLeft: -8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.4,
-        shadowRadius: 3,
-        elevation: 4,
-        borderWidth: 2,
-        borderColor: '#fff',
-    },
-    timeRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingTop: 8,
-    },
-    timeText: {
-        color: 'rgba(255,255,255,0.95)',
-        fontSize: 13,
-        fontWeight: '600',
-        fontVariant: ['tabular-nums'],
-    },
-    bottomRightControls: {
-        flexDirection: 'row',
-        gap: 20,
-        alignItems: 'center',
-    },
-    controlIconButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    skipButton: {
-        padding: 6,
-    },
-    speedPill: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 14,
-        minWidth: 44,
-        alignItems: 'center',
-    },
-    speedPillText: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    speedButton: {
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 4,
-    },
-    speedButtonText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    rotateButton: {
-        padding: 4,
-    },
-    fullscreenButton: {
-        padding: 4,
-    },
-    speedMenuOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    speedMenuContainer: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
-        width: 260,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    speedMenuTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        textAlign: 'center',
-        marginBottom: SPACING.md,
-    },
-    speedMenuItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-    },
-    speedMenuItemActive: {
-        backgroundColor: `${COLORS.primary}15`,
-    },
-    speedMenuItemText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-    },
-    speedMenuItemTextActive: {
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-
-    // Video Error
-    videoErrorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#000',
-        padding: SPACING.xl,
-    },
-    videoErrorTitle: {
-        color: '#fff',
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        marginTop: SPACING.md,
-    },
-    videoErrorText: {
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: FONT_SIZE.sm,
-        textAlign: 'center',
-        marginTop: SPACING.xs,
-        maxWidth: 280,
-    },
-    videoRetryButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
-        marginTop: SPACING.lg,
-        gap: SPACING.xs,
-    },
-    videoRetryText: {
-        color: '#fff',
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-
-    // Content Placeholder (non-video) - edX/Udemy style header
-    contentPlaceholder: {
-        flex: 1,
-        backgroundColor: '#1a1a2e',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    // Non-video header (for quiz, text content)
-    nonVideoHeader: {
-        backgroundColor: '#1a1a2e',
-        paddingBottom: SPACING.xl + 20,
-        paddingHorizontal: SPACING.lg,
-    },
-    backButtonAlt: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: SPACING.md,
-    },
-    headerContent: {
-        alignItems: 'center',
-        paddingTop: SPACING.md,
-    },
-    headerIconContainer: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: SPACING.md,
-    },
-    headerTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: '#fff',
-        textAlign: 'center',
-        marginBottom: SPACING.xs,
-    },
-    headerSubtitle: {
-        fontSize: FONT_SIZE.sm,
-        color: 'rgba(255,255,255,0.7)',
-    },
-    placeholderContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: SPACING.xl,
-    },
-    placeholderIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: SPACING.md,
-    },
-    placeholderTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: '#fff',
-        textAlign: 'center',
-        marginTop: SPACING.sm,
-    },
-    placeholderSubtitle: {
-        fontSize: FONT_SIZE.sm,
-        color: 'rgba(255,255,255,0.6)',
-        marginTop: SPACING.xs,
-    },
-
-    // Content Area
-    contentArea: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        marginTop: -20,
-    },
-    lessonHeader: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        padding: SPACING.lg,
-        paddingTop: SPACING.xl + 4,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    lessonInfo: {
-        flex: 1,
-        marginRight: SPACING.md,
-    },
-    moduleLabel: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.medium,
-        marginBottom: SPACING.xs,
-    },
-    lessonTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        lineHeight: 24,
-    },
-    outlineButton: {
-        width: 44,
-        height: 44,
-        borderRadius: BORDER_RADIUS.md,
-        backgroundColor: COLORS.primary + '15',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    // Scroll Content
-    scrollContent: {
-        flex: 1,
-    },
-    scrollContentInner: {
-        padding: SPACING.lg,
-        paddingBottom: SPACING.xxxl,
-        flexGrow: 1,
-    },
-    textContent: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.lg,
-    },
-
-    // Text block container for rich HTML content
-    textBlockContainer: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.lg,
-        marginVertical: SPACING.sm,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    textBlockTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.md,
-        paddingBottom: SPACING.sm,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-
-    // Quiz
-    quizPrompt: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: SPACING.xl,
-    },
-    quizIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: COLORS.primary + '15',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: SPACING.md,
-    },
-    quizTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
-        textAlign: 'center',
-    },
-    quizDescription: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        marginBottom: SPACING.lg,
-        paddingHorizontal: SPACING.md,
-    },
-    quizCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.xl,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    quizStats: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-        gap: SPACING.lg,
-        marginBottom: SPACING.xl,
-        paddingVertical: SPACING.md,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: COLORS.border,
-        width: '100%',
-    },
-    quizStatItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.xs,
-    },
-    quizStatText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-    },
-    startQuizButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.xl,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
-        gap: SPACING.sm,
-        minWidth: 180,
-        justifyContent: 'center',
-    },
-    startQuizButtonText: {
-        color: '#fff',
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-    },
-
-    // Video Description
-    videoDescription: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.lg,
-    },
-    descriptionTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
-    },
-    descriptionText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        lineHeight: 24,
-    },
-    videoActions: {
-        flexDirection: 'row',
-        marginTop: SPACING.lg,
-        gap: SPACING.md,
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.background,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
-        gap: SPACING.xs,
-    },
-    actionButtonActive: {
-        backgroundColor: COLORS.success + '15',
-    },
-    actionButtonText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.text,
-    },
-    actionButtonTextActive: {
-        color: COLORS.success,
-    },
-
-    // Download Section for non-video lessons
-    downloadSection: {
-        marginTop: SPACING.lg,
-        paddingHorizontal: SPACING.md,
-    },
-    downloadAllButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        gap: SPACING.sm,
-    },
-    downloadAllButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: '#fff',
-    },
-
-    // Blocks
-    blocksContainer: {
-        marginTop: SPACING.lg,
-    },
-    blockItem: {
-        marginBottom: SPACING.md,
-    },
-    audioBlock: {
-        marginVertical: SPACING.md,
-    },
-
-    // Navigation Footer
-    navigationFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
-        backgroundColor: COLORS.surface,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-    },
-    navButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        gap: SPACING.xs,
-    },
-    navButtonNext: {
-        backgroundColor: COLORS.primary,
-    },
-    navButtonComplete: {
-        backgroundColor: COLORS.success,
-    },
-    navButtonDisabled: {
-        opacity: 0.5,
-    },
-    navButtonText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-        fontWeight: FONT_WEIGHT.medium,
-    },
-    navButtonTextNext: {
-        color: '#fff',
-    },
-    navButtonTextComplete: {
-        color: '#fff',
-    },
-    navButtonTextDisabled: {
-        color: COLORS.textTertiary,
-    },
-    progressIndicator: {
-        paddingHorizontal: SPACING.md,
-    },
-    progressText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
-    },
-
-    // Sidebar
-    sidebarOverlay: {
-        flex: 1,
-        flexDirection: 'row',
-    },
-    sidebarBackdrop: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    sidebar: {
-        width: SCREEN_WIDTH * 0.85,
-        maxWidth: 400,
-        backgroundColor: COLORS.surface,
-        borderTopLeftRadius: 20,
-        borderBottomLeftRadius: 20,
-    },
-    sidebarHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: SPACING.lg,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    sidebarTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-    },
-    closeSidebar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: COLORS.background,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    courseProgress: {
-        padding: SPACING.lg,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    courseProgressBar: {
-        height: 6,
-        backgroundColor: COLORS.border,
-        borderRadius: 3,
-        marginBottom: SPACING.sm,
-    },
-    courseProgressFill: {
-        height: '100%',
-        backgroundColor: COLORS.primary,
-        borderRadius: 3,
-    },
-    courseProgressText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
-    },
-    moduleSection: {
-        paddingVertical: SPACING.md,
-    },
-    moduleSectionHeader: {
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.sm,
-    },
-    moduleSectionNumber: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
-        marginBottom: 2,
-    },
-    moduleSectionTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-    },
-    sidebarLesson: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: SPACING.md,
-        paddingHorizontal: SPACING.lg,
-        marginHorizontal: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
-    },
-    sidebarLessonActive: {
-        backgroundColor: COLORS.primary + '15',
-    },
-    lessonStatusIcon: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: COLORS.background,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: SPACING.md,
-    },
-    lessonStatusCompleted: {
-        backgroundColor: COLORS.success,
-    },
-    lessonStatusActive: {
-        backgroundColor: COLORS.primary,
-    },
-    sidebarLessonInfo: {
-        flex: 1,
-    },
-    sidebarLessonTitle: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.text,
-        lineHeight: 20,
-    },
-    sidebarLessonTitleActive: {
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.primary,
-    },
-    sidebarLessonMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.xs,
-        marginTop: 2,
-    },
-    sidebarLessonType: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textTertiary,
-    },
-    downloadStatusContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: COLORS.backgroundSecondary,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: BORDER_RADIUS.sm,
-    },
-    downloadProgressText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
-    },
-    sidebarDownloadBtn: {
-        padding: SPACING.xs,
-        marginLeft: 'auto',
-    },
-
-    // Additional Block styles for video/image/file blocks
-    blockTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
-    },
-    additionalVideoBlock: {
-        marginVertical: SPACING.sm,
-        width: '100%',
-    },
-    embeddedVideoContainer: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        borderRadius: BORDER_RADIUS.lg,
-        overflow: 'hidden',
-        backgroundColor: '#000',
-    },
-    embeddedVideo: {
-        flex: 1,
-    },
-    blockVideo: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        borderRadius: BORDER_RADIUS.lg,
-        backgroundColor: '#000',
-    },
-    imageBlock: {
-        marginVertical: SPACING.sm,
-    },
-    imageContainer: {
-        borderRadius: BORDER_RADIUS.lg,
-        overflow: 'hidden',
-        backgroundColor: COLORS.backgroundSecondary,
-    },
-    imagePlaceholder: {
-        aspectRatio: 16 / 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: COLORS.backgroundSecondary,
-    },
-    imageCaption: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.sm,
-        textAlign: 'center',
-    },
-    fileBlock: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: SPACING.md,
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.lg,
-        gap: SPACING.md,
-    },
-    fileInfo: {
-        flex: 1,
-    },
-    fileName: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.text,
-    },
-    fileAction: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.primary,
-        marginTop: 2,
-    },
-
-    // Video touch area
-    videoTouchArea: {
-        width: '100%',
-        height: '100%',
-    },
-
-    // Video gesture container for tap zones - starts below top bar area
-    videoGestureContainer: {
-        position: 'absolute',
-        top: 60,
-        left: 0,
-        right: 0,
-        bottom: 80,
-        flexDirection: 'row',
-        zIndex: 5,
-    },
-    videoTapZoneLeft: {
-        flex: 0.35,
-        height: '100%',
-    },
-    videoTapZoneCenter: {
-        flex: 0.30,
-        height: '100%',
-    },
-    videoTapZoneRight: {
-        flex: 0.35,
-        height: '100%',
-    },
-
-    // Skip indicator (shows when double-tapping)
-    skipIndicator: {
-        position: 'absolute',
-        top: '50%',
-        transform: [{ translateY: -35 }],
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        paddingHorizontal: 20,
-        paddingVertical: 14,
-        borderRadius: 50,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        gap: 6,
-    },
-    skipIndicatorLeft: {
-        left: 50,
-    },
-    skipIndicatorRight: {
-        right: 50,
-    },
-    skipIndicatorText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '700',
-    },
-
-    // Speed boost indicator (Instagram/FB style 2x)
-    speedBoostIndicator: {
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 4,
-        gap: 4,
-    },
-    speedBoostText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-
-    // Block image styles
-    blockImage: {
-        width: '100%',
-        minHeight: 200,
-        maxHeight: 400,
-        borderRadius: BORDER_RADIUS.lg,
-    },
-
-    // Inline quiz card (for quizzes not at first position)
-    inlineQuizCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.lg,
-        marginVertical: SPACING.md,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-    },
-    inlineQuizHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: SPACING.md,
-        gap: SPACING.sm,
-    },
-    inlineQuizTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        flex: 1,
-    },
-    inlineQuizDesc: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginBottom: SPACING.lg,
-        lineHeight: 22,
-    },
-    inlineQuizButton: {
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.md,
-        paddingHorizontal: SPACING.xl,
-        borderRadius: BORDER_RADIUS.lg,
-        alignItems: 'center',
-    },
-    inlineQuizButtonText: {
-        color: '#fff',
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-
-    // PDF Viewer styles
-    pdfViewerContainer: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    pdfHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-        backgroundColor: COLORS.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    pdfCloseButton: {
-        padding: SPACING.sm,
-    },
-    pdfTitleContainer: {
-        flex: 1,
-        alignItems: 'center',
-        marginHorizontal: SPACING.sm,
-    },
-    pdfTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        textAlign: 'center',
-    },
-    pdfPageInfo: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
-        marginTop: 2,
-    },
-    pdfShareButton: {
-        padding: SPACING.sm,
-    },
-    pdfContent: {
-        flex: 1,
-        backgroundColor: COLORS.backgroundSecondary,
-    },
-    pdfView: {
-        flex: 1,
-        backgroundColor: COLORS.backgroundSecondary,
-    },
-    pdfWebView: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    pdfEmptyState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: SPACING.xl,
-    },
-    pdfEmptyText: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.md,
-    },
-    pdfEmptySubtext: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.xs,
-        textAlign: 'center',
-    },
-    pdfLoadingOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: COLORS.background,
-        zIndex: 10,
-    },
-    pdfLoadingText: {
-        marginTop: SPACING.md,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-    },
-
-    // Download Progress Overlay
-    downloadProgressOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000,
-    },
-    downloadProgressCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.xl,
-        alignItems: 'center',
-        width: SCREEN_WIDTH * 0.8,
-        maxWidth: 300,
-    },
-    downloadProgressTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginTop: SPACING.md,
-    },
-    downloadProgressFilename: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.xs,
-        maxWidth: '100%',
-    },
-    downloadProgressBarContainer: {
-        width: '100%',
-        height: 8,
-        backgroundColor: COLORS.border,
-        borderRadius: 4,
-        marginTop: SPACING.lg,
-        overflow: 'hidden',
-    },
-    downloadProgressBar: {
-        height: '100%',
-        backgroundColor: COLORS.primary,
-        borderRadius: 4,
-    },
-    downloadProgressPercent: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.primary,
-        marginTop: SPACING.sm,
-    },
-
-    // Offline indicator styles
-    offlineIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: COLORS.warning + '20',
-        paddingVertical: SPACING.xs,
-        paddingHorizontal: SPACING.md,
-        gap: SPACING.xs,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.warning + '30',
-    },
-    offlineIndicatorText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.warning,
-    },
-
-    // Course download banner
-    courseDownloadBanner: {
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.sm,
-    },
-    courseDownloadInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.sm,
-    },
-    courseDownloadTexts: {
-        flex: 1,
-    },
-    courseDownloadTitle: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: '#fff',
-    },
-    courseDownloadStatus: {
-        fontSize: FONT_SIZE.xs,
-        color: 'rgba(255,255,255,0.8)',
-    },
-    courseDownloadPercent: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.bold,
-        color: '#fff',
-    },
-    courseDownloadProgressBg: {
-        height: 3,
-        backgroundColor: 'rgba(255,255,255,0.3)',
-        borderRadius: 2,
-        marginTop: SPACING.xs,
-        overflow: 'hidden',
-    },
-    courseDownloadProgressFill: {
-        height: '100%',
-        backgroundColor: '#fff',
-        borderRadius: 2,
-    },
-
-    // Lesson header buttons container
-    lessonHeaderButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.sm,
-    },
-    downloadCourseButton: {
-        width: 44,
-        height: 44,
-        borderRadius: BORDER_RADIUS.lg,
-        backgroundColor: COLORS.background,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: COLORS.border,
-    },
-    downloadCourseButtonActive: {
-        backgroundColor: COLORS.success + '15',
-        borderColor: COLORS.success + '30',
-    },
-    downloadCourseButtonDownloading: {
-        backgroundColor: COLORS.primary + '10',
-        borderColor: COLORS.primary + '30',
-    },
 });
+
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: '#000',
+        },
+        centerContent: {
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: Theme.spacing.xl,
+        },
+        loadingText: {
+            marginTop: Theme.spacing.md,
+            color: colors.textSecondary,
+            fontSize: Theme.fontSize.base,
+        },
+        errorTitle: {
+            fontSize: Theme.fontSize.xl,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginTop: Theme.spacing.lg,
+        },
+        errorText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            textAlign: 'center',
+            marginTop: Theme.spacing.sm,
+        },
+        retryButton: {
+            backgroundColor: colors.primary,
+            paddingHorizontal: Theme.spacing.xl,
+            paddingVertical: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+            marginTop: Theme.spacing.xl,
+        },
+        retryButtonText: {
+            color: '#fff',
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+        },
+        backLink: {
+            marginTop: Theme.spacing.md,
+        },
+        backLinkText: {
+            color: colors.primary,
+            fontSize: Theme.fontSize.base,
+        },
+
+        // Media Container - video player area
+        mediaContainer: {
+            backgroundColor: '#000',
+            width: '100%',
+            overflow: 'hidden',
+        },
+        videoWrapper: {
+            width: '100%',
+            aspectRatio: 16 / 9,
+            backgroundColor: '#000',
+            position: 'relative',
+            overflow: 'hidden',
+        },
+        video: {
+            flex: 1,
+            backgroundColor: '#000',
+        },
+        bufferingOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+        },
+        controlsOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: 'transparent',
+        },
+
+        // World-class embedded video player styles (YouTube, Vimeo, etc.)
+        embeddedVideoWrapper: {
+            width: '100%',
+            aspectRatio: 16 / 9,
+            backgroundColor: '#000',
+            position: 'relative',
+            overflow: 'hidden',
+        },
+        embeddedWebView: {
+            flex: 1,
+            backgroundColor: '#000',
+        },
+        embeddedLoadingOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: '#000',
+        },
+        embeddedLoadingText: {
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: 14,
+            marginTop: 12,
+            fontWeight: '500',
+        },
+        embeddedBackButton: {
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 100,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.5,
+            shadowRadius: 4,
+            elevation: 5,
+        },
+
+        topBar: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            zIndex: 20,
+        },
+        topBarButton: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 4,
+        },
+        topBarRight: {
+            flexDirection: 'row',
+            gap: Theme.spacing.sm,
+        },
+        embeddedTopBar: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            padding: Theme.spacing.md,
+            flexDirection: 'row',
+            justifyContent: 'flex-start',
+            zIndex: 10,
+        },
+        centerPlayButton: {
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            marginTop: -36,
+            marginLeft: -36,
+            zIndex: 15,
+        },
+        playButtonCircle: {
+            width: 72,
+            height: 72,
+            borderRadius: 36,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 2,
+            borderColor: 'rgba(255,255,255,0.3)',
+        },
+
+        // Netflix/YouTube style bottom controls
+        bottomControlsContainer: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 20,
+        },
+        bottomGradient: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 120,
+            backgroundColor: 'transparent',
+            // Simulated gradient using multiple layers
+            borderTopWidth: 0,
+        },
+        bottomControls: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            paddingHorizontal: 16,
+            paddingTop: 40,
+            paddingBottom: 12,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            zIndex: 20,
+        },
+        progressContainer: {
+            paddingHorizontal: 16,
+            paddingTop: 8,
+            paddingBottom: 4,
+        },
+        progressBar: {
+            height: 44,
+            justifyContent: 'center',
+            paddingVertical: 16,
+        },
+        progressTrack: {
+            height: 4,
+            backgroundColor: 'rgba(255,255,255,0.3)',
+            borderRadius: 2,
+            position: 'relative',
+            overflow: 'visible',
+        },
+        progressFill: {
+            height: '100%',
+            backgroundColor: '#E50914',
+            borderRadius: 2,
+        },
+        progressThumb: {
+            position: 'absolute',
+            top: -6,
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: '#E50914',
+            marginLeft: -8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.4,
+            shadowRadius: 3,
+            elevation: 4,
+            borderWidth: 2,
+            borderColor: '#fff',
+        },
+        timeRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            paddingTop: 8,
+        },
+        timeText: {
+            color: 'rgba(255,255,255,0.95)',
+            fontSize: 13,
+            fontWeight: '600',
+            fontVariant: ['tabular-nums'],
+        },
+        bottomRightControls: {
+            flexDirection: 'row',
+            gap: 20,
+            alignItems: 'center',
+        },
+        controlIconButton: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+        },
+        skipButton: {
+            padding: 6,
+        },
+        speedPill: {
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 14,
+            minWidth: 44,
+            alignItems: 'center',
+        },
+        speedPillText: {
+            color: '#fff',
+            fontSize: 13,
+            fontWeight: '700',
+        },
+        speedButton: {
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 4,
+        },
+        speedButtonText: {
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: '600',
+        },
+        rotateButton: {
+            padding: 4,
+        },
+        fullscreenButton: {
+            padding: 4,
+        },
+        speedMenuOverlay: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        speedMenuContainer: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.md,
+            width: 260,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+        },
+        speedMenuTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            textAlign: 'center',
+            marginBottom: Theme.spacing.md,
+        },
+        speedMenuItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.sm,
+            paddingHorizontal: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+        },
+        speedMenuItemActive: {
+            backgroundColor: `${colors.primary}15`,
+        },
+        speedMenuItemText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+        },
+        speedMenuItemTextActive: {
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.semibold,
+        },
+
+        // Video Error
+        videoErrorContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: '#000',
+            padding: Theme.spacing.xl,
+        },
+        videoErrorTitle: {
+            color: '#fff',
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            marginTop: Theme.spacing.md,
+        },
+        videoErrorText: {
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: Theme.fontSize.sm,
+            textAlign: 'center',
+            marginTop: Theme.spacing.xs,
+            maxWidth: 280,
+        },
+        videoRetryButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.primary,
+            paddingHorizontal: Theme.spacing.lg,
+            paddingVertical: Theme.spacing.sm,
+            borderRadius: Theme.borderRadius.md,
+            marginTop: Theme.spacing.lg,
+            gap: Theme.spacing.xs,
+        },
+        videoRetryText: {
+            color: '#fff',
+            fontWeight: Theme.fontWeight.semibold,
+        },
+
+        // Content Placeholder (non-video) - edX/Udemy style header
+        contentPlaceholder: {
+            flex: 1,
+            backgroundColor: '#1a1a2e',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+
+        // Non-video header (for quiz, text content)
+        nonVideoHeader: {
+            backgroundColor: '#1a1a2e',
+            paddingBottom: Theme.spacing.xl + 20,
+            paddingHorizontal: Theme.spacing.lg,
+        },
+        backButtonAlt: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: Theme.spacing.md,
+        },
+        headerContent: {
+            alignItems: 'center',
+            paddingTop: Theme.spacing.md,
+        },
+        headerIconContainer: {
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: Theme.spacing.md,
+        },
+        headerTitle: {
+            fontSize: Theme.fontSize.xl,
+            fontWeight: Theme.fontWeight.bold,
+            color: '#fff',
+            textAlign: 'center',
+            marginBottom: Theme.spacing.xs,
+        },
+        headerSubtitle: {
+            fontSize: Theme.fontSize.sm,
+            color: 'rgba(255,255,255,0.7)',
+        },
+        placeholderContent: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: Theme.spacing.xl,
+        },
+        placeholderIcon: {
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: Theme.spacing.md,
+        },
+        placeholderTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: '#fff',
+            textAlign: 'center',
+            marginTop: Theme.spacing.sm,
+        },
+        placeholderSubtitle: {
+            fontSize: Theme.fontSize.sm,
+            color: 'rgba(255,255,255,0.6)',
+            marginTop: Theme.spacing.xs,
+        },
+
+        // Content Area
+        contentArea: {
+            flex: 1,
+            backgroundColor: colors.background,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            marginTop: -20,
+        },
+        lessonHeader: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            padding: Theme.spacing.lg,
+            paddingTop: Theme.spacing.xl + 4,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        lessonInfo: {
+            flex: 1,
+            marginRight: Theme.spacing.md,
+        },
+        moduleLabel: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.medium,
+            marginBottom: Theme.spacing.xs,
+        },
+        lessonTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            lineHeight: 24,
+        },
+        outlineButton: {
+            width: 44,
+            height: 44,
+            borderRadius: Theme.borderRadius.md,
+            backgroundColor: colors.primary + '15',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+
+        // Scroll Content
+        scrollContent: {
+            flex: 1,
+        },
+        scrollContentInner: {
+            padding: Theme.spacing.lg,
+            paddingBottom: Theme.spacing['3xl'],
+            flexGrow: 1,
+        },
+        textContent: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.lg,
+        },
+
+        // Text block container for rich HTML content
+        textBlockContainer: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.lg,
+            marginVertical: Theme.spacing.sm,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            elevation: 2,
+        },
+        textBlockTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginBottom: Theme.spacing.md,
+            paddingBottom: Theme.spacing.sm,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+
+        // Quiz
+        quizPrompt: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.xl,
+        },
+        quizIcon: {
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: colors.primary + '15',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: Theme.spacing.md,
+        },
+        quizTitle: {
+            fontSize: Theme.fontSize.xl,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginBottom: Theme.spacing.xs,
+            textAlign: 'center',
+        },
+        quizDescription: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            textAlign: 'center',
+            marginBottom: Theme.spacing.lg,
+            paddingHorizontal: Theme.spacing.md,
+        },
+        quizCard: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.xl,
+            padding: Theme.spacing.xl,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+        },
+        quizStats: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            gap: Theme.spacing.lg,
+            marginBottom: Theme.spacing.xl,
+            paddingVertical: Theme.spacing.md,
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: colors.border,
+            width: '100%',
+        },
+        quizStatItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Theme.spacing.xs,
+        },
+        quizStatText: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+        },
+        startQuizButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.primary,
+            paddingHorizontal: Theme.spacing.xl,
+            paddingVertical: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.lg,
+            gap: Theme.spacing.sm,
+            minWidth: 180,
+            justifyContent: 'center',
+        },
+        startQuizButtonText: {
+            color: '#fff',
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.bold,
+        },
+
+        // Video Description
+        videoDescription: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.lg,
+        },
+        descriptionTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+            marginBottom: Theme.spacing.sm,
+        },
+        descriptionText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            lineHeight: 24,
+        },
+        videoActions: {
+            flexDirection: 'row',
+            marginTop: Theme.spacing.lg,
+            gap: Theme.spacing.md,
+        },
+        actionButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.background,
+            paddingHorizontal: Theme.spacing.md,
+            paddingVertical: Theme.spacing.sm,
+            borderRadius: Theme.borderRadius.md,
+            gap: Theme.spacing.xs,
+        },
+        actionButtonActive: {
+            backgroundColor: colors.success + '15',
+        },
+        actionButtonText: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.text,
+        },
+        actionButtonTextActive: {
+            color: colors.success,
+        },
+
+        // Download Section for non-video lessons
+        downloadSection: {
+            marginTop: Theme.spacing.lg,
+            paddingHorizontal: Theme.spacing.md,
+        },
+        downloadAllButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.primary,
+            paddingHorizontal: Theme.spacing.lg,
+            paddingVertical: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+            gap: Theme.spacing.sm,
+        },
+        downloadAllButtonText: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: '#fff',
+        },
+
+        // Blocks
+        blocksContainer: {
+            marginTop: Theme.spacing.lg,
+        },
+        blockItem: {
+            marginBottom: Theme.spacing.md,
+        },
+        audioBlock: {
+            marginVertical: Theme.spacing.md,
+        },
+
+        // Navigation Footer
+        navigationFooter: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: Theme.spacing.lg,
+            paddingVertical: Theme.spacing.md,
+            backgroundColor: colors.surface,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+        },
+        navButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.sm,
+            paddingHorizontal: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+            gap: Theme.spacing.xs,
+        },
+        navButtonNext: {
+            backgroundColor: colors.primary,
+        },
+        navButtonComplete: {
+            backgroundColor: colors.success,
+        },
+        navButtonDisabled: {
+            opacity: 0.5,
+        },
+        navButtonText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.text,
+            fontWeight: Theme.fontWeight.medium,
+        },
+        navButtonTextNext: {
+            color: '#fff',
+        },
+        navButtonTextComplete: {
+            color: '#fff',
+        },
+        navButtonTextDisabled: {
+            color: colors.textTertiary,
+        },
+        progressIndicator: {
+            paddingHorizontal: Theme.spacing.md,
+        },
+        progressText: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            fontWeight: Theme.fontWeight.medium,
+        },
+
+        // Sidebar
+        sidebarOverlay: {
+            flex: 1,
+            flexDirection: 'row',
+        },
+        sidebarBackdrop: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+        },
+        sidebar: {
+            width: SCREEN_WIDTH * 0.85,
+            maxWidth: 400,
+            backgroundColor: colors.surface,
+            borderTopLeftRadius: 20,
+            borderBottomLeftRadius: 20,
+        },
+        sidebarHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: Theme.spacing.lg,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        sidebarTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+        },
+        closeSidebar: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: colors.background,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        courseProgress: {
+            padding: Theme.spacing.lg,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        courseProgressBar: {
+            height: 6,
+            backgroundColor: colors.border,
+            borderRadius: 3,
+            marginBottom: Theme.spacing.sm,
+        },
+        courseProgressFill: {
+            height: '100%',
+            backgroundColor: colors.primary,
+            borderRadius: 3,
+        },
+        courseProgressText: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textSecondary,
+        },
+        moduleSection: {
+            paddingVertical: Theme.spacing.md,
+        },
+        moduleSectionHeader: {
+            paddingHorizontal: Theme.spacing.lg,
+            paddingVertical: Theme.spacing.sm,
+        },
+        moduleSectionNumber: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.semibold,
+            marginBottom: 2,
+        },
+        moduleSectionTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+        },
+        sidebarLesson: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.md,
+            paddingHorizontal: Theme.spacing.lg,
+            marginHorizontal: Theme.spacing.sm,
+            borderRadius: Theme.borderRadius.md,
+        },
+        sidebarLessonActive: {
+            backgroundColor: colors.primary + '15',
+        },
+        lessonStatusIcon: {
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: colors.background,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: Theme.spacing.md,
+        },
+        lessonStatusCompleted: {
+            backgroundColor: colors.success,
+        },
+        lessonStatusActive: {
+            backgroundColor: colors.primary,
+        },
+        sidebarLessonInfo: {
+            flex: 1,
+        },
+        sidebarLessonTitle: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.text,
+            lineHeight: 20,
+        },
+        sidebarLessonTitleActive: {
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.primary,
+        },
+        sidebarLessonMeta: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Theme.spacing.xs,
+            marginTop: 2,
+        },
+        sidebarLessonType: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textTertiary,
+        },
+        downloadStatusContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: colors.backgroundSecondary,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: Theme.borderRadius.sm,
+        },
+        downloadProgressText: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textSecondary,
+            fontWeight: Theme.fontWeight.medium,
+        },
+        sidebarDownloadBtn: {
+            padding: Theme.spacing.xs,
+            marginLeft: 'auto',
+        },
+
+        // Additional Block styles for video/image/file blocks
+        blockTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+            marginBottom: Theme.spacing.sm,
+        },
+        additionalVideoBlock: {
+            marginVertical: Theme.spacing.sm,
+            width: '100%',
+        },
+        embeddedVideoContainer: {
+            width: '100%',
+            aspectRatio: 16 / 9,
+            borderRadius: Theme.borderRadius.lg,
+            overflow: 'hidden',
+            backgroundColor: '#000',
+        },
+        embeddedVideo: {
+            flex: 1,
+        },
+        blockVideo: {
+            width: '100%',
+            aspectRatio: 16 / 9,
+            borderRadius: Theme.borderRadius.lg,
+            backgroundColor: '#000',
+        },
+        imageBlock: {
+            marginVertical: Theme.spacing.sm,
+        },
+        imageContainer: {
+            borderRadius: Theme.borderRadius.lg,
+            overflow: 'hidden',
+            backgroundColor: colors.backgroundSecondary,
+        },
+        imagePlaceholder: {
+            aspectRatio: 16 / 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: colors.backgroundSecondary,
+        },
+        imageCaption: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginTop: Theme.spacing.sm,
+            textAlign: 'center',
+        },
+        fileBlock: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: Theme.spacing.md,
+            backgroundColor: colors.backgroundSecondary,
+            borderRadius: Theme.borderRadius.lg,
+            gap: Theme.spacing.md,
+        },
+        fileInfo: {
+            flex: 1,
+        },
+        fileName: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.text,
+        },
+        fileAction: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.primary,
+            marginTop: 2,
+        },
+
+        // Video touch area
+        videoTouchArea: {
+            width: '100%',
+            height: '100%',
+        },
+
+        // Video gesture container for tap zones - starts below top bar area
+        videoGestureContainer: {
+            position: 'absolute',
+            top: 60,
+            left: 0,
+            right: 0,
+            bottom: 80,
+            flexDirection: 'row',
+            zIndex: 5,
+        },
+        videoTapZoneLeft: {
+            flex: 0.35,
+            height: '100%',
+        },
+        videoTapZoneCenter: {
+            flex: 0.30,
+            height: '100%',
+        },
+        videoTapZoneRight: {
+            flex: 0.35,
+            height: '100%',
+        },
+
+        // Skip indicator (shows when double-tapping)
+        skipIndicator: {
+            position: 'absolute',
+            top: '50%',
+            transform: [{ translateY: -35 }],
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            paddingHorizontal: 20,
+            paddingVertical: 14,
+            borderRadius: 50,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            gap: 6,
+        },
+        skipIndicatorLeft: {
+            left: 50,
+        },
+        skipIndicatorRight: {
+            right: 50,
+        },
+        skipIndicatorText: {
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: '700',
+        },
+
+        // Speed boost indicator (Instagram/FB style 2x)
+        speedBoostIndicator: {
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 4,
+            gap: 4,
+        },
+        speedBoostText: {
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: '700',
+        },
+
+        // Block image styles
+        blockImage: {
+            width: '100%',
+            minHeight: 200,
+            maxHeight: 400,
+            borderRadius: Theme.borderRadius.lg,
+        },
+
+        // Inline quiz card (for quizzes not at first position)
+        inlineQuizCard: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.lg,
+            marginVertical: Theme.spacing.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        inlineQuizHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: Theme.spacing.md,
+            gap: Theme.spacing.sm,
+        },
+        inlineQuizTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+            flex: 1,
+        },
+        inlineQuizDesc: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            marginBottom: Theme.spacing.lg,
+            lineHeight: 22,
+        },
+        inlineQuizButton: {
+            backgroundColor: colors.primary,
+            paddingVertical: Theme.spacing.md,
+            paddingHorizontal: Theme.spacing.xl,
+            borderRadius: Theme.borderRadius.lg,
+            alignItems: 'center',
+        },
+        inlineQuizButtonText: {
+            color: '#fff',
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+        },
+
+        // PDF Viewer styles
+        pdfViewerContainer: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        pdfHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: Theme.spacing.md,
+            paddingVertical: Theme.spacing.sm,
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        pdfCloseButton: {
+            padding: Theme.spacing.sm,
+        },
+        pdfTitleContainer: {
+            flex: 1,
+            alignItems: 'center',
+            marginHorizontal: Theme.spacing.sm,
+        },
+        pdfTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+            textAlign: 'center',
+        },
+        pdfPageInfo: {
+            fontSize: Theme.fontSize.xs,
+            color: colors.textSecondary,
+            marginTop: 2,
+        },
+        pdfShareButton: {
+            padding: Theme.spacing.sm,
+        },
+        pdfContent: {
+            flex: 1,
+            backgroundColor: colors.backgroundSecondary,
+        },
+        pdfView: {
+            flex: 1,
+            backgroundColor: colors.backgroundSecondary,
+        },
+        pdfWebView: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        pdfEmptyState: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: Theme.spacing.xl,
+        },
+        pdfEmptyText: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.textSecondary,
+            marginTop: Theme.spacing.md,
+        },
+        pdfEmptySubtext: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginTop: Theme.spacing.xs,
+            textAlign: 'center',
+        },
+        pdfLoadingOverlay: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: colors.background,
+            zIndex: 10,
+        },
+        pdfLoadingText: {
+            marginTop: Theme.spacing.md,
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+        },
+
+        // Download Progress Overlay
+        downloadProgressOverlay: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+        },
+        downloadProgressCard: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.xl,
+            padding: Theme.spacing.xl,
+            alignItems: 'center',
+            width: SCREEN_WIDTH * 0.8,
+            maxWidth: 300,
+        },
+        downloadProgressTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+            marginTop: Theme.spacing.md,
+        },
+        downloadProgressFilename: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginTop: Theme.spacing.xs,
+            maxWidth: '100%',
+        },
+        downloadProgressBarContainer: {
+            width: '100%',
+            height: 8,
+            backgroundColor: colors.border,
+            borderRadius: 4,
+            marginTop: Theme.spacing.lg,
+            overflow: 'hidden',
+        },
+        downloadProgressBar: {
+            height: '100%',
+            backgroundColor: colors.primary,
+            borderRadius: 4,
+        },
+        downloadProgressPercent: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.primary,
+            marginTop: Theme.spacing.sm,
+        },
+
+        // Offline indicator styles
+        offlineIndicator: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.warning + '20',
+            paddingVertical: Theme.spacing.xs,
+            paddingHorizontal: Theme.spacing.md,
+            gap: Theme.spacing.xs,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.warning + '30',
+        },
+        offlineIndicatorText: {
+            fontSize: Theme.fontSize.xs,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.warning,
+        },
+
+        // Course download banner
+        courseDownloadBanner: {
+            backgroundColor: colors.primary,
+            paddingHorizontal: Theme.spacing.md,
+            paddingVertical: Theme.spacing.sm,
+        },
+        courseDownloadInfo: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Theme.spacing.sm,
+        },
+        courseDownloadTexts: {
+            flex: 1,
+        },
+        courseDownloadTitle: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.semibold,
+            color: '#fff',
+        },
+        courseDownloadStatus: {
+            fontSize: Theme.fontSize.xs,
+            color: 'rgba(255,255,255,0.8)',
+        },
+        courseDownloadPercent: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.bold,
+            color: '#fff',
+        },
+        courseDownloadProgressBg: {
+            height: 3,
+            backgroundColor: 'rgba(255,255,255,0.3)',
+            borderRadius: 2,
+            marginTop: Theme.spacing.xs,
+            overflow: 'hidden',
+        },
+        courseDownloadProgressFill: {
+            height: '100%',
+            backgroundColor: '#fff',
+            borderRadius: 2,
+        },
+
+        // Lesson header buttons container
+        lessonHeaderButtons: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Theme.spacing.sm,
+        },
+        downloadCourseButton: {
+            width: 44,
+            height: 44,
+            borderRadius: Theme.borderRadius.lg,
+            backgroundColor: colors.background,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        downloadCourseButtonActive: {
+            backgroundColor: colors.success + '15',
+            borderColor: colors.success + '30',
+        },
+        downloadCourseButtonDownloading: {
+            backgroundColor: colors.primary + '10',
+            borderColor: colors.primary + '30',
+        },
+    });
+}

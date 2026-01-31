@@ -1,10 +1,11 @@
+import { Theme } from '@/constants/theme';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bell, BookOpen, LayoutDashboard, User } from 'lucide-react-native';
-import { Platform, View, Text } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/context/ThemeContext';
 import { useNotifications } from '../../src/context/NotificationContext';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function StudentLayout() {
     const insets = useSafeAreaInsets();
@@ -33,20 +34,16 @@ export default function StudentLayout() {
                         borderTopWidth: 0,
                         height: 60 + bottomPadding,
                         paddingBottom: bottomPadding,
-                        paddingTop: 8,
+                        paddingTop: Theme.spacing.sm,
                         backgroundColor: colors.surface,
-                        borderTopLeftRadius: 24,
-                        borderTopRightRadius: 24,
-                        shadowColor: isDark ? '#000' : '#000',
-                        shadowOpacity: isDark ? 0.3 : 0.15,
-                        shadowOffset: { width: 0, height: -4 },
-                        shadowRadius: 16,
-                        elevation: 24,
+                        borderTopLeftRadius: Theme.borderRadius.xl,
+                        borderTopRightRadius: Theme.borderRadius.xl,
+                        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
                     },
                     tabBarLabelStyle: {
-                        fontSize: 11,
-                        fontFamily: 'Inter-SemiBold',
-                        marginTop: 4,
+                        fontSize: Theme.fontSize.xs,
+                        fontWeight: Theme.fontWeight.semibold,
+                        marginTop: Theme.spacing.xs,
                     },
                     tabBarIconStyle: {
                         marginTop: 2,
@@ -117,7 +114,7 @@ export default function StudentLayout() {
                                         <Text style={{
                                             color: '#FFFFFF',
                                             fontSize: 10,
-                                            fontFamily: 'Inter-Bold',
+                                            fontWeight: Theme.fontWeight.bold,
                                         }}>
                                             {unreadCount > 99 ? '99+' : unreadCount}
                                         </Text>

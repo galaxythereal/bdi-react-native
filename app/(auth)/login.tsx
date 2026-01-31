@@ -1,3 +1,4 @@
+import { Theme } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
@@ -5,9 +6,8 @@ import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
-import { useAuth } from '../../src/features/auth/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
+import { useAuth } from '../../src/features/auth/AuthContext';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -42,7 +42,7 @@ export default function LoginScreen() {
             if (isSignUp) {
                 await signUp(email, password, fullName.trim());
                 Alert.alert(
-                    'Account Created', 
+                    'Account Created',
                     'Your account has been created! Please wait for admin approval before you can access courses.'
                 );
                 setIsSignUp(false);
@@ -56,7 +56,7 @@ export default function LoginScreen() {
         } catch (error: any) {
             console.error('Auth error:', error);
             let errorMessage = error.message || 'An error occurred';
-            
+
             if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch')) {
                 errorMessage = 'Network error: Please check your connection.';
             } else if (errorMessage.includes('Invalid login credentials')) {
@@ -64,7 +64,7 @@ export default function LoginScreen() {
             } else if (errorMessage.includes('User already registered')) {
                 errorMessage = 'This email is already registered. Please sign in instead.';
             }
-            
+
             Alert.alert(isSignUp ? 'Sign Up Failed' : 'Login Failed', errorMessage);
         } finally {
             setLoading(false);
@@ -89,7 +89,7 @@ export default function LoginScreen() {
                     >
                         <View style={styles.header}>
                             <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-                                <Text style={[styles.logoText, { color: colors.surface }]}>BDI</Text>
+                                <Text style={[styles.logoText, { color: colors.textOnPrimary }]}>BDI</Text>
                             </View>
                             <Text style={[styles.title, { color: colors.text }]}>
                                 {isSignUp ? 'Create Account' : 'Welcome Back'}
@@ -128,7 +128,7 @@ export default function LoginScreen() {
                             />
 
                             <Button
-                                title={loading 
+                                title={loading
                                     ? (isSignUp ? 'Creating Account...' : 'Signing In...')
                                     : (isSignUp ? 'Create Account' : 'Sign In')
                                 }
@@ -164,7 +164,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: Theme.colors.light.background,
     },
     keyboardView: {
         flex: 1,
@@ -172,38 +172,38 @@ const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         justifyContent: 'center',
-        padding: SPACING.lg,
+        padding: Theme.spacing.lg,
     },
     header: {
         alignItems: 'center',
-        marginBottom: SPACING.xl * 2,
+        marginBottom: Theme.spacing.xl * 2,
     },
     logoContainer: {
         width: 120,
         height: 120,
-        borderRadius: BORDER_RADIUS.xl,
-        backgroundColor: COLORS.primary,
+        borderRadius: Theme.borderRadius.xl,
+        backgroundColor: Theme.colors.light.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: SPACING.xl,
-        ...SHADOWS.lg,
+        marginBottom: Theme.spacing.xl,
+        ...Theme.shadows.light.lg,
     },
     logoText: {
-        fontSize: FONT_SIZE.xxxl,
-        fontWeight: FONT_WEIGHT.extrabold,
-        color: COLORS.surface,
+        fontSize: Theme.fontSize['3xl'],
+        fontWeight: Theme.fontWeight.extrabold,
+        color: Theme.colors.light.surface,
         letterSpacing: 2,
     },
     title: {
-        fontSize: FONT_SIZE.xxxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize['3xl'],
+        fontWeight: Theme.fontWeight.bold,
+        color: Theme.colors.light.text,
+        marginBottom: Theme.spacing.sm,
         textAlign: 'center',
     },
     subtitle: {
-        fontSize: FONT_SIZE.lg,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.lg,
+        color: Theme.colors.light.textSecondary,
         textAlign: 'center',
         lineHeight: 24,
     },
@@ -211,18 +211,18 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     submitButton: {
-        marginTop: SPACING.lg,
-        marginBottom: SPACING.md,
+        marginTop: Theme.spacing.lg,
+        marginBottom: Theme.spacing.md,
     },
     switchContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: SPACING.md,
+        marginTop: Theme.spacing.md,
     },
     switchText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        color: Theme.colors.light.textSecondary,
     },
     switchButton: {
         paddingHorizontal: 0,

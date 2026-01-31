@@ -1,17 +1,18 @@
+import { Theme } from '@/constants/theme';
+import { Award, BookOpen, TrendingUp, Users } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    RefreshControl,
     ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { supabase } from '../../src/lib/supabase';
-import { BarChart3, Users, BookOpen, TrendingUp, Award } from 'lucide-react-native';
 
 interface DashboardStats {
     totalStudents: number;
@@ -181,7 +182,7 @@ export default function AdminDashboard() {
                     <View style={styles.statsGrid}>
                         <View style={styles.statCard}>
                             <View style={styles.statCardInner}>
-                                <View style={[styles.statIcon, { backgroundColor: colors.primary + '20' }]}>
+                                <View style={[styles.statIcon, { backgroundColor: Theme.colors.light.primarySubtle }]}>
                                     <Users color={colors.primary} size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.totalStudents || 0}</Text>
@@ -191,7 +192,7 @@ export default function AdminDashboard() {
 
                         <View style={styles.statCard}>
                             <View style={styles.statCardInner}>
-                                <View style={[styles.statIcon, { backgroundColor: '#22c55e20' }]}>
+                                <View style={[styles.statIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
                                     <TrendingUp color="#22c55e" size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.activeEnrollments || 0}</Text>
@@ -201,7 +202,7 @@ export default function AdminDashboard() {
 
                         <View style={styles.statCard}>
                             <View style={styles.statCardInner}>
-                                <View style={[styles.statIcon, { backgroundColor: '#3b82f620' }]}>
+                                <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
                                     <BookOpen color="#3b82f6" size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.totalCourses || 0}</Text>
@@ -211,7 +212,7 @@ export default function AdminDashboard() {
 
                         <View style={styles.statCard}>
                             <View style={styles.statCardInner}>
-                                <View style={[styles.statIcon, { backgroundColor: '#f59e0b20' }]}>
+                                <View style={[styles.statIcon, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
                                     <Award color="#f59e0b" size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.completedEnrollments || 0}</Text>
@@ -222,9 +223,9 @@ export default function AdminDashboard() {
                 </View>
 
                 {/* Info Section */}
-                <View style={[styles.content, { marginTop: 24, paddingBottom: 40 }]}>
-                    <View style={[styles.statCardInner, { backgroundColor: colors.primary + '10' }]}>
-                        <Text style={[styles.sectionTitle, { marginBottom: 8, color: colors.primary }]}>
+                <View style={[styles.content, { marginTop: Theme.spacing.xl, paddingBottom: 40 }]}>
+                    <View style={[styles.statCardInner, { backgroundColor: Theme.colors.light.primarySubtle }]}>
+                        <Text style={[styles.sectionTitle, { marginBottom: Theme.spacing.xs, color: colors.primary }]}>
                             Student Impersonation
                         </Text>
                         <Text style={{ color: colors.text, lineHeight: 22 }}>

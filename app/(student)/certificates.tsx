@@ -1,29 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { printToFileAsync } from 'expo-print';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Animated,
     Dimensions,
-    Image,
     Modal,
     RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import Theme from '../../constants/theme';
+import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyCertificates, generateCertificateHTML, loadCertificateTemplate } from '../../src/features/certificates/certificateService';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
-import { useTheme } from '../../src/context/ThemeContext';
 import { Certificate } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -35,6 +34,8 @@ interface CertificateCardProps {
 }
 
 const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, onPress }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -57,7 +58,7 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
             <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.card}>
                 <View style={styles.cardHeader}>
                     <View style={styles.awardIcon}>
-                        <Ionicons name="ribbon" size={28} color={COLORS.warning} />
+                        <Ionicons name="ribbon" size={28} color={colors.warning} />
                     </View>
                     <View style={styles.cardHeaderText}>
                         <Text style={styles.cardTitle} numberOfLines={2}>
@@ -93,7 +94,7 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
                 <View style={styles.cardFooter}>
                     <View style={styles.viewButton}>
                         <Text style={styles.viewButtonText}>View Certificate</Text>
-                        <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+                        <Ionicons name="chevron-forward" size={16} color={colors.primary} />
                     </View>
                 </View>
             </TouchableOpacity>
@@ -113,7 +114,8 @@ export default function CertificatesScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     // Load the certificate template on mount
     useEffect(() => {
@@ -249,29 +251,29 @@ export default function CertificatesScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+            <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading certificates...</Text>
+                    <Text style={styles.loadingText}>Loading certificates...</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>Certificates</Text>
-                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+                    <Text style={styles.headerTitle}>Certificates</Text>
+                    <Text style={styles.headerSubtitle}>
                         {certificates.length > 0
                             ? `${certificates.length} certificate${certificates.length !== 1 ? 's' : ''} earned`
                             : 'Complete courses to earn certificates'}
                     </Text>
                 </View>
                 <View style={styles.headerIcon}>
-                    <Ionicons name="ribbon" size={32} color={COLORS.warning} />
+                    <Ionicons name="ribbon" size={32} color={colors.warning} />
                 </View>
             </View>
 
@@ -293,7 +295,7 @@ export default function CertificatesScreen() {
                 {certificates.length === 0 ? (
                     <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
                         <View style={styles.emptyIcon}>
-                            <Ionicons name="trophy-outline" size={64} color={COLORS.textTertiary} />
+                            <Ionicons name="trophy-outline" size={64} color={colors.textTertiary} />
                         </View>
                         <Text style={styles.emptyTitle}>No Certificates Yet</Text>
                         <Text style={styles.emptyText}>
@@ -304,7 +306,7 @@ export default function CertificatesScreen() {
                             onPress={() => router.push('/(student)/courses')}
                         >
                             <Text style={styles.emptyButtonText}>View My Courses</Text>
-                            <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+                            <Ionicons name="arrow-forward" size={16} color={colors.primary} />
                         </TouchableOpacity>
                     </Animated.View>
                 ) : (
@@ -334,7 +336,7 @@ export default function CertificatesScreen() {
                             style={styles.viewerCloseButton}
                             onPress={() => setShowViewer(false)}
                         >
-                            <Ionicons name="close" size={24} color={COLORS.text} />
+                            <Ionicons name="close" size={24} color={colors.text} />
                         </TouchableOpacity>
                         <Text style={styles.viewerTitle} numberOfLines={1}>
                             {selectedCertificate?.diploma?.title || 'Certificate'}
@@ -344,13 +346,13 @@ export default function CertificatesScreen() {
                                 style={styles.viewerActionButton}
                                 onPress={handleShareCertificate}
                             >
-                                <Ionicons name="share-outline" size={22} color={COLORS.primary} />
+                                <Ionicons name="share-outline" size={22} color={colors.primary} />
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.viewerActionButton}
                                 onPress={handleDownloadCertificate}
                             >
-                                <Ionicons name="download-outline" size={22} color={COLORS.primary} />
+                                <Ionicons name="download-outline" size={22} color={colors.primary} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -375,203 +377,205 @@ export default function CertificatesScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        marginTop: SPACING.md,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: SPACING.lg,
-        paddingTop: SPACING.md,
-    },
-    headerTitle: {
-        fontSize: FONT_SIZE.xxxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-    },
-    headerSubtitle: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        marginTop: 4,
-    },
-    headerIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: COLORS.warning + '15',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: SPACING.lg,
-        paddingTop: 0,
-    },
-    cardWrapper: {
-        marginBottom: SPACING.md,
-    },
-    card: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.lg,
-        ...SHADOWS.md,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-    },
-    awardIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        backgroundColor: COLORS.warning + '15',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: SPACING.md,
-    },
-    cardHeaderText: {
-        flex: 1,
-    },
-    cardTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: 4,
-    },
-    cardDate: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-    },
-    cardDivider: {
-        height: 1,
-        backgroundColor: COLORS.border,
-        marginVertical: SPACING.md,
-    },
-    cardDetails: {
-        gap: SPACING.sm,
-    },
-    detailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    detailLabel: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-    },
-    detailValue: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.text,
-        fontWeight: FONT_WEIGHT.medium,
-        maxWidth: '60%',
-    },
-    verificationCode: {
-        fontFamily: 'monospace',
-        color: COLORS.primary,
-    },
-    cardFooter: {
-        marginTop: SPACING.md,
-        paddingTop: SPACING.md,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
-    },
-    viewButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    viewButtonText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
-        marginRight: 4,
-    },
-    emptyState: {
-        alignItems: 'center',
-        paddingVertical: SPACING.xxxl,
-    },
-    emptyIcon: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: COLORS.surface,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: SPACING.lg,
-    },
-    emptyTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
-    },
-    emptyText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        paddingHorizontal: SPACING.xl,
-        marginBottom: SPACING.lg,
-    },
-    emptyButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.lg,
-        backgroundColor: COLORS.primary + '15',
-        borderRadius: BORDER_RADIUS.round,
-        gap: SPACING.xs,
-    },
-    emptyButtonText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
-    },
-    viewerContainer: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    viewerHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: SPACING.md,
-        backgroundColor: COLORS.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-    },
-    viewerCloseButton: {
-        padding: SPACING.sm,
-    },
-    viewerTitle: {
-        flex: 1,
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginHorizontal: SPACING.sm,
-    },
-    viewerActions: {
-        flexDirection: 'row',
-        gap: SPACING.xs,
-    },
-    viewerActionButton: {
-        padding: SPACING.sm,
-    },
-    webView: {
-        flex: 1,
-        backgroundColor: '#1a1a2e',
-    },
-});
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        loadingContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        loadingText: {
+            marginTop: Theme.spacing.md,
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+        },
+        header: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: Theme.spacing.lg,
+            paddingTop: Theme.spacing.md,
+        },
+        headerTitle: {
+            fontSize: Theme.fontSize['3xl'],
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+        },
+        headerSubtitle: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+            marginTop: 4,
+        },
+        headerIcon: {
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.warning + '15',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        scrollView: {
+            flex: 1,
+        },
+        scrollContent: {
+            padding: Theme.spacing.lg,
+            paddingTop: 0,
+        },
+        cardWrapper: {
+            marginBottom: Theme.spacing.md,
+        },
+        card: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.xl,
+            padding: Theme.spacing.lg,
+            ...Theme.shadows[isDark ? 'dark' : 'light'].md,
+        },
+        cardHeader: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+        },
+        awardIcon: {
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            backgroundColor: colors.warning + '15',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: Theme.spacing.md,
+        },
+        cardHeaderText: {
+            flex: 1,
+        },
+        cardTitle: {
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginBottom: 4,
+        },
+        cardDate: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+        },
+        cardDivider: {
+            height: 1,
+            backgroundColor: colors.border,
+            marginVertical: Theme.spacing.md,
+        },
+        cardDetails: {
+            gap: Theme.spacing.sm,
+        },
+        detailRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        detailLabel: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.textSecondary,
+        },
+        detailValue: {
+            fontSize: Theme.fontSize.sm,
+            color: colors.text,
+            fontWeight: Theme.fontWeight.medium,
+            maxWidth: '60%',
+        },
+        verificationCode: {
+            fontFamily: 'monospace',
+            color: colors.primary,
+        },
+        cardFooter: {
+            marginTop: Theme.spacing.md,
+            paddingTop: Theme.spacing.md,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+        },
+        viewButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        viewButtonText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.semibold,
+            marginRight: 4,
+        },
+        emptyState: {
+            alignItems: 'center',
+            paddingVertical: Theme.spacing['3xl'],
+        },
+        emptyIcon: {
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            backgroundColor: colors.surface,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: Theme.spacing.lg,
+        },
+        emptyTitle: {
+            fontSize: Theme.fontSize.xl,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            marginBottom: Theme.spacing.sm,
+        },
+        emptyText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+            textAlign: 'center',
+            paddingHorizontal: Theme.spacing.xl,
+            marginBottom: Theme.spacing.lg,
+        },
+        emptyButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.sm,
+            paddingHorizontal: Theme.spacing.lg,
+            backgroundColor: colors.primary + '15',
+            borderRadius: Theme.borderRadius.full,
+            gap: Theme.spacing.xs,
+        },
+        emptyButtonText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.semibold,
+        },
+        viewerContainer: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        viewerHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: Theme.spacing.md,
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        viewerCloseButton: {
+            padding: Theme.spacing.sm,
+        },
+        viewerTitle: {
+            flex: 1,
+            fontSize: Theme.fontSize.lg,
+            fontWeight: Theme.fontWeight.semibold,
+            color: colors.text,
+            marginHorizontal: Theme.spacing.sm,
+        },
+        viewerActions: {
+            flexDirection: 'row',
+            gap: Theme.spacing.xs,
+        },
+        viewerActionButton: {
+            padding: Theme.spacing.sm,
+        },
+        webView: {
+            flex: 1,
+            backgroundColor: '#1a1a2e',
+        },
+    });
+}

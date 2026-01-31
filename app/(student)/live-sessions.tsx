@@ -1,8 +1,10 @@
+import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Animated,
     Dimensions,
     Linking,
@@ -12,12 +14,11 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../src/lib/constants';
-import { LiveSession, Batch } from '../../src/types';
-import { fetchUpcomingLiveSessions, fetchMyBatches } from '../../src/features/diplomas/diplomaService';
+import { useTheme } from '../../src/context/ThemeContext';
+import { fetchMyBatches, fetchUpcomingLiveSessions } from '../../src/features/diplomas/diplomaService';
+import { Batch, LiveSession } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -58,6 +59,8 @@ interface SessionCardProps {
 }
 
 const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const { date, time, isToday, isTomorrow } = formatDateTime(session.scheduled_at);
     const isLive = session.status === 'live';
@@ -86,7 +89,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
             case 'zoom': return '#2D8CFF';
             case 'google_meet': return '#00897B';
             case 'teams': return '#5558AF';
-            default: return COLORS.primary;
+            default: return colors.primary;
         }
     };
 
@@ -142,7 +145,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                     {/* Meta Info */}
                     <View style={styles.metaRow}>
                         <View style={styles.metaItem}>
-                            <Ionicons name="time-outline" size={14} color={COLORS.textSecondary} />
+                            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
                             <Text style={styles.metaText}>{session.duration_minutes} min</Text>
                         </View>
 
@@ -161,7 +164,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                     {/* Batch Name */}
                     {session.batch && (
                         <View style={styles.batchTag}>
-                            <Ionicons name="people-outline" size={12} color={COLORS.primary} />
+                            <Ionicons name="people-outline" size={12} color={colors.primary} />
                             <Text style={styles.batchTagText}>{session.batch.name}</Text>
                         </View>
                     )}
@@ -191,6 +194,8 @@ interface BatchCardProps {
 }
 
 const BatchCard: React.FC<BatchCardProps> = ({ batch, index, onPress }) => {
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -205,10 +210,10 @@ const BatchCard: React.FC<BatchCardProps> = ({ batch, index, onPress }) => {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'active': return COLORS.success;
-            case 'upcoming': return COLORS.warning;
-            case 'completed': return COLORS.textSecondary;
-            default: return COLORS.textTertiary;
+            case 'active': return colors.success;
+            case 'upcoming': return colors.warning;
+            case 'completed': return colors.textSecondary;
+            default: return colors.textTertiary;
         }
     };
 
@@ -235,7 +240,7 @@ const BatchCard: React.FC<BatchCardProps> = ({ batch, index, onPress }) => {
 
                 <View style={styles.batchMeta}>
                     <View style={styles.batchMetaItem}>
-                        <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
+                        <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
                         <Text style={styles.batchMetaText}>
                             {new Date(batch.start_date).toLocaleDateString()}
                         </Text>
@@ -264,6 +269,8 @@ export default function LiveSessionsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'sessions' | 'batches'>('sessions');
     const router = useRouter();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = useCallback(async () => {
         try {
@@ -312,7 +319,7 @@ export default function LiveSessionsScreen() {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+                <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingText}>Loading sessions...</Text>
             </View>
         );
@@ -340,7 +347,7 @@ export default function LiveSessionsScreen() {
                     <Ionicons
                         name="videocam"
                         size={18}
-                        color={activeTab === 'sessions' ? COLORS.primary : COLORS.textSecondary}
+                        color={activeTab === 'sessions' ? colors.primary : colors.textSecondary}
                     />
                     <Text style={[styles.tabText, activeTab === 'sessions' && styles.tabTextActive]}>
                         Sessions
@@ -354,7 +361,7 @@ export default function LiveSessionsScreen() {
                     <Ionicons
                         name="people"
                         size={18}
-                        color={activeTab === 'batches' ? COLORS.primary : COLORS.textSecondary}
+                        color={activeTab === 'batches' ? colors.primary : colors.textSecondary}
                     />
                     <Text style={[styles.tabText, activeTab === 'batches' && styles.tabTextActive]}>
                         My Batches
@@ -370,7 +377,7 @@ export default function LiveSessionsScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        tintColor={COLORS.primary}
+                        tintColor={colors.primary}
                     />
                 }
                 showsVerticalScrollIndicator={false}
@@ -387,7 +394,7 @@ export default function LiveSessionsScreen() {
                         ))
                     ) : (
                         <View style={styles.emptyState}>
-                            <Ionicons name="videocam-off-outline" size={64} color={COLORS.textTertiary} />
+                            <Ionicons name="videocam-off-outline" size={64} color={colors.textTertiary} />
                             <Text style={styles.emptyTitle}>No Upcoming Sessions</Text>
                             <Text style={styles.emptySubtitle}>
                                 When live sessions are scheduled, they'll appear here
@@ -411,7 +418,7 @@ export default function LiveSessionsScreen() {
                         ))
                     ) : (
                         <View style={styles.emptyState}>
-                            <Ionicons name="people-outline" size={64} color={COLORS.textTertiary} />
+                            <Ionicons name="people-outline" size={64} color={colors.textTertiary} />
                             <Text style={styles.emptyTitle}>No Batches</Text>
                             <Text style={styles.emptySubtitle}>
                                 You're not enrolled in any batch programs
@@ -426,240 +433,240 @@ export default function LiveSessionsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
     },
     loadingText: {
-        marginTop: SPACING.md,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        marginTop: Theme.spacing.md,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
     },
     header: {
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.md,
     },
     headerTitle: {
-        fontSize: FONT_SIZE.xxl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize['2xl'],
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
     },
     headerSubtitle: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.xs,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
+        marginTop: Theme.spacing.xs,
     },
     tabContainer: {
         flexDirection: 'row',
-        marginHorizontal: SPACING.lg,
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.md,
-        padding: SPACING.xs,
-        ...SHADOWS.sm,
+        marginHorizontal: Theme.spacing.lg,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.md,
+        padding: Theme.spacing.xs,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     tab: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.sm,
-        gap: SPACING.xs,
+        paddingVertical: Theme.spacing.sm,
+        borderRadius: Theme.borderRadius.sm,
+        gap: Theme.spacing.xs,
     },
     tabActive: {
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
     },
     tabText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.medium,
+        color: colors.textSecondary,
     },
     tabTextActive: {
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.semibold,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.semibold,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        padding: SPACING.lg,
+        padding: Theme.spacing.lg,
     },
 
     // Session Card Styles
     sessionCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        marginBottom: SPACING.md,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.lg,
+        marginBottom: Theme.spacing.md,
         overflow: 'hidden',
-        ...SHADOWS.md,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     sessionCardLive: {
         borderWidth: 2,
-        borderColor: COLORS.error,
+        borderColor: colors.error,
     },
     sessionCardContent: {
-        padding: SPACING.md,
+        padding: Theme.spacing.md,
     },
     liveIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
     },
     liveDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: COLORS.error,
-        marginRight: SPACING.xs,
+        backgroundColor: colors.error,
+        marginRight: Theme.spacing.xs,
     },
     liveText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.error,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.error,
         letterSpacing: 1,
     },
     dateTimeSection: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
     },
     dateBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.sm,
+        gap: Theme.spacing.sm,
     },
     dayText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.text,
     },
     timeText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
     },
     timeUntilBadge: {
-        backgroundColor: COLORS.backgroundSecondary,
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.full,
+        backgroundColor: colors.backgroundSecondary,
+        paddingHorizontal: Theme.spacing.sm,
+        paddingVertical: Theme.spacing.xs,
+        borderRadius: Theme.borderRadius.full,
     },
     timeUntilBadgeLive: {
-        backgroundColor: COLORS.error,
+        backgroundColor: colors.error,
     },
     timeUntilText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.textSecondary,
     },
     timeUntilTextLive: {
         color: '#fff',
     },
     sessionInfo: {
-        marginBottom: SPACING.md,
+        marginBottom: Theme.spacing.md,
     },
     sessionTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.xs,
     },
     sessionDescription: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
         lineHeight: 20,
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
     },
     metaRow: {
         flexDirection: 'row',
-        gap: SPACING.md,
+        gap: Theme.spacing.md,
     },
     metaItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
+        gap: Theme.spacing.xs,
     },
     metaText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
     },
     batchTag: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.primary + '10',
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.full,
+        backgroundColor: colors.primary + '10',
+        paddingHorizontal: Theme.spacing.sm,
+        paddingVertical: Theme.spacing.xs,
+        borderRadius: Theme.borderRadius.full,
         alignSelf: 'flex-start',
-        marginTop: SPACING.sm,
-        gap: SPACING.xs,
+        marginTop: Theme.spacing.sm,
+        gap: Theme.spacing.xs,
     },
     batchTagText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.medium,
-        color: COLORS.primary,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.medium,
+        color: colors.primary,
     },
     joinButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
-        gap: SPACING.xs,
+        backgroundColor: colors.primary,
+        paddingVertical: Theme.spacing.sm,
+        borderRadius: Theme.borderRadius.md,
+        gap: Theme.spacing.xs,
     },
     joinButtonLive: {
-        backgroundColor: COLORS.error,
+        backgroundColor: colors.error,
     },
     joinButtonText: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.semibold,
         color: '#fff',
     },
 
     // Batch Card Styles
     batchCard: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.md,
-        marginBottom: SPACING.md,
-        ...SHADOWS.md,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.lg,
+        padding: Theme.spacing.md,
+        marginBottom: Theme.spacing.md,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     batchHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
     },
     statusDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        marginRight: SPACING.xs,
+        marginRight: Theme.spacing.xs,
     },
     batchStatus: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     batchName: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.xs,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.xs,
     },
     batchDiploma: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.primary,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize.sm,
+        color: colors.primary,
+        marginBottom: Theme.spacing.sm,
     },
     batchMeta: {
         flexDirection: 'row',
@@ -669,24 +676,24 @@ const styles = StyleSheet.create({
     batchMetaItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
+        gap: Theme.spacing.xs,
     },
     batchMetaText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
     },
     whatsappBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#25D36610',
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.full,
-        gap: SPACING.xs,
+        paddingHorizontal: Theme.spacing.sm,
+        paddingVertical: Theme.spacing.xs,
+        borderRadius: Theme.borderRadius.full,
+        gap: Theme.spacing.xs,
     },
     whatsappBadgeText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.medium,
         color: '#25D366',
     },
 
@@ -694,18 +701,18 @@ const styles = StyleSheet.create({
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: SPACING.xxxl,
+        paddingVertical: Theme.spacing['3xl'],
     },
     emptyTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginTop: SPACING.md,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginTop: Theme.spacing.md,
     },
     emptySubtitle: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
-        marginTop: SPACING.xs,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
+        marginTop: Theme.spacing.xs,
         textAlign: 'center',
     },
 });

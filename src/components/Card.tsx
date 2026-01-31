@@ -1,20 +1,24 @@
 import React from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { BORDER_RADIUS, SPACING } from '../lib/constants';
+import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { BORDER_RADIUS, SHADOWS, SPACING } from '../lib/constants';
 import { useTheme } from '../context/ThemeContext';
 
 interface CardProps {
     children: React.ReactNode;
     style?: StyleProp<ViewStyle>;
     variant?: 'elevated' | 'outlined' | 'flat';
-    onPress?: () => void; // TODO: Implement touchable if needed
+    onPress?: () => void;
 }
 
-export const Card = ({ children, style, variant = 'elevated' }: CardProps) => {
+export const Card = ({ children, style, variant = 'elevated', onPress }: CardProps) => {
     const { colors, isDark } = useTheme();
     
+    const CardComponent = onPress ? TouchableOpacity : View;
+    const cardProps = onPress ? { activeOpacity: 0.95, onPress } : {};
+    
     return (
-        <View
+        <CardComponent
+            {...cardProps}
             style={[
                 styles.container,
                 { backgroundColor: colors.surface },
@@ -22,7 +26,8 @@ export const Card = ({ children, style, variant = 'elevated' }: CardProps) => {
                     styles.elevated,
                     { 
                         borderColor: colors.borderLight,
-                        shadowOpacity: isDark ? 0.3 : 0.08,
+                        shadowColor: isDark ? '#000' : '#000',
+                        shadowOpacity: isDark ? 0.5 : 0.08,
                     }
                 ],
                 variant === 'outlined' && [styles.outlined, { borderColor: colors.border }],
@@ -31,7 +36,7 @@ export const Card = ({ children, style, variant = 'elevated' }: CardProps) => {
             ]}
         >
             {children}
-        </View>
+        </CardComponent>
     );
 };
 
@@ -41,10 +46,9 @@ const styles = StyleSheet.create({
         padding: SPACING.lg + SPACING.sm,
     },
     elevated: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 16,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 20,
+        elevation: 4,
         borderWidth: 1,
     },
     outlined: {

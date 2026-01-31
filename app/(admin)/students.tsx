@@ -1,20 +1,21 @@
-import React, { useState, useCallback } from 'react';
+import { Theme } from '@/constants/theme';
+import { useRouter } from 'expo-router';
+import { Eye, GraduationCap, Search, User } from 'lucide-react-native';
+import React, { useCallback, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    FlatList,
     ActivityIndicator,
     Alert,
+    FlatList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useTheme } from '../../src/context/ThemeContext';
 import { useImpersonation } from '../../src/context/ImpersonationContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { supabase } from '../../src/lib/supabase';
-import { Search, User, Eye, GraduationCap } from 'lucide-react-native';
 
 interface Student {
     id: string;
@@ -91,138 +92,138 @@ export default function StudentsScreen() {
     const styles = StyleSheet.create({
         container: {
             flex: 1,
-            backgroundColor: colors.background,
+            backgroundColor: Theme.colors.light.background,
         },
         header: {
-            padding: 24,
-            paddingTop: 16,
+            padding: Theme.spacing['2xl'],
+            paddingTop: Theme.spacing.base,
         },
         title: {
-            fontSize: 28,
-            fontWeight: '700',
-            color: colors.text,
+            fontSize: Theme.fontSize['3xl'],
+            fontWeight: Theme.fontWeight.bold,
+            color: Theme.colors.light.text,
         },
         subtitle: {
-            fontSize: 15,
-            color: colors.textSecondary,
-            marginTop: 8,
+            fontSize: Theme.fontSize.base,
+            color: Theme.colors.light.textSecondary,
+            marginTop: Theme.spacing.sm,
         },
         searchContainer: {
-            paddingHorizontal: 20,
-            marginBottom: 16,
+            paddingHorizontal: Theme.spacing.lg,
+            marginBottom: Theme.spacing.base,
         },
         searchInputContainer: {
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: colors.surface,
-            borderRadius: 12,
-            paddingHorizontal: 16,
+            backgroundColor: Theme.colors.light.surface,
+            borderRadius: Theme.borderRadius.md,
+            paddingHorizontal: Theme.spacing.base,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: Theme.colors.light.border,
         },
         searchInput: {
             flex: 1,
-            paddingVertical: 16,
-            paddingLeft: 12,
-            fontSize: 16,
-            color: colors.text,
+            paddingVertical: Theme.spacing.base,
+            paddingLeft: Theme.spacing.md,
+            fontSize: Theme.fontSize.base,
+            color: Theme.colors.light.text,
         },
         content: {
             flex: 1,
-            paddingHorizontal: 20,
+            paddingHorizontal: Theme.spacing.lg,
         },
         emptyState: {
             flex: 1,
             justifyContent: 'center',
             alignItems: 'center',
-            paddingBottom: 100,
+            paddingBottom: 100, // Keep manual padding for centering visual
         },
         emptyText: {
-            fontSize: 16,
-            color: colors.textSecondary,
-            marginTop: 16,
+            fontSize: Theme.fontSize.base,
+            color: Theme.colors.light.textSecondary,
+            marginTop: Theme.spacing.base,
             textAlign: 'center',
         },
         emptyHint: {
-            fontSize: 14,
-            color: colors.textSecondary,
-            marginTop: 8,
+            fontSize: Theme.fontSize.sm,
+            color: Theme.colors.light.textSecondary,
+            marginTop: Theme.spacing.sm,
             opacity: 0.7,
         },
         studentCard: {
-            backgroundColor: colors.surface,
-            borderRadius: 16,
-            padding: 16,
-            marginBottom: 12,
+            backgroundColor: Theme.colors.light.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.base,
+            marginBottom: Theme.spacing.md,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: Theme.colors.light.border,
             flexDirection: 'row',
             alignItems: 'center',
         },
         avatar: {
             width: 52,
             height: 52,
-            borderRadius: 26,
-            backgroundColor: colors.primary + '20',
+            borderRadius: 26, // Half of width
+            backgroundColor: Theme.colors.light.primarySubtle,
             justifyContent: 'center',
             alignItems: 'center',
         },
         studentInfo: {
             flex: 1,
-            marginLeft: 16,
+            marginLeft: Theme.spacing.base,
         },
         studentName: {
-            fontSize: 17,
-            fontWeight: '600',
-            color: colors.text,
+            fontSize: Theme.fontSize.lg, // Changed from 17 to lg (18)
+            fontWeight: Theme.fontWeight.semibold,
+            color: Theme.colors.light.text,
         },
         studentEmail: {
-            fontSize: 14,
-            color: colors.textSecondary,
+            fontSize: Theme.fontSize.sm,
+            color: Theme.colors.light.textSecondary,
             marginTop: 2,
         },
         statusBadge: {
             marginTop: 6,
-            paddingHorizontal: 8,
+            paddingHorizontal: Theme.spacing.sm,
             paddingVertical: 3,
-            borderRadius: 8,
+            borderRadius: Theme.borderRadius.sm,
             alignSelf: 'flex-start',
         },
         statusText: {
-            fontSize: 12,
-            fontWeight: '600',
+            fontSize: Theme.fontSize.xs,
+            fontWeight: Theme.fontWeight.semibold,
         },
         viewButton: {
-            backgroundColor: colors.primary + '15',
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderRadius: 10,
+            backgroundColor: 'rgba(219, 0, 17, 0.1)', // Primary with opacity
+            paddingHorizontal: Theme.spacing.base,
+            paddingVertical: Theme.spacing.sm, // Approx 10
+            borderRadius: Theme.borderRadius.sm, // Approx 8-10
             flexDirection: 'row',
             alignItems: 'center',
         },
         viewButtonText: {
-            color: colors.primary,
-            fontWeight: '600',
+            color: Theme.colors.light.primary,
+            fontWeight: Theme.fontWeight.semibold,
             marginLeft: 6,
         },
         infoBox: {
-            backgroundColor: colors.primary + '10',
-            borderRadius: 12,
-            padding: 16,
-            marginHorizontal: 20,
-            marginBottom: 20,
+            backgroundColor: Theme.colors.light.primarySubtle,
+            borderRadius: Theme.borderRadius.md,
+            padding: Theme.spacing.base,
+            marginHorizontal: Theme.spacing.lg,
+            marginBottom: Theme.spacing.lg,
             borderWidth: 1,
-            borderColor: colors.primary + '30',
+            borderColor: 'rgba(219, 0, 17, 0.3)', // Primary border light
         },
         infoTitle: {
-            fontSize: 15,
-            fontWeight: '600',
-            color: colors.primary,
+            fontSize: Theme.fontSize.base, // Changed from 15 to base (16)
+            fontWeight: Theme.fontWeight.semibold,
+            color: Theme.colors.light.primary,
             marginBottom: 6,
         },
         infoText: {
-            fontSize: 14,
-            color: colors.text,
+            fontSize: Theme.fontSize.sm,
+            color: Theme.colors.light.text,
             lineHeight: 20,
         },
     });
@@ -230,7 +231,7 @@ export default function StudentsScreen() {
     const renderStudent = ({ item }: { item: Student }) => (
         <View style={styles.studentCard}>
             <View style={styles.avatar}>
-                <User color={colors.primary} size={24} />
+                <User color={Theme.colors.light.primary} size={24} />
             </View>
             <View style={styles.studentInfo}>
                 <Text style={styles.studentName}>{item.full_name || 'No name'}</Text>

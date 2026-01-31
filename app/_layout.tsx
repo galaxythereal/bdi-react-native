@@ -3,13 +3,13 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View, Platform } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AuthProvider, useAuth } from '../src/features/auth/AuthContext';
-import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
-import { NotificationProvider } from '../src/context/NotificationContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ImpersonationProvider } from '../src/context/ImpersonationContext';
+import { NotificationProvider } from '../src/context/NotificationContext';
+import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
+import { AuthProvider, useAuth } from '../src/features/auth/AuthContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -70,7 +70,11 @@ export default function RootLayout() {
   }, [loaded, error]);
 
   if (!loaded && !error) {
-    return <View style={{ flex: 1, backgroundColor: '#FAFAFA' }} />;
+    // Ideally this should use a theme color, but context might not be ready if it's inside ThemeProvider
+    // However, since this check is inside RootLayout which returns the provider, we can't use useTheme here.
+    // We can import Colors directly for this loader state.
+    const { Colors } = require('@/constants/theme');
+    return <View style={{ flex: 1, backgroundColor: Colors.light.background }} />;
   }
 
   return (

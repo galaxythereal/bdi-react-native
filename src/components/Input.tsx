@@ -1,16 +1,16 @@
+import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useRef, useCallback } from 'react';
-import { 
-    StyleSheet, 
-    Text, 
-    TextInput, 
-    View, 
-    TouchableOpacity,
+import React, { useCallback, useRef, useState } from 'react';
+import {
     Animated,
+    StyleSheet,
+    Text,
+    TextInput,
     TextInputProps,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
     label?: string;
@@ -90,9 +90,9 @@ export const Input = ({
 
     const getFontSize = () => {
         switch (size) {
-            case 'sm': return FONT_SIZE.sm;
-            case 'lg': return FONT_SIZE.lg;
-            default: return FONT_SIZE.md;
+            case 'sm': return Theme.fontSize.sm;
+            case 'lg': return Theme.fontSize.lg;
+            default: return Theme.fontSize.base;
         }
     };
 
@@ -106,7 +106,12 @@ export const Input = ({
 
     const shadowOpacity = focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, 0.1],
+        outputRange: [0, 0.15],
+    });
+
+    const borderWidth = focusAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1.5, 2],
     });
 
     return (
@@ -121,34 +126,35 @@ export const Input = ({
                     {label}
                 </Text>
             )}
-            
+
             <Animated.View
                 style={[
                     styles.inputWrapper,
-                    { backgroundColor: colors.surface, borderColor: colors.border },
+                    { backgroundColor: colors.surface },
                     variant === 'filled' && { backgroundColor: colors.backgroundSecondary, borderColor: 'transparent' },
                     variant === 'outline' && { backgroundColor: 'transparent' },
                     {
                         borderColor,
+                        borderWidth,
                         shadowOpacity,
                         shadowColor: error ? colors.error : colors.primary,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowRadius: 8,
-                        elevation: isFocused ? 2 : 0,
+                        shadowOffset: { width: 0, height: isFocused ? 4 : 0 },
+                        shadowRadius: isFocused ? 12 : 0,
+                        elevation: isFocused ? 3 : 0,
                     },
                     disabled && { backgroundColor: colors.backgroundSecondary, opacity: 0.6 },
                 ]}
             >
                 {leftIcon && (
                     <View style={styles.iconLeft}>
-                        <Ionicons 
-                            name={leftIcon} 
-                            size={20} 
-                            color={isFocused ? colors.primary : colors.textSecondary} 
+                        <Ionicons
+                            name={leftIcon}
+                            size={20}
+                            color={isFocused ? colors.primary : colors.textSecondary}
                         />
                     </View>
                 )}
-                
+
                 <TextInput
                     ref={inputRef}
                     style={[
@@ -166,7 +172,7 @@ export const Input = ({
                     value={value}
                     onChangeText={onChangeText}
                     placeholder={placeholder}
-                    placeholderTextColor={colors.textTertiary}
+                    placeholderTextColor={colors.textSecondary}
                     secureTextEntry={isSecure}
                     autoCapitalize={autoCapitalize}
                     keyboardType={keyboardType}
@@ -175,37 +181,37 @@ export const Input = ({
                     editable={!disabled}
                     {...rest}
                 />
-                
+
                 {initialSecureEntry && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.iconRight}
                         onPress={toggleSecure}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <Ionicons 
-                            name={isSecure ? 'eye-outline' : 'eye-off-outline'} 
-                            size={20} 
-                            color={colors.textSecondary} 
+                        <Ionicons
+                            name={isSecure ? 'eye-outline' : 'eye-off-outline'}
+                            size={20}
+                            color={colors.textSecondary}
                         />
                     </TouchableOpacity>
                 )}
-                
+
                 {rightIcon && !initialSecureEntry && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.iconRight}
                         onPress={onRightIconPress}
                         disabled={!onRightIconPress}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <Ionicons 
-                            name={rightIcon} 
-                            size={20} 
-                            color={colors.textSecondary} 
+                        <Ionicons
+                            name={rightIcon}
+                            size={20}
+                            color={colors.textSecondary}
                         />
                     </TouchableOpacity>
                 )}
             </Animated.View>
-            
+
             {(error || hint) && (
                 <View style={styles.helperContainer}>
                     {error ? (
@@ -241,7 +247,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     containerStyle,
 }) => {
     const { colors } = useTheme();
-    
+
     const handleClear = () => {
         onChangeText('');
         onClear?.();
@@ -255,7 +261,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
                 value={value}
                 onChangeText={onChangeText}
                 placeholder={placeholder}
-                placeholderTextColor={colors.textTertiary}
+                placeholderTextColor={colors.textSecondary}
                 returnKeyType="search"
                 onSubmitEditing={onSubmit}
             />
@@ -270,100 +276,93 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     label: {
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.semibold,
+        marginBottom: Theme.spacing.sm,
         letterSpacing: 0.2,
     },
     labelError: {
-        color: COLORS.error,
+        color: Theme.colors.light.error,
     },
     labelFocused: {
-        color: COLORS.primary,
+        color: Theme.colors.light.primary,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.surface,
-        borderWidth: 1.5,
-        borderColor: COLORS.border,
-        borderRadius: BORDER_RADIUS.lg,
+        backgroundColor: Theme.colors.light.surface,
+        borderRadius: Theme.borderRadius.lg,
         overflow: 'hidden',
     },
     inputWrapperFilled: {
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: Theme.colors.light.backgroundSecondary,
         borderColor: 'transparent',
     },
     inputWrapperOutline: {
         backgroundColor: 'transparent',
     },
     inputWrapperDisabled: {
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: Theme.colors.light.backgroundSecondary,
         opacity: 0.6,
     },
     input: {
         flex: 1,
-        paddingHorizontal: SPACING.lg,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
-        fontWeight: FONT_WEIGHT.regular,
+        paddingHorizontal: Theme.spacing.lg,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.normal,
     },
     inputWithLeftIcon: {
-        paddingLeft: SPACING.sm,
+        paddingLeft: Theme.spacing.sm,
     },
     inputWithRightIcon: {
-        paddingRight: SPACING.sm,
+        paddingRight: Theme.spacing.sm,
     },
     inputDisabled: {
-        color: COLORS.textTertiary,
+        color: Theme.colors.light.textSecondary,
     },
     iconLeft: {
-        paddingLeft: SPACING.md,
+        paddingLeft: Theme.spacing.md,
     },
     iconRight: {
-        paddingRight: SPACING.md,
+        paddingRight: Theme.spacing.md,
     },
     helperContainer: {
-        marginTop: SPACING.xs,
+        marginTop: Theme.spacing.xs,
     },
     errorContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
+        gap: Theme.spacing.xs,
     },
     errorText: {
-        color: COLORS.error,
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.medium,
     },
     hintText: {
-        color: COLORS.textSecondary,
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.regular,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.normal,
     },
     // Search Input styles
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.lg,
-        paddingHorizontal: SPACING.md,
+        backgroundColor: Theme.colors.light.backgroundSecondary,
+        borderRadius: Theme.borderRadius.lg,
+        paddingHorizontal: Theme.spacing.md,
         height: 48,
     },
     searchIcon: {
-        marginRight: SPACING.sm,
+        marginRight: Theme.spacing.sm,
     },
     searchInput: {
         flex: 1,
-        fontSize: FONT_SIZE.md,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
         height: '100%',
     },
     clearButton: {
-        padding: SPACING.xs,
+        padding: Theme.spacing.xs,
     },
 });

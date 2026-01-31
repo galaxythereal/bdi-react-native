@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video, VideoFullscreenUpdate, AVPlaybackStatus } from 'expo-av';
+import { AVPlaybackStatus, ResizeMode, Video, VideoFullscreenUpdate } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -14,7 +14,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SPACING } from '../lib/constants';
+import Theme from '../../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface VideoPlayerProps {
     source: { uri: string };
@@ -48,6 +49,8 @@ const formatTime = (milliseconds: number): string => {
 
 export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     ({ source, poster, title, onProgress, onComplete, onError, autoPlay = false, startPosition = 0 }, ref) => {
+        const { colors } = useTheme();
+        const styles = React.useMemo(() => createStyles(colors), [colors]);
         const videoRef = useRef<Video>(null);
         const [status, setStatus] = useState<AVPlaybackStatus | null>(null);
         const [isLoading, setIsLoading] = useState(true);
@@ -127,7 +130,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
         const handlePlaybackStatusUpdate = (playbackStatus: AVPlaybackStatus) => {
             setStatus(playbackStatus);
-            
+
             if (!playbackStatus.isLoaded) {
                 if (playbackStatus.error) {
                     setHasError(true);
@@ -245,7 +248,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             return (
                 <View style={styles.container}>
                     <View style={styles.errorContainer}>
-                        <Ionicons name="cloud-offline-outline" size={48} color={COLORS.error} />
+                        <Ionicons name="cloud-offline-outline" size={48} color={colors.error} />
                         <Text style={styles.errorTitle}>Video Unavailable</Text>
                         <Text style={styles.errorMessage}>
                             {errorMessage || 'Unable to load video. Please check your connection.'}
@@ -258,7 +261,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                 setIsLoading(true);
                             }}
                         >
-                            <Ionicons name="refresh" size={18} color={COLORS.surface} />
+                            <Ionicons name="refresh" size={18} color={colors.surface} />
                             <Text style={styles.retryText}>Retry</Text>
                         </TouchableOpacity>
                     </View>
@@ -288,7 +291,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                     {(isLoading || isBuffering) && (
                         <View style={styles.loadingOverlay}>
                             <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color={COLORS.surface} />
+                                <ActivityIndicator size="large" color={colors.surface} />
                                 <Text style={styles.loadingText}>
                                     {isLoading ? 'Loading...' : 'Buffering...'}
                                 </Text>
@@ -318,7 +321,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                     onPress={skipBackward}
                                     hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                                 >
-                                    <Ionicons name="play-back" size={32} color={COLORS.surface} />
+                                    <Ionicons name="play-back" size={32} color={colors.surface} />
                                     <Text style={styles.skipText}>10</Text>
                                 </TouchableOpacity>
 
@@ -330,7 +333,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                     <Ionicons
                                         name={isPlaying ? 'pause' : 'play'}
                                         size={44}
-                                        color={COLORS.surface}
+                                        color={colors.surface}
                                     />
                                 </TouchableOpacity>
 
@@ -339,7 +342,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                     onPress={skipForward}
                                     hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                                 >
-                                    <Ionicons name="play-forward" size={32} color={COLORS.surface} />
+                                    <Ionicons name="play-forward" size={32} color={colors.surface} />
                                     <Text style={styles.skipText}>10</Text>
                                 </TouchableOpacity>
                             </View>
@@ -393,7 +396,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                                     <Ionicons
                                         name={isFullscreen ? 'contract' : 'expand'}
                                         size={24}
-                                        color={COLORS.surface}
+                                        color={colors.surface}
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -405,12 +408,12 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     }
 );
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light) => StyleSheet.create({
     container: {
         width: '100%',
         aspectRatio: 16 / 9,
         backgroundColor: '#000',
-        borderRadius: BORDER_RADIUS.lg,
+        borderRadius: Theme.borderRadius.lg,
         overflow: 'hidden',
     },
     fullscreenContainer: {
@@ -444,10 +447,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.sm,
-        marginTop: SPACING.sm,
-        fontWeight: FONT_WEIGHT.medium,
+        color: colors.surface,
+        fontSize: Theme.fontSize.sm,
+        marginTop: Theme.spacing.sm,
+        fontWeight: Theme.fontWeight.medium,
     },
     controlsOverlay: {
         ...StyleSheet.absoluteFillObject,
@@ -458,32 +461,32 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: SPACING.md,
-        paddingTop: SPACING.md,
+        paddingHorizontal: Theme.spacing.md,
+        paddingTop: Theme.spacing.md,
     },
     videoTitle: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
+        color: colors.surface,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.semibold,
         flex: 1,
-        marginRight: SPACING.md,
+        marginRight: Theme.spacing.md,
     },
     controlButton: {
         backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        borderRadius: BORDER_RADIUS.sm,
+        paddingHorizontal: Theme.spacing.sm,
+        paddingVertical: Theme.spacing.xs,
+        borderRadius: Theme.borderRadius.sm,
     },
     speedText: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.sm,
-        fontWeight: FONT_WEIGHT.bold,
+        color: colors.surface,
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.bold,
     },
     centerControls: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: SPACING.xxl,
+        gap: Theme.spacing["2xl"],
     },
     playPauseButton: {
         width: 72,
@@ -500,31 +503,31 @@ const styles = StyleSheet.create({
         height: 56,
     },
     skipText: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
+        color: colors.surface,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.bold,
         marginTop: -4,
     },
     bottomControls: {
-        paddingHorizontal: SPACING.md,
-        paddingBottom: SPACING.md,
+        paddingHorizontal: Theme.spacing.md,
+        paddingBottom: Theme.spacing.md,
     },
     progressContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: SPACING.sm,
+        marginBottom: Theme.spacing.sm,
     },
     timeText: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.medium,
+        color: colors.surface,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.medium,
         minWidth: 48,
         textAlign: 'center',
     },
     progressBarTouchable: {
         flex: 1,
-        paddingVertical: SPACING.sm,
-        marginHorizontal: SPACING.sm,
+        paddingVertical: Theme.spacing.sm,
+        marginHorizontal: Theme.spacing.sm,
     },
     progressBarBg: {
         height: 4,
@@ -534,7 +537,7 @@ const styles = StyleSheet.create({
     },
     progressBarFill: {
         height: '100%',
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         borderRadius: 2,
     },
     progressKnob: {
@@ -544,9 +547,9 @@ const styles = StyleSheet.create({
         width: 16,
         height: 16,
         borderRadius: 8,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         borderWidth: 2,
-        borderColor: COLORS.surface,
+        borderColor: colors.surface,
     },
     fullscreenButton: {
         alignSelf: 'flex-end',
@@ -555,34 +558,34 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: SPACING.xl,
+        padding: Theme.spacing.xl,
         backgroundColor: '#1a1a1a',
     },
     errorTitle: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        marginTop: SPACING.md,
-        marginBottom: SPACING.sm,
+        color: colors.surface,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        marginTop: Theme.spacing.md,
+        marginBottom: Theme.spacing.sm,
     },
     errorMessage: {
-        color: COLORS.textTertiary,
-        fontSize: FONT_SIZE.sm,
+        color: colors.textTertiary,
+        fontSize: Theme.fontSize.sm,
         textAlign: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     retryButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.sm,
-        borderRadius: BORDER_RADIUS.md,
+        gap: Theme.spacing.xs,
+        backgroundColor: colors.primary,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.sm,
+        borderRadius: Theme.borderRadius.md,
     },
     retryText: {
-        color: COLORS.surface,
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
+        color: colors.surface,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.semibold,
     },
 });
