@@ -984,7 +984,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         marginBottom: Theme.spacing.lg,
     },
     quizTitle: {
-        fontSize: Theme.fontSize.xxl,
+        fontSize: Theme.fontSize['2xl'],
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
         textAlign: 'center',
@@ -1530,7 +1530,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         marginBottom: Theme.spacing.lg,
     },
     resultTitle: {
-        fontSize: Theme.fontSize.xxl,
+        fontSize: Theme.fontSize['2xl'],
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
         marginBottom: Theme.spacing.xs,
@@ -1547,7 +1547,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         alignItems: 'center',
     },
     scorePercentage: {
-        fontSize: Theme.fontSize.display,
+        fontSize: Theme.fontSize['6xl'],
         fontWeight: Theme.fontWeight.black,
     },
     scoreLabel: {

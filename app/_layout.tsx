@@ -33,7 +33,8 @@ function RootLayoutContent() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen name="(student)" options={{ headerShown: false }} />
-        <Stack.Screen name="course/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="course/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="diploma/[id]" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </>
   );

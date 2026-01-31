@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Linking from 'expo-linking';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -23,7 +22,6 @@ import { ProfilePhotoUpload } from '../../src/components/media/ProfilePhotoUploa
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
-import { deleteLessonDownload, getDownloadRecords, getDownloadsStorageUsed } from '../../src/features/offline/downloadManager';
 import { supabase } from '../../src/lib/supabase';
 interface MenuItem {
     icon: keyof typeof Ionicons.glyphMap;
@@ -40,13 +38,7 @@ interface StatsData {
     certificates: number;
 }
 
-interface DownloadItemData {
-    id: string;
-    title: string;
-    courseTitle?: string;
-    fileSize?: number;
-    downloadedAt: string;
-}
+
 
 export default function ProfileScreen() {
     const { signOut, session } = useAuth();
@@ -60,7 +52,7 @@ export default function ProfileScreen() {
     // Modal states
     const [editProfileVisible, setEditProfileVisible] = useState(false);
     const [changePasswordVisible, setChangePasswordVisible] = useState(false);
-    const [downloadsVisible, setDownloadsVisible] = useState(false);
+
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [themeModalVisible, setThemeModalVisible] = useState(false);
     const [comingSoonVisible, setComingSoonVisible] = useState(false);
@@ -72,8 +64,7 @@ export default function ProfileScreen() {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [downloads, setDownloads] = useState<DownloadItemData[]>([]);
-    const [storageUsed, setStorageUsed] = useState(0);
+
 
     // Animations
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -154,16 +145,7 @@ export default function ProfileScreen() {
         }
     };
 
-    const loadDownloads = async () => {
-        try {
-            const downloadsList = await getDownloadRecords();
-            setDownloads(downloadsList);
-            const storage = await getDownloadsStorageUsed();
-            setStorageUsed(storage);
-        } catch (error) {
-            console.error('Error loading downloads:', error);
-        }
-    };
+
 
     const handleUpdateProfile = async () => {
         if (!fullName.trim()) {
@@ -226,35 +208,9 @@ export default function ProfileScreen() {
         }
     };
 
-    const handleDeleteDownload = async (id: string) => {
-        Alert.alert(
-            'Delete Download',
-            'Are you sure you want to delete this download?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await deleteLessonDownload(id);
-                            loadDownloads();
-                        } catch (error) {
-                            Alert.alert('Error', 'Failed to delete download');
-                        }
-                    }
-                },
-            ]
-        );
-    };
 
-    const formatBytes = (bytes: number) => {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-    };
+
+
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -298,10 +254,7 @@ export default function ProfileScreen() {
                     icon: 'cloud-download-outline',
                     label: 'Downloads',
                     subtitle: 'Manage offline content',
-                    onPress: () => {
-                        loadDownloads();
-                        setDownloadsVisible(true);
-                    }
+                    onPress: () => router.push('/(student)/downloads')
                 },
                 {
                     icon: 'bookmark-outline',
@@ -318,13 +271,7 @@ export default function ProfileScreen() {
                     label: 'Certificates',
                     subtitle: 'View your achievements',
                     badge: stats.certificates > 0 ? String(stats.certificates) : undefined,
-                    onPress: () => {
-                        if (stats.certificates > 0) {
-                            Alert.alert('Certificates', `You have earned ${stats.certificates} certificate(s)! View them in your completed courses.`);
-                        } else {
-                            Alert.alert('Certificates', 'Complete courses to earn certificates!');
-                        }
-                    }
+                    onPress: () => router.push('/(student)/certificates')
                 },
             ],
         },
@@ -365,20 +312,10 @@ export default function ProfileScreen() {
             title: 'Support',
             items: [
                 {
-                    icon: 'help-circle-outline',
-                    label: 'Help Center',
-                    subtitle: 'FAQs and guides',
-                    onPress: () => showComingSoon(
-                        'Help Center',
-                        'Our comprehensive help center with FAQs, guides, and tutorials is being built. For now, contact support directly!',
-                        'help-circle-outline'
-                    )
-                },
-                {
                     icon: 'chatbubble-outline',
                     label: 'Contact Support',
                     subtitle: 'Get help from our team',
-                    onPress: () => Linking.openURL('mailto:support@bdi.com?subject=Support%20Request')
+                    onPress: () => router.push('/(student)/support')
                 },
                 {
                     icon: 'document-text-outline',
@@ -667,59 +604,7 @@ export default function ProfileScreen() {
                 </View>
             </Modal>
 
-            {/* Downloads Modal */}
-            <Modal
-                visible={downloadsVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setDownloadsVisible(false)}
-            >
-                <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
-                    <View style={[styles.modalContent, { maxHeight: '80%', backgroundColor: colors.surface }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Downloads</Text>
-                            <TouchableOpacity onPress={() => setDownloadsVisible(false)}>
-                                <Ionicons name="close" size={24} color={colors.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
 
-                        <View style={[styles.storageInfo, { backgroundColor: colors.primary + '10' }]}>
-                            <Ionicons name="folder-outline" size={20} color={colors.primary} />
-                            <Text style={[styles.storageText, { color: colors.textPrimary }]}>Storage Used: {formatBytes(storageUsed)}</Text>
-                        </View>
-
-                        <ScrollView style={styles.downloadsList}>
-                            {downloads.length === 0 ? (
-                                <View style={styles.emptyState}>
-                                    <Ionicons name="cloud-download-outline" size={48} color={colors.textTertiary} />
-                                    <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>No downloads yet</Text>
-                                    <Text style={[styles.emptyStateSubtext, { color: colors.textTertiary }]}>Downloaded videos will appear here</Text>
-                                </View>
-                            ) : (
-                                downloads.map((item) => (
-                                    <View key={item.id} style={[styles.downloadItem, { borderBottomColor: colors.border }]}>
-                                        <View style={[styles.downloadItemIcon, { backgroundColor: colors.primary + '10' }]}>
-                                            <Ionicons name="videocam" size={24} color={colors.primary} />
-                                        </View>
-                                        <View style={styles.downloadItemInfo}>
-                                            <Text style={[styles.downloadItemTitle, { color: colors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
-                                            <Text style={[styles.downloadItemSubtitle, { color: colors.textSecondary }]}>
-                                                {item.courseTitle} • {formatBytes(item.fileSize || 0)}
-                                            </Text>
-                                        </View>
-                                        <TouchableOpacity
-                                            onPress={() => handleDeleteDownload(item.id)}
-                                            style={styles.downloadItemDelete}
-                                        >
-                                            <Ionicons name="trash-outline" size={20} color={colors.error} />
-                                        </TouchableOpacity>
-                                    </View>
-                                ))
-                            )}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
 
             {/* Theme Selection Modal */}
             <Modal

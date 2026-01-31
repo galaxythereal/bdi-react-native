@@ -155,7 +155,8 @@ const lightColors: ThemeColors = {
 
 const darkColors: ThemeColors = {
   primary: tintColorDark, // Brighter red for dark mode
-  primaryLight: '#ff6666',
+  // primaryLight: '#ff6666',
+  primaryLight: '#db0011',
   primaryDark: '#db0011',
   primarySubtle: '#3c0005', // Very dark red
   primaryDisabled: '#7f1d1d', // Dark red for disabled state

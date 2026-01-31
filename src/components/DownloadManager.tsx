@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -11,7 +11,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
+import Theme from '../../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface Download {
     id: string;
@@ -53,6 +54,9 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
     onPlay,
     onClearAll,
 }) => {
+    const { colors, isDark } = useTheme();
+    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
     const completedDownloads = downloads.filter(d => d.status === 'completed');
     const activeDownloads = downloads.filter(d => d.status === 'downloading' || d.status === 'pending');
     const failedDownloads = downloads.filter(d => d.status === 'failed');
@@ -71,17 +75,17 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
         const getStatusIcon = () => {
             switch (item.status) {
                 case 'completed':
-                    return { name: 'checkmark-circle', color: COLORS.success };
+                    return { name: 'checkmark-circle', color: colors.success };
                 case 'downloading':
-                    return { name: 'cloud-download', color: COLORS.primary };
+                    return { name: 'cloud-download', color: colors.primary };
                 case 'pending':
-                    return { name: 'hourglass', color: COLORS.warning };
+                    return { name: 'hourglass', color: colors.warning };
                 case 'failed':
-                    return { name: 'alert-circle', color: COLORS.error };
+                    return { name: 'alert-circle', color: colors.error };
                 case 'paused':
-                    return { name: 'pause-circle', color: COLORS.textSecondary };
+                    return { name: 'pause-circle', color: colors.textSecondary };
                 default:
-                    return { name: 'help-circle', color: COLORS.textTertiary };
+                    return { name: 'help-circle', color: colors.textTertiary };
             }
         };
 
@@ -171,7 +175,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                                 style={styles.actionButton}
                                 onPress={() => onPause(item.lessonId)}
                             >
-                                <Ionicons name="pause" size={20} color={COLORS.textSecondary} />
+                                <Ionicons name="pause" size={20} color={colors.textSecondary} />
                             </TouchableOpacity>
                         )}
 
@@ -180,7 +184,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                                 style={styles.actionButton}
                                 onPress={() => onResume(item.lessonId)}
                             >
-                                <Ionicons name="play" size={20} color={COLORS.primary} />
+                                <Ionicons name="play" size={20} color={colors.primary} />
                             </TouchableOpacity>
                         )}
 
@@ -189,7 +193,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                                 style={styles.actionButton}
                                 onPress={() => onRetry(item.lessonId)}
                             >
-                                <Ionicons name="refresh" size={20} color={COLORS.primary} />
+                                <Ionicons name="refresh" size={20} color={colors.primary} />
                             </TouchableOpacity>
                         )}
 
@@ -198,7 +202,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                                 style={styles.actionButton}
                                 onPress={() => onPlay(item.lessonId)}
                             >
-                                <Ionicons name="play-circle" size={24} color={COLORS.primary} />
+                                <Ionicons name="play-circle" size={24} color={colors.primary} />
                             </TouchableOpacity>
                         )}
 
@@ -206,7 +210,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                             style={styles.actionButton}
                             onPress={handleRemove}
                         >
-                            <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -227,7 +231,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
         return (
             <View style={styles.emptyContainer}>
                 <View style={styles.emptyIconContainer}>
-                    <Ionicons name="cloud-download-outline" size={64} color={COLORS.textTertiary} />
+                    <Ionicons name="cloud-download-outline" size={64} color={colors.textTertiary} />
                 </View>
                 <Text style={styles.emptyTitle}>No Downloads</Text>
                 <Text style={styles.emptyText}>
@@ -294,6 +298,9 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
 
 // Storage Info Component
 const StorageInfo: React.FC = () => {
+    const { colors, isDark } = useTheme();
+    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
     const [storageInfo, setStorageInfo] = useState<{ used: number; free: number } | null>(null);
 
     useEffect(() => {
@@ -314,7 +321,7 @@ const StorageInfo: React.FC = () => {
     return (
         <View style={styles.storageContainer}>
             <View style={styles.storageHeader}>
-                <Ionicons name="folder-open-outline" size={20} color={COLORS.textSecondary} />
+                <Ionicons name="folder-open-outline" size={20} color={colors.textSecondary} />
                 <Text style={styles.storageTitle}>Storage</Text>
             </View>
             <View style={styles.storageBar}>
@@ -349,6 +356,9 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
     size = 'medium',
     showLabel = false,
 }) => {
+    const { colors, isDark } = useTheme();
+    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
     const iconSize = size === 'small' ? 18 : size === 'medium' ? 24 : 32;
     const progressAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -416,7 +426,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
                 <Ionicons
                     name={isDownloaded ? 'checkmark-circle' : 'download-outline'}
                     size={iconSize}
-                    color={isDownloaded ? COLORS.success : COLORS.primary}
+                    color={isDownloaded ? colors.success : colors.primary}
                 />
             </View>
             {showLabel && (
@@ -428,7 +438,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -436,65 +446,65 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: SPACING.xxxl,
+        padding: Theme.spacing['3xl'],
     },
     emptyIconContainer: {
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: COLORS.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: SPACING.xl,
+        marginBottom: Theme.spacing.xl,
     },
     emptyTitle: {
-        fontSize: FONT_SIZE.xl,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
-        marginBottom: SPACING.sm,
+        fontSize: Theme.fontSize.xl,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
+        marginBottom: Theme.spacing.sm,
     },
     emptyText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.base,
+        color: colors.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
     },
     storageContainer: {
-        backgroundColor: COLORS.surface,
-        padding: SPACING.lg,
-        marginBottom: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
-        ...SHADOWS.sm,
+        backgroundColor: colors.surface,
+        padding: Theme.spacing.lg,
+        marginBottom: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     storageHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.sm,
-        marginBottom: SPACING.sm,
+        gap: Theme.spacing.sm,
+        marginBottom: Theme.spacing.sm,
     },
     storageTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.text,
     },
     storageBar: {
         height: 8,
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         borderRadius: 4,
-        marginBottom: SPACING.xs,
+        marginBottom: Theme.spacing.xs,
         overflow: 'hidden',
     },
     storageUsed: {
         height: '100%',
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         borderRadius: 4,
     },
     storageText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
     },
     section: {
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     sectionHeaderRow: {
         flexDirection: 'row',
@@ -504,103 +514,103 @@ const styles = StyleSheet.create({
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.sm,
-        marginBottom: SPACING.md,
-        paddingHorizontal: SPACING.sm,
+        gap: Theme.spacing.sm,
+        marginBottom: Theme.spacing.md,
+        paddingHorizontal: Theme.spacing.sm,
     },
     sectionTitle: {
-        fontSize: FONT_SIZE.lg,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.text,
     },
     badge: {
-        backgroundColor: COLORS.primary + '20',
-        paddingHorizontal: SPACING.sm,
+        backgroundColor: colors.primary + '20',
+        paddingHorizontal: Theme.spacing.sm,
         paddingVertical: 2,
-        borderRadius: BORDER_RADIUS.round,
+        borderRadius: Theme.borderRadius.round,
     },
     badgeText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.primary,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.primary,
     },
     clearButton: {
-        paddingHorizontal: SPACING.md,
-        paddingVertical: SPACING.xs,
+        paddingHorizontal: Theme.spacing.md,
+        paddingVertical: Theme.spacing.xs,
     },
     clearButtonText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.error,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.error,
+        fontWeight: Theme.fontWeight.medium,
     },
     downloadItem: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        marginBottom: SPACING.sm,
-        ...SHADOWS.sm,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.lg,
+        marginBottom: Theme.spacing.sm,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     downloadContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.md,
+        padding: Theme.spacing.md,
     },
     statusIndicator: {
         width: 48,
         height: 48,
-        borderRadius: BORDER_RADIUS.lg,
+        borderRadius: Theme.borderRadius.lg,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: SPACING.md,
+        marginRight: Theme.spacing.md,
     },
     downloadInfo: {
         flex: 1,
     },
     downloadTitle: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.text,
         marginBottom: 2,
     },
     downloadCourse: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
     },
     progressContainer: {
-        marginTop: SPACING.sm,
+        marginTop: Theme.spacing.sm,
     },
     progressBar: {
         height: 4,
-        backgroundColor: COLORS.border,
+        backgroundColor: colors.border,
         borderRadius: 2,
         overflow: 'hidden',
         marginBottom: 4,
     },
     progressFill: {
         height: '100%',
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         borderRadius: 2,
     },
     progressText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.xs,
+        color: colors.textSecondary,
     },
     fileSizeText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textTertiary,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textTertiary,
         marginTop: 2,
     },
     errorText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.error,
-        marginTop: SPACING.xs,
+        fontSize: Theme.fontSize.sm,
+        color: colors.error,
+        marginTop: Theme.spacing.xs,
     },
     downloadActions: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
+        gap: Theme.spacing.xs,
     },
     actionButton: {
-        padding: SPACING.sm,
+        padding: Theme.spacing.sm,
     },
     downloadButton: {
         alignItems: 'center',
@@ -616,27 +626,27 @@ const styles = StyleSheet.create({
         minWidth: 64,
     },
     downloadIconContainer: {
-        padding: SPACING.xs,
+        padding: Theme.spacing.xs,
     },
     downloadIconContainerCompleted: {
-        backgroundColor: COLORS.success + '15',
-        borderRadius: BORDER_RADIUS.round,
+        backgroundColor: colors.success + '15',
+        borderRadius: Theme.borderRadius.round,
     },
     downloadLabel: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.primary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.xs,
+        color: colors.primary,
+        fontWeight: Theme.fontWeight.medium,
         marginTop: 2,
     },
     downloadLabelCompleted: {
-        color: COLORS.success,
+        color: colors.success,
     },
     progressCircle: {
         width: 40,
         height: 40,
         borderRadius: 20,
         borderWidth: 3,
-        borderColor: COLORS.border,
+        borderColor: colors.border,
         justifyContent: 'center',
         alignItems: 'center',
         position: 'relative',
@@ -647,13 +657,13 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 20,
         borderWidth: 3,
-        borderColor: COLORS.primary,
+        borderColor: colors.primary,
         borderTopColor: 'transparent',
         borderRightColor: 'transparent',
     },
     progressCircleText: {
-        fontSize: FONT_SIZE.xs,
-        fontWeight: FONT_WEIGHT.bold,
-        color: COLORS.primary,
+        fontSize: Theme.fontSize.xs,
+        fontWeight: Theme.fontWeight.bold,
+        color: colors.primary,
     },
 });

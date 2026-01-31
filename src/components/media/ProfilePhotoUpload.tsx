@@ -4,24 +4,25 @@
  * A reusable component for uploading and displaying profile photos.
  */
 
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Text,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../lib/constants';
+import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Theme from '../../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
+import {
+  getAvatarUrl,
   pickImage,
   takePhoto,
   uploadProfilePhoto,
-  getAvatarUrl,
 } from '../../services/mediaService';
 
 interface ProfilePhotoUploadProps {
@@ -43,6 +44,9 @@ export function ProfilePhotoUpload({
   name,
   showEditButton = true,
 }: ProfilePhotoUploadProps) {
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
@@ -59,7 +63,7 @@ export function ProfilePhotoUpload({
 
     try {
       const result = await uploadProfilePhoto(asset.uri, userId);
-      
+
       if (result.success && result.url) {
         onChange?.(result.url);
         setLocalPreview(null); // Clear local preview, use actual URL
@@ -158,7 +162,7 @@ export function ProfilePhotoUpload({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
   container: {
     alignItems: 'center',
   },
@@ -167,15 +171,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatar: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   placeholder: {
-    backgroundColor: COLORS.primary + '20',
+    backgroundColor: colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
   },
   initials: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
   uploadingOverlay: {
@@ -196,7 +200,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,

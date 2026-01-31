@@ -1,7 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { supabase } from '../../lib/supabase';
-import { CatalogDiploma, DiplomaDetail, Enrollment, Batch, LiveSession } from '../../types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Batch, CatalogDiploma, DiplomaDetail, Enrollment, LiveSession } from '../../types';
 import { checkIsOnline } from '../offline/offlineManager';
 
 const CACHE_KEY_CATALOG = 'bdi_diploma_catalog';
@@ -116,6 +116,98 @@ export const fetchDiplomaCatalog = async (): Promise<CatalogDiploma[]> => {
         } catch { }
 
         return [];
+    }
+};
+
+/**
+ * Fetch a single diploma by ID with full details (public/catalog view)
+ */
+export const fetchDiplomaById = async (diplomaId: string): Promise<CatalogDiploma | null> => {
+    try {
+        const isOnline = await checkIsOnline();
+
+        if (!isOnline) {
+            const cached = await AsyncStorage.getItem(CACHE_KEY_CATALOG);
+            if (cached) {
+                const catalog: CatalogDiploma[] = JSON.parse(cached);
+                return catalog.find(d => d.id === diplomaId) || null;
+            }
+            return null;
+        }
+
+        const { data: diploma, error } = await supabase
+            .from('diplomas')
+            .select(`
+                id,
+                title,
+                title_ar,
+                description,
+                description_ar,
+                thumbnail_url,
+                slug,
+                status,
+                is_featured,
+                duration_weeks,
+                price,
+                currency,
+                created_at,
+                updated_at
+            `)
+            .eq('id', diplomaId)
+            .single();
+
+        if (error) throw error;
+        if (!diploma) return null;
+
+        // Fetch courses for the diploma
+        const { data: courses } = await supabase
+            .from('courses')
+            .select('id, title, title_ar, description, thumbnail_url, order_index, status')
+            .eq('diploma_id', diploma.id)
+            .eq('status', 'published')
+            .order('order_index');
+
+        // Fetch chapters for each course
+        const coursesWithChapters = await Promise.all(
+            (courses || []).map(async (course) => {
+                const { data: chapters } = await supabase
+                    .from('chapters')
+                    .select('id, title, title_ar')
+                    .eq('course_id', course.id)
+                    .order('order_index');
+
+                // Count lessons in each chapter
+                const chaptersWithLessonCount = await Promise.all(
+                    (chapters || []).map(async (ch) => {
+                        const { count } = await supabase
+                            .from('lessons')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('chapter_id', ch.id);
+
+                        return {
+                            id: ch.id,
+                            title: ch.title,
+                            title_ar: ch.title_ar,
+                            lessons_count: count || 0,
+                        };
+                    })
+                );
+
+                return {
+                    ...course,
+                    chapters: chaptersWithLessonCount,
+                };
+            })
+        );
+
+        return {
+            ...diploma,
+            courses: coursesWithChapters,
+        } as CatalogDiploma;
+
+    } catch (error) {
+        console.error('Error fetching diploma details:', error);
+        return null;
     }
 };
 

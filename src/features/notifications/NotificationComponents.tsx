@@ -1,22 +1,22 @@
-import React, { useCallback, useRef } from 'react';
-import { 
-    Animated, 
-    StyleSheet, 
-    Text, 
-    TouchableOpacity, 
-    View,
-    Dimensions,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useCallback, useRef } from 'react';
+import {
+    Animated,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
-import { 
-    Notification, 
-    getNotificationIcon, 
+import { BORDER_RADIUS, FONT_SIZE, SPACING } from '../../lib/constants';
+import {
+    Notification,
+    formatNotificationTime,
     getNotificationColor,
-    formatNotificationTime 
+    getNotificationIcon
 } from './notificationService';
-import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../../lib/constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -77,9 +77,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         });
 
         return (
-            <Animated.View 
+            <Animated.View
                 style={[
-                    styles.rightActions, 
+                    styles.rightActions,
                     { transform: [{ translateX }], opacity }
                 ]}
             >
@@ -139,13 +139,16 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                     style={[
                         styles.container,
                         {
-                            backgroundColor: notification.read 
-                                ? colors.surface 
-                                : isDark 
-                                    ? colors.surfaceElevated 
-                                    : colors.backgroundSecondary,
-                            borderLeftColor: notification.read ? 'transparent' : iconColor,
-                            borderLeftWidth: notification.read ? 0 : 3,
+                            backgroundColor: notification.read
+                                ? 'transparent'
+                                : isDark
+                                    ? colors.surfaceElevated
+                                    : colors.surface,
+                            // Subtle border handling
+                            borderBottomWidth: 1,
+                            borderBottomColor: colors.borderLight,
+                            marginHorizontal: SPACING.md,
+                            marginBottom: SPACING.xs,
                         },
                     ]}
                 >
@@ -157,10 +160,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                     {/* Content */}
                     <View style={styles.content}>
                         <View style={styles.header}>
-                            <Text 
+                            <Text
                                 style={[
-                                    styles.title, 
-                                    { 
+                                    styles.title,
+                                    {
                                         color: colors.text,
                                         fontWeight: notification.read ? '500' : '700',
                                     }
@@ -173,11 +176,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                                 {timeAgo}
                             </Text>
                         </View>
-                        <Text 
+                        <Text
                             style={[
-                                styles.message, 
-                                { 
-                                    color: notification.read ? colors.textTertiary : colors.textSecondary 
+                                styles.message,
+                                {
+                                    color: notification.read ? colors.textTertiary : colors.textSecondary
                                 }
                             ]}
                             numberOfLines={2}
@@ -202,19 +205,19 @@ interface NotificationBadgeProps {
     size?: 'small' | 'medium';
 }
 
-export const NotificationBadge: React.FC<NotificationBadgeProps> = ({ 
-    count, 
-    size = 'small' 
+export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
+    count,
+    size = 'small'
 }) => {
     const { colors } = useTheme();
-    
+
     if (count === 0) return null;
 
     const displayCount = count > 99 ? '99+' : count.toString();
     const isSmall = size === 'small';
 
     return (
-        <View 
+        <View
             style={[
                 styles.badge,
                 {
@@ -226,7 +229,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                 },
             ]}
         >
-            <Text 
+            <Text
                 style={[
                     styles.badgeText,
                     { fontSize: isSmall ? 10 : 12 },
@@ -279,10 +282,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
             <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                <Ionicons 
-                    name={count > 0 ? 'notifications' : 'notifications-outline'} 
-                    size={24} 
-                    color={color || colors.text} 
+                <Ionicons
+                    name={count > 0 ? 'notifications' : 'notifications-outline'}
+                    size={24}
+                    color={color || colors.text}
                 />
                 {count > 0 && (
                     <View style={styles.bellBadge}>
@@ -309,10 +312,10 @@ export const EmptyNotifications: React.FC<EmptyNotificationsProps> = ({
     return (
         <View style={styles.emptyContainer}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.backgroundTertiary }]}>
-                <Ionicons 
-                    name="notifications-off-outline" 
-                    size={48} 
-                    color={colors.textTertiary} 
+                <Ionicons
+                    name="notifications-off-outline"
+                    size={48}
+                    color={colors.textTertiary}
                 />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
@@ -326,15 +329,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: SPACING.md,
-        marginHorizontal: SPACING.md,
-        marginVertical: SPACING.xs,
         borderRadius: BORDER_RADIUS.lg,
-        ...SHADOWS.sm,
     },
     iconContainer: {
         width: 48,
         height: 48,
-        borderRadius: BORDER_RADIUS.full,
+        borderRadius: BORDER_RADIUS.md, // Squared circle
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: SPACING.md,
@@ -364,10 +364,11 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     unreadDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
         marginLeft: SPACING.sm,
+        backgroundColor: '#2D6CDF', // Default primary blue
     },
     rightActions: {
         flexDirection: 'row',

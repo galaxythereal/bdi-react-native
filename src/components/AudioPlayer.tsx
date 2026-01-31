@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -9,8 +10,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
+import Theme from '../../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface AudioPlayerProps {
     uri: string;
@@ -25,6 +26,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     title,
     onComplete,
 }) => {
+    const { colors, isDark } = useTheme();
+    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
     const [sound, setSound] = useState<Audio.Sound | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +37,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
     const [showSpeedOptions, setShowSpeedOptions] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+
     const progressAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -57,7 +61,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         try {
             setIsLoading(true);
             setError(null);
-            
+
             // Configure audio mode
             await Audio.setAudioModeAsync({
                 allowsRecordingIOS: false,
@@ -72,7 +76,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 { shouldPlay: false },
                 onPlaybackStatusUpdate
             );
-            
+
             setSound(newSound);
             setIsLoading(false);
         } catch (err: any) {
@@ -151,7 +155,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        
+
         if (hours > 0) {
             return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
@@ -162,7 +166,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         return (
             <View style={styles.container}>
                 <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle" size={32} color={COLORS.error} />
+                    <Ionicons name="alert-circle" size={32} color={colors.error} />
                     <Text style={styles.errorText}>{error}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={loadAudio}>
                         <Text style={styles.retryButtonText}>Retry</Text>
@@ -191,7 +195,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                                     }),
                                     backgroundColor: progressAnim.interpolate({
                                         inputRange: [0, i / 20, (i + 1) / 20, 1],
-                                        outputRange: [COLORS.border, COLORS.border, COLORS.primary, COLORS.primary],
+                                        outputRange: [colors.border, colors.border, colors.primary, colors.primary],
                                         extrapolate: 'clamp',
                                     }),
                                 },
@@ -210,9 +214,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     maximumValue={duration}
                     value={position}
                     onSlidingComplete={seekTo}
-                    minimumTrackTintColor={COLORS.primary}
-                    maximumTrackTintColor={COLORS.border}
-                    thumbTintColor={COLORS.primary}
+                    minimumTrackTintColor={colors.primary}
+                    maximumTrackTintColor={colors.border}
+                    thumbTintColor={colors.primary}
                     disabled={isLoading}
                 />
                 <View style={styles.timeContainer}>
@@ -224,50 +228,50 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             {/* Controls */}
             <View style={styles.controlsContainer}>
                 {/* Skip backward */}
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.skipButton}
                     onPress={skipBackward}
                     disabled={isLoading}
                 >
-                    <Ionicons name="play-back" size={24} color={COLORS.text} />
+                    <Ionicons name="play-back" size={24} color={colors.text} />
                     <Text style={styles.skipText}>15s</Text>
                 </TouchableOpacity>
 
                 {/* Play/Pause */}
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.playButton}
                     onPress={togglePlayPause}
                     disabled={isLoading}
                 >
                     {isLoading ? (
-                        <ActivityIndicator size="large" color={COLORS.surface} />
+                        <ActivityIndicator size="large" color={colors.surface} />
                     ) : (
-                        <Ionicons 
-                            name={isPlaying ? "pause" : "play"} 
-                            size={32} 
-                            color={COLORS.surface} 
+                        <Ionicons
+                            name={isPlaying ? "pause" : "play"}
+                            size={32}
+                            color={colors.surface}
                         />
                     )}
                 </TouchableOpacity>
 
                 {/* Skip forward */}
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.skipButton}
                     onPress={skipForward}
                     disabled={isLoading}
                 >
-                    <Ionicons name="play-forward" size={24} color={COLORS.text} />
+                    <Ionicons name="play-forward" size={24} color={colors.text} />
                     <Text style={styles.skipText}>15s</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Speed Control */}
             <View style={styles.speedContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.speedButton}
                     onPress={() => setShowSpeedOptions(!showSpeedOptions)}
                 >
-                    <Ionicons name="speedometer-outline" size={18} color={COLORS.textSecondary} />
+                    <Ionicons name="speedometer-outline" size={18} color={colors.textSecondary} />
                     <Text style={styles.speedButtonText}>{playbackSpeed}x</Text>
                 </TouchableOpacity>
 
@@ -297,16 +301,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
     container: {
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        padding: SPACING.lg,
-        ...SHADOWS.md,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.xl,
+        padding: Theme.spacing.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     visualContainer: {
         alignItems: 'center',
-        marginBottom: SPACING.lg,
+        marginBottom: Theme.spacing.lg,
     },
     waveformContainer: {
         flexDirection: 'row',
@@ -314,20 +318,20 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         height: 60,
         gap: 3,
-        marginBottom: SPACING.md,
+        marginBottom: Theme.spacing.md,
     },
     waveformBar: {
         width: 4,
         borderRadius: 2,
     },
     title: {
-        fontSize: FONT_SIZE.md,
-        fontWeight: FONT_WEIGHT.semibold,
-        color: COLORS.text,
+        fontSize: Theme.fontSize.base,
+        fontWeight: Theme.fontWeight.semibold,
+        color: colors.text,
         textAlign: 'center',
     },
     progressContainer: {
-        marginBottom: SPACING.md,
+        marginBottom: Theme.spacing.md,
     },
     slider: {
         width: '100%',
@@ -336,37 +340,37 @@ const styles = StyleSheet.create({
     timeContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: SPACING.xs,
+        paddingHorizontal: Theme.spacing.xs,
     },
     timeText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
     },
     controlsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: SPACING.xl,
-        marginBottom: SPACING.lg,
+        gap: Theme.spacing.xl,
+        marginBottom: Theme.spacing.lg,
     },
     skipButton: {
         alignItems: 'center',
-        padding: SPACING.sm,
+        padding: Theme.spacing.sm,
     },
     skipText: {
-        fontSize: FONT_SIZE.xs,
-        color: COLORS.textSecondary,
+        fontSize: Theme.fontSize.xs,
+        color: colors.textSecondary,
         marginTop: 2,
     },
     playButton: {
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        ...SHADOWS.lg,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
     },
     speedContainer: {
         alignItems: 'center',
@@ -374,66 +378,66 @@ const styles = StyleSheet.create({
     speedButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.md,
-        backgroundColor: COLORS.backgroundSecondary,
-        borderRadius: BORDER_RADIUS.md,
+        gap: Theme.spacing.xs,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.md,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: Theme.borderRadius.md,
     },
     speedButtonText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.textSecondary,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.textSecondary,
+        fontWeight: Theme.fontWeight.medium,
     },
     speedOptionsContainer: {
         position: 'absolute',
         bottom: '100%',
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.lg,
-        padding: SPACING.sm,
-        marginBottom: SPACING.sm,
+        backgroundColor: colors.surface,
+        borderRadius: Theme.borderRadius.lg,
+        padding: Theme.spacing.sm,
+        marginBottom: Theme.spacing.sm,
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: SPACING.xs,
-        ...SHADOWS.lg,
+        gap: Theme.spacing.xs,
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
         zIndex: 100,
     },
     speedOption: {
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.md,
-        borderRadius: BORDER_RADIUS.md,
-        backgroundColor: COLORS.backgroundSecondary,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.md,
+        backgroundColor: colors.backgroundSecondary,
     },
     speedOptionActive: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
     },
     speedOptionText: {
-        fontSize: FONT_SIZE.sm,
-        color: COLORS.text,
-        fontWeight: FONT_WEIGHT.medium,
+        fontSize: Theme.fontSize.sm,
+        color: colors.text,
+        fontWeight: Theme.fontWeight.medium,
     },
     speedOptionTextActive: {
-        color: COLORS.surface,
+        color: colors.surface,
     },
     errorContainer: {
         alignItems: 'center',
-        padding: SPACING.xl,
-        gap: SPACING.md,
+        padding: Theme.spacing.xl,
+        gap: Theme.spacing.md,
     },
     errorText: {
-        fontSize: FONT_SIZE.md,
-        color: COLORS.error,
+        fontSize: Theme.fontSize.base,
+        color: colors.error,
         textAlign: 'center',
     },
     retryButton: {
-        backgroundColor: COLORS.primary,
-        paddingVertical: SPACING.sm,
-        paddingHorizontal: SPACING.lg,
-        borderRadius: BORDER_RADIUS.md,
+        backgroundColor: colors.primary,
+        paddingVertical: Theme.spacing.sm,
+        paddingHorizontal: Theme.spacing.lg,
+        borderRadius: Theme.borderRadius.md,
     },
     retryButtonText: {
-        color: COLORS.surface,
-        fontWeight: FONT_WEIGHT.bold,
+        color: colors.surface,
+        fontWeight: Theme.fontWeight.bold,
     },
 });
 

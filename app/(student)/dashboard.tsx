@@ -10,14 +10,13 @@ import {
     Dimensions,
     Image,
     Linking,
-    Modal,
     Platform,
     RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotifications } from '../../src/context/NotificationContext';
@@ -147,12 +146,12 @@ const StatCard: React.FC<StatCardProps> = ({ icon, value, label, color }) => {
     const { colors, isDark } = useTheme();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     return (
-        <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
-            <View style={[styles.statIconContainer, { backgroundColor: color + '20' }]}>
-                <Ionicons name={icon} size={20} color={color} />
+        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: 1 }]}>
+            <View style={[styles.statIconContainer, { backgroundColor: color + '10' }]}>
+                <Ionicons name={icon} size={22} color={color} />
             </View>
             <Text style={[styles.statValue, { color: colors.textPrimary }]}>{value}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]} numberOfLines={1}>{label}</Text>
         </View>
     );
 };
@@ -161,8 +160,7 @@ export default function DashboardScreen() {
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
     const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
     const [allDiplomas, setAllDiplomas] = useState<CatalogDiploma[]>([]);
-    const [selectedDiploma, setSelectedDiploma] = useState<CatalogDiploma | null>(null);
-    const [showDiplomaModal, setShowDiplomaModal] = useState(false);
+
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const { session } = useAuth();
@@ -219,13 +217,7 @@ export default function DashboardScreen() {
     const completedCourses = enrollments.filter(e => e.progress >= 100).length;
     const inProgressCourses = enrollments.filter(e => e.progress > 0 && e.progress < 100).length;
 
-    // Get greeting based on time
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return 'Good morning';
-        if (hour < 17) return 'Good afternoon';
-        return 'Good evening';
-    };
+
 
     const getUserName = () => {
         const email = session?.user.email || '';
@@ -266,7 +258,7 @@ export default function DashboardScreen() {
                     <View style={[styles.header, { backgroundColor: colors.surface }]}>
                         <View style={styles.headerTop}>
                             <View style={styles.headerTextContainer}>
-                                <Text style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()},</Text>
+                                <Text style={[styles.greeting, { color: colors.textSecondary }]}>Welcome back,</Text>
                                 <Text style={[styles.userName, { color: colors.textPrimary }]}>{getUserName()} 👋</Text>
                             </View>
                             <View style={styles.headerActions}>
@@ -292,7 +284,7 @@ export default function DashboardScreen() {
                                 <StatCard
                                     icon="book"
                                     value={totalCourses}
-                                    label="Courses"
+                                    label="Diplomas"
                                     color={Theme.colors.light.primary}
                                 />
                                 <StatCard
@@ -324,7 +316,7 @@ export default function DashboardScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            {liveSessions.slice(0, 2).map((session, index) => {
+                            {liveSessions.slice(0, 1).map((session, index) => {
                                 const isLive = session.status === 'live';
                                 const sessionDate = new Date(session.scheduled_at);
                                 const now = new Date();
@@ -354,7 +346,7 @@ export default function DashboardScreen() {
                                         activeOpacity={0.9}
                                     >
                                         <LinearGradient
-                                            colors={isLive ? ['#EF4444', '#DC2626'] : [colors.primary, colors.primaryLight]}
+                                            colors={isLive ? ['#EF4444', '#DC2626'] : [colors.primary, '#7C3AED']}
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 1 }}
                                             style={styles.liveSessionGradient}
@@ -441,25 +433,7 @@ export default function DashboardScreen() {
                                             styles.enrolledDiplomaCard,
                                             enrollmentIndex > 0 && { marginTop: Theme.spacing.md }
                                         ]}
-                                        onPress={() => {
-                                            // Find this diploma in catalog for richer data
-                                            const catalogDiploma = allDiplomas.find(d => d.id === enrollment.diploma_id);
-                                            if (catalogDiploma) {
-                                                setSelectedDiploma(catalogDiploma);
-                                                setShowDiplomaModal(true);
-                                            } else if (diploma) {
-                                                // Use enrollment diploma data if catalog not available
-                                                setSelectedDiploma({
-                                                    ...diploma,
-                                                    courses: courses.map(c => ({
-                                                        ...c,
-                                                        description: null,
-                                                        chapters: []
-                                                    }))
-                                                } as CatalogDiploma);
-                                                setShowDiplomaModal(true);
-                                            }
-                                        }}
+                                        onPress={() => router.push(`/diploma/${enrollment.diploma_id}`)}
                                         activeOpacity={0.95}
                                     >
                                         {/* Diploma Hero Image */}
@@ -609,10 +583,7 @@ export default function DashboardScreen() {
                                                 styles.diplomaCard,
                                                 !isEnrolled && styles.diplomaCardLocked
                                             ]}
-                                            onPress={() => {
-                                                setSelectedDiploma(diploma);
-                                                setShowDiplomaModal(true);
-                                            }}
+                                            onPress={() => router.push(`/diploma/${diploma.id}`)}
                                             activeOpacity={0.9}
                                         >
                                             {/* Diploma Thumbnail */}
@@ -701,147 +672,7 @@ export default function DashboardScreen() {
                 </Animated.View>
             </ScrollView>
 
-            {/* Diploma Detail Modal */}
-            <Modal
-                visible={showDiplomaModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowDiplomaModal(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        {/* Modal Header */}
-                        <View style={styles.modalHeader}>
-                            <View style={styles.modalDragHandle} />
-                            <TouchableOpacity
-                                style={styles.modalCloseButton}
-                                onPress={() => setShowDiplomaModal(false)}
-                            >
-                                <Ionicons name="close" size={24} color={Theme.colors.light.text} />
-                            </TouchableOpacity>
-                        </View>
 
-                        {selectedDiploma && (
-                            <ScrollView
-                                showsVerticalScrollIndicator={false}
-                                style={styles.modalScroll}
-                                contentContainerStyle={styles.modalScrollContent}
-                            >
-                                {/* Diploma Hero */}
-                                <View style={styles.modalHero}>
-                                    {selectedDiploma.thumbnail_url ? (
-                                        <Image
-                                            source={{ uri: selectedDiploma.thumbnail_url }}
-                                            style={styles.modalHeroImage}
-                                            resizeMode="cover"
-                                        />
-                                    ) : (
-                                        <LinearGradient
-                                            colors={[Theme.colors.light.primary, Theme.colors.light.primaryLight]}
-                                            style={styles.modalHeroImage}
-                                        >
-                                            <Ionicons name="school" size={48} color="#fff" />
-                                        </LinearGradient>
-                                    )}
-                                    <LinearGradient
-                                        colors={['transparent', 'rgba(0,0,0,0.8)']}
-                                        style={styles.modalHeroOverlay}
-                                    >
-                                        <Text style={styles.modalDiplomaTitle}>{selectedDiploma.title}</Text>
-                                        <View style={styles.modalDiplomaMeta}>
-                                            <View style={styles.modalMetaItem}>
-                                                <Ionicons name="book-outline" size={14} color="#fff" />
-                                                <Text style={styles.modalMetaText}>
-                                                    {selectedDiploma.courses?.length || 0} Courses
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    </LinearGradient>
-                                </View>
-
-                                {/* Description */}
-                                {selectedDiploma.description && (
-                                    <View style={styles.modalSection}>
-                                        <Text style={styles.modalSectionTitle}>About This Program</Text>
-                                        <Text style={styles.modalDescription}>
-                                            {selectedDiploma.description}
-                                        </Text>
-                                    </View>
-                                )}
-
-                                {/* Courses List */}
-                                <View style={styles.modalSection}>
-                                    <Text style={styles.modalSectionTitle}>
-                                        Course Curriculum ({selectedDiploma.courses?.length || 0})
-                                    </Text>
-
-                                    {selectedDiploma.courses?.map((course, index) => {
-                                        const isEnrolled = enrollments.some(e => e.diploma_id === selectedDiploma.id);
-
-                                        return (
-                                            <TouchableOpacity
-                                                key={course.id}
-                                                style={[
-                                                    styles.courseListItem,
-                                                    !isEnrolled && styles.courseListItemLocked
-                                                ]}
-                                                onPress={() => {
-                                                    if (isEnrolled) {
-                                                        setShowDiplomaModal(false);
-                                                        router.push(`/course/${course.id}`);
-                                                    } else {
-                                                        Alert.alert(
-                                                            'Enrollment Required',
-                                                            'Please contact your instructor to enroll in this diploma program.',
-                                                            [{ text: 'OK' }]
-                                                        );
-                                                    }
-                                                }}
-                                                activeOpacity={0.8}
-                                            >
-                                                <View style={styles.courseListNumber}>
-                                                    <Text style={styles.courseListNumberText}>{index + 1}</Text>
-                                                </View>
-                                                <View style={styles.courseListContent}>
-                                                    <Text style={[
-                                                        styles.courseListTitle,
-                                                        !isEnrolled && styles.courseListTitleLocked
-                                                    ]} numberOfLines={2}>
-                                                        {course.title}
-                                                    </Text>
-                                                </View>
-                                                {isEnrolled ? (
-                                                    <Ionicons name="chevron-forward" size={20} color={Theme.colors.light.primary} />
-                                                ) : (
-                                                    <Ionicons name="lock-closed" size={18} color={Theme.colors.light.textTertiary} />
-                                                )}
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                                </View>
-
-                                {/* Action Button */}
-                                {!enrollments.some(e => e.diploma_id === selectedDiploma.id) && (
-                                    <View style={styles.modalActionSection}>
-                                        <TouchableOpacity
-                                            style={styles.enrollButton}
-                                            onPress={() => {
-                                                setShowDiplomaModal(false);
-                                                Alert.alert(
-                                                    'Contact Instructor',
-                                                    'Please contact your instructor or administrator to enroll in this diploma program.'
-                                                );
-                                            }}
-                                        >
-                                            <Text style={styles.enrollButtonText}>Request Enrollment</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </ScrollView>
-                        )}
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView>
     );
 }
@@ -886,12 +717,13 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
     },
     greeting: {
         fontSize: Theme.fontSize.base,
-        fontWeight: Theme.fontWeight.medium,
+        fontWeight: '500',
+        marginBottom: 2,
     },
     userName: {
         fontSize: Theme.fontSize['2xl'],
-        fontWeight: Theme.fontWeight.bold,
-        marginTop: 2,
+        fontWeight: '800',
+        letterSpacing: -0.5,
     },
     avatar: {
         width: 48,
@@ -913,26 +745,33 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
     },
     statCard: {
         flex: 1,
-        borderRadius: Theme.borderRadius.lg,
-        padding: Theme.spacing.md,
-        alignItems: 'center',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        padding: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.xl,
+        borderRadius: Theme.borderRadius.xl,
+        gap: Theme.spacing.sm,
+        // Premium shadow
+        ...Theme.shadows[isDark ? 'dark' : 'light'].md,
+        borderWidth: 1,
     },
     statIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 44,
+        height: 44,
+        borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: Theme.spacing.xs,
+        marginBottom: 4,
     },
     statValue: {
-        fontSize: Theme.fontSize.xl,
-        fontWeight: Theme.fontWeight.bold,
-        color: colors.text,
+        fontSize: 22,
+        fontWeight: '800',
+        lineHeight: 26,
+        letterSpacing: -0.5,
     },
     statLabel: {
-        fontSize: Theme.fontSize.xs,
-        marginTop: 2,
+        fontSize: 13,
+        fontWeight: '600',
     },
 
     // Section
@@ -1041,12 +880,16 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
     },
     cardWrapper: {
         width: CARD_WIDTH,
+        marginBottom: Theme.spacing.lg,
     },
     card: {
         backgroundColor: colors.surface,
-        borderRadius: Theme.borderRadius.lg,
+        borderRadius: Theme.borderRadius.xl,
         overflow: 'hidden',
+        // Premium shadow
         ...Theme.shadows[isDark ? 'dark' : 'light'].md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
     },
     thumbnailContainer: {
         position: 'relative',

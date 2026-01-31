@@ -4,22 +4,23 @@
  * A reusable component for uploading images in lessons/blocks.
  */
 
-import React, { useState, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useState } from 'react';
 import {
-  View,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
   ActivityIndicator,
   Alert,
+  Image,
+  StyleSheet,
   Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../lib/constants';
+import Theme from '../../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import {
+  getMediaUrl,
   pickImage,
   uploadFile,
-  getMediaUrl,
 } from '../../services/mediaService';
 
 interface ImageUploadProps {
@@ -41,6 +42,9 @@ export function ImageUpload({
   disabled = false,
   maxSizeMB = 10,
 }: ImageUploadProps) {
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
@@ -110,7 +114,7 @@ export function ImageUpload({
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      
+
       <TouchableOpacity
         style={[
           styles.uploadArea,
@@ -129,7 +133,7 @@ export function ImageUpload({
               style={styles.image}
               resizeMode="cover"
             />
-            
+
             {/* Action buttons */}
             {!uploading && !disabled && (
               <View style={styles.actions}>
@@ -150,7 +154,7 @@ export function ImageUpload({
           </View>
         ) : (
           <View style={styles.placeholder}>
-            <Ionicons name="image-outline" size={40} color={COLORS.textSecondary} />
+            <Ionicons name="image-outline" size={40} color={colors.textSecondary} />
             <Text style={styles.placeholderText}>Tap to select image</Text>
             <Text style={styles.placeholderHint}>Max {maxSizeMB}MB • JPG, PNG, WebP</Text>
           </View>
@@ -171,23 +175,23 @@ export function ImageUpload({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
   container: {
     width: '100%',
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
+    color: colors.text,
+    marginBottom: Theme.spacing.sm,
   },
   uploadArea: {
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.lg,
+    borderColor: colors.border,
+    borderRadius: Theme.borderRadius.lg,
     overflow: 'hidden',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
   hasImage: {
     borderStyle: 'solid',
@@ -200,18 +204,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SPACING.lg,
+    padding: Theme.spacing.lg,
   },
   placeholderText: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.text,
-    marginTop: SPACING.sm,
+    color: colors.text,
+    marginTop: Theme.spacing.sm,
   },
   placeholderHint: {
     fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
+    color: colors.textSecondary,
+    marginTop: Theme.spacing.xs,
   },
   imageContainer: {
     flex: 1,
@@ -223,10 +227,10 @@ const styles = StyleSheet.create({
   },
   actions: {
     position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
+    top: Theme.spacing.sm,
+    right: Theme.spacing.sm,
     flexDirection: 'row',
-    gap: SPACING.xs,
+    gap: Theme.spacing.xs,
   },
   actionButton: {
     width: 36,
@@ -237,30 +241,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   removeButton: {
-    backgroundColor: COLORS.error,
+    backgroundColor: colors.error,
   },
   uploadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SPACING.lg,
+    padding: Theme.spacing.lg,
   },
   uploadingText: {
     color: '#fff',
     fontSize: 14,
-    marginTop: SPACING.sm,
+    marginTop: Theme.spacing.sm,
   },
   progressBar: {
     width: '80%',
     height: 4,
     backgroundColor: 'rgba(255,255,255,0.3)',
     borderRadius: 2,
-    marginTop: SPACING.sm,
+    marginTop: Theme.spacing.sm,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
 });

@@ -1,11 +1,12 @@
 import { Theme } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { isThisWeek, isToday, isYesterday, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
-    FlatList,
     RefreshControl,
+    SectionList,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -15,6 +16,37 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNotifications } from '../../src/context/NotificationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { EmptyNotifications, NotificationItem } from '../../src/features/notifications/NotificationComponents';
+
+// Helper to group notifications
+const groupNotificationsByDate = (notifications: any[]) => {
+    if (!notifications) return [];
+
+    const today: any[] = [];
+    const yesterday: any[] = [];
+    const thisWeek: any[] = [];
+    const older: any[] = [];
+
+    notifications.forEach(notification => {
+        const date = parseISO(notification.created_at);
+        if (isToday(date)) {
+            today.push(notification);
+        } else if (isYesterday(date)) {
+            yesterday.push(notification);
+        } else if (isThisWeek(date)) {
+            thisWeek.push(notification);
+        } else {
+            older.push(notification);
+        }
+    });
+
+    const sections = [];
+    if (today.length > 0) sections.push({ title: 'Today', data: today });
+    if (yesterday.length > 0) sections.push({ title: 'Yesterday', data: yesterday });
+    if (thisWeek.length > 0) sections.push({ title: 'This Week', data: thisWeek });
+    if (older.length > 0) sections.push({ title: 'Older', data: older });
+
+    return sections;
+};
 
 export default function NotificationsScreen() {
     const router = useRouter();
@@ -121,9 +153,16 @@ export default function NotificationsScreen() {
                     </Text>
                 </View>
             ) : (
-                <FlatList
-                    data={notifications}
+                <SectionList
+                    sections={groupNotificationsByDate(notifications)}
                     renderItem={renderNotification}
+                    renderSectionHeader={({ section: { title, data } }) => (
+                        data.length > 0 ? (
+                            <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
+                                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{title}</Text>
+                            </View>
+                        ) : null
+                    )}
                     keyExtractor={keyExtractor}
                     contentContainerStyle={[
                         styles.listContent,
@@ -140,9 +179,7 @@ export default function NotificationsScreen() {
                     }
                     ListEmptyComponent={<EmptyNotifications />}
                     showsVerticalScrollIndicator={false}
-                    ItemSeparatorComponent={() => (
-                        <View style={[styles.separator, { backgroundColor: colors.border }]} />
-                    )}
+                    stickySectionHeadersEnabled={false}
                 />
             )}
         </SafeAreaView>
@@ -220,8 +257,15 @@ const styles = StyleSheet.create({
     emptyListContent: {
         flex: 1,
     },
-    separator: {
-        height: 1,
-        marginLeft: Theme.spacing.md + 48, // Align with content after icon
+    sectionHeader: {
+        paddingHorizontal: Theme.spacing.md,
+        paddingVertical: Theme.spacing.sm,
+        paddingTop: Theme.spacing.lg,
+    },
+    sectionTitle: {
+        fontSize: Theme.fontSize.sm,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
 });
