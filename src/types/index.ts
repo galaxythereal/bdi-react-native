@@ -86,6 +86,8 @@ export interface Enrollment {
     status: 'pending' | 'active' | 'completed' | 'dropped' | 'suspended';
     enrollment_type: 'batch' | 'individual';
     expires_at: string | null;
+    last_accessed_at?: string | null;
+    completed_at?: string | null;
     diploma?: Diploma;
     batch?: Batch;
     courses?: { id: string; title: string; thumbnail_url?: string | null; order_index?: number }[];

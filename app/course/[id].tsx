@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
 import { cacheDirectory, documentDirectory, EncodingType, getInfoAsync, readAsStringAsync } from 'expo-file-system/legacy';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { isAvailableAsync, shareAsync } from 'expo-sharing';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -12,6 +14,7 @@ import {
     Alert,
     Dimensions,
     FlatList,
+    GestureResponderEvent,
     Image,
     Modal,
     Platform,
@@ -31,6 +34,7 @@ import { AudioPlayer } from '../../src/components/AudioPlayer';
 import { QuizComponent, QuizData, QuizResult } from '../../src/components/QuizComponent';
 import { useTheme } from '../../src/context/ThemeContext';
 import { fetchCourseContentWithOfflineSupport, updateEnrollmentProgress } from '../../src/features/courses/courseService';
+import { supabase } from '../../src/lib/supabase';
 import {
     deleteLessonDownload,
     downloadLessonContent,
@@ -45,6 +49,9 @@ import {
     getOfflineCourse,
     syncOfflineData
 } from '../../src/features/offline/offlineManager';
+import {
+    getCourseSettings
+} from '../../src/features/progress/progressService';
 import { CourseDetail, Lesson } from '../../src/types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -61,10 +68,709 @@ interface FlattenedLesson extends Lesson {
 }
 
 // Extract video ID from various YouTube URL formats
+const getYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
 
+    // Try regex patterns first
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /youtube\.com\/shorts\/([^&\n?#]+)/,
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match?.[1]) return match[1];
+    }
+
+    // Try URL parsing for edge cases
+    try {
+        const urlObj = new URL(url);
+        const vParam = urlObj.searchParams.get('v');
+        if (vParam) return vParam;
+    } catch (e) {
+        // Invalid URL
+    }
+
+    return null;
+};
 
 // Generate custom HTML video player for YouTube with full control
+const generateYouTubePlayerHTML = (videoId: string): string => {
+    if (!videoId) return '<html><body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><p>Invalid video</p></body></html>';
 
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            width: 100%; 
+            height: 100%; 
+            background: #000; 
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #player-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        #youtube-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Custom Controls Overlay */
+        #controls-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+        #controls-overlay.hidden { opacity: 0; }
+        #controls-overlay > * { pointer-events: auto; }
+        
+        /* Gradient overlays */
+        .gradient-top {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+            height: 80px;
+            padding: 12px 16px;
+        }
+        .gradient-bottom {
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+            padding: 16px;
+            padding-bottom: 20px;
+        }
+        
+        /* Center play button */
+        #center-controls {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            gap: 48px;
+        }
+        .center-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s, background 0.15s;
+        }
+        .center-btn:active { transform: scale(0.95); background: rgba(0,0,0,0.8); }
+        .center-btn.play-btn { width: 72px; height: 72px; background: rgba(229,9,20,0.9); }
+        .center-btn svg { fill: white; }
+        
+        /* Skip buttons */
+        .skip-btn { width: 48px; height: 48px; }
+        .skip-btn svg { width: 28px; height: 28px; }
+        
+        /* Progress bar */
+        #progress-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        #progress-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+        #progress-bar:hover { height: 6px; }
+        #progress-fill {
+            height: 100%;
+            background: #E50914;
+            border-radius: 2px;
+            width: 0%;
+            position: relative;
+        }
+        #progress-thumb {
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            background: #E50914;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .time-text {
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 45px;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* Bottom controls row */
+        #bottom-controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .control-btn:hover { background: rgba(255,255,255,0.1); }
+        .control-btn:active { background: rgba(255,255,255,0.2); }
+        .control-btn svg { width: 24px; height: 24px; fill: white; }
+        
+        /* Speed button */
+        #speed-btn {
+            background: rgba(255,255,255,0.15);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        
+        /* Controls group */
+        .controls-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Skip indicator */
+        .skip-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.15);
+            padding: 16px 24px;
+            border-radius: 50px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .skip-indicator.left { left: 60px; }
+        .skip-indicator.right { right: 60px; }
+        .skip-indicator.show { display: flex; }
+        .skip-indicator svg { width: 24px; height: 24px; fill: white; }
+        
+        /* Speed indicator */
+        #speed-indicator {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0,0,0,0.8);
+            padding: 6px 12px;
+            border-radius: 4px;
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+        #speed-indicator.show { display: flex; }
+        
+        /* Buffering spinner */
+        #buffering {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+        #buffering.show { display: block; }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Tap zones */
+        #tap-zones {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            z-index: 5;
+        }
+        .tap-zone {
+            flex: 1;
+            height: 100%;
+        }
+        
+        /* Speed menu */
+        #speed-menu {
+            position: absolute;
+            bottom: 80px;
+            right: 16px;
+            background: rgba(28,28,28,0.95);
+            border-radius: 12px;
+            padding: 8px 0;
+            display: none;
+            min-width: 140px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        #speed-menu.show { display: block; }
+        .speed-option {
+            padding: 12px 20px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .speed-option:hover { background: rgba(255,255,255,0.1); }
+        .speed-option.active { color: #E50914; font-weight: 600; }
+        .speed-option .check { display: none; }
+        .speed-option.active .check { display: block; color: #E50914; }
+    </style>
+</head>
+<body>
+    <div id="player-container">
+        <!-- YouTube player will be injected here by the API -->
+        
+        <!-- Tap zones for gestures -->
+        <div id="tap-zones">
+            <div class="tap-zone" id="tap-left"></div>
+            <div class="tap-zone" id="tap-center"></div>
+            <div class="tap-zone" id="tap-right"></div>
+        </div>
+        
+        <!-- Skip indicators -->
+        <div class="skip-indicator left" id="skip-left">
+            <svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+            <span id="skip-left-text">5s</span>
+        </div>
+        <div class="skip-indicator right" id="skip-right">
+            <span id="skip-right-text">5s</span>
+            <svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+        </div>
+        
+        <!-- Speed indicator for hold-to-2x -->
+        <div id="speed-indicator">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+            <span>2×</span>
+        </div>
+        
+        <!-- Buffering -->
+        <div id="buffering"><div class="spinner"></div></div>
+        
+        <!-- Controls overlay -->
+        <div id="controls-overlay">
+            <div class="gradient-top"></div>
+            
+            <div id="center-controls">
+                <button class="center-btn skip-btn" id="skip-back-btn">
+                    <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8zm-1.1 11H10v-3.3L9 13v-.7l1.8-.6h.1V16zm4.3-1.8c0 .3 0 .6-.1.8l-.3.6s-.3.3-.5.3-.4.1-.6.1-.4 0-.6-.1-.3-.2-.5-.3-.2-.3-.3-.6-.1-.5-.1-.8v-.7c0-.3 0-.6.1-.8l.3-.6s.3-.3.5-.3.4-.1.6-.1.4 0 .6.1.3.2.5.3.2.3.3.6.1.5.1.8v.7zm-.9-.8v-.5s-.1-.2-.1-.3-.1-.1-.2-.2-.2-.1-.3-.1-.2 0-.3.1l-.2.2s-.1.2-.1.3v2s.1.2.1.3.1.1.2.2.2.1.3.1.2 0 .3-.1l.2-.2s.1-.2.1-.3v-1.5z"/></svg>
+                </button>
+                <button class="center-btn play-btn" id="play-btn">
+                    <svg id="play-icon" viewBox="0 0 24 24" width="32" height="32"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pause-icon" viewBox="0 0 24 24" width="32" height="32" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <button class="center-btn skip-btn" id="skip-forward-btn">
+                    <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8zm-1.1 11H10v-3.3L9 13v-.7l1.8-.6h.1V16zm4.3-1.8c0 .3 0 .6-.1.8l-.3.6s-.3.3-.5.3-.4.1-.6.1-.4 0-.6-.1-.3-.2-.5-.3-.2-.3-.3-.6-.1-.5-.1-.8v-.7c0-.3 0-.6.1-.8l.3-.6s.3-.3.5-.3.4-.1.6-.1.4 0 .6.1.3.2.5.3.2.3.3.6.1.5.1.8v.7zm-.9-.8v-.5s-.1-.2-.1-.3-.1-.1-.2-.2-.2-.1-.3-.1-.2 0-.3.1l-.2.2s-.1.2-.1.3v2s.1.2.1.3.1.1.2.2.2.1.3.1.2 0 .3-.1l.2-.2s.1-.2.1-.3v-1.5z"/></svg>
+                </button>
+            </div>
+            
+            <div class="gradient-bottom">
+                <div id="progress-container">
+                    <span class="time-text" id="current-time">0:00</span>
+                    <div id="progress-bar">
+                        <div id="progress-fill">
+                            <div id="progress-thumb"></div>
+                        </div>
+                    </div>
+                    <span class="time-text" id="duration">0:00</span>
+                </div>
+                <div id="bottom-controls-row">
+                    <div class="controls-group">
+                        <button class="control-btn" id="play-btn-small">
+                            <svg id="play-icon-small" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <svg id="pause-icon-small" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        </button>
+                    </div>
+                    <div class="controls-group">
+                        <button class="control-btn" id="speed-btn">1×</button>
+                        <button class="control-btn" id="fullscreen-btn">
+                            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Speed menu -->
+        <div id="speed-menu">
+            <div class="speed-option" data-speed="0.5">0.5× <span class="check">✓</span></div>
+            <div class="speed-option" data-speed="0.75">0.75× <span class="check">✓</span></div>
+            <div class="speed-option active" data-speed="1">Normal <span class="check">✓</span></div>
+            <div class="speed-option" data-speed="1.25">1.25× <span class="check">✓</span></div>
+            <div class="speed-option" data-speed="1.5">1.5× <span class="check">✓</span></div>
+            <div class="speed-option" data-speed="1.75">1.75× <span class="check">✓</span></div>
+            <div class="speed-option" data-speed="2">2× <span class="check">✓</span></div>
+        </div>
+    </div>
+
+    <script>
+        var player;
+        var isPlaying = false;
+        var controlsTimeout;
+        var currentSpeed = 1;
+        var normalSpeed = 1;
+        var isHoldingForSpeed = false;
+        var lastTapTime = { left: 0, right: 0 };
+        var skipAmount = 0;
+        var skipTimeout;
+        var playerReady = false;
+        var videoId = '${videoId}';
+
+        // Load YouTube IFrame API
+        function loadYouTubeAPI() {
+            if (window.YT && window.YT.Player) {
+                initPlayer();
+                return;
+            }
+            var tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            tag.onerror = function() {
+                // Fallback: use direct iframe embed
+                useFallbackPlayer();
+            };
+            var firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
+
+        // YouTube API callback
+        window.onYouTubeIframeAPIReady = function() {
+            initPlayer();
+        };
+
+        function initPlayer() {
+            try {
+                player = new YT.Player('player-container', {
+                    width: '100%',
+                    height: '100%',
+                    videoId: videoId,
+                    host: 'https://www.youtube.com',
+                    playerVars: {
+                        'playsinline': 1,
+                        'controls': 0,
+                        'rel': 0,
+                        'showinfo': 0,
+                        'modestbranding': 1,
+                        'fs': 0,
+                        'iv_load_policy': 3,
+                        'disablekb': 1,
+                        'enablejsapi': 1,
+                        'origin': 'https://www.youtube.com'
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange,
+                        'onError': onPlayerError
+                    }
+                });
+            } catch (e) {
+                console.error('YT Player init error:', e);
+                useFallbackPlayer();
+            }
+        }
+
+        function useFallbackPlayer() {
+            // Use simple iframe as fallback
+            var container = document.getElementById('player-container');
+            container.innerHTML = '<iframe id="youtube-iframe" src="https://www.youtube.com/embed/' + videoId + '?playsinline=1&rel=0&modestbranding=1&fs=1&controls=1&enablejsapi=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>';
+            document.getElementById('controls-overlay').style.display = 'none';
+            document.getElementById('buffering').classList.remove('show');
+        }
+
+        function onPlayerReady(event) {
+            playerReady = true;
+            document.getElementById('buffering').classList.remove('show');
+            updateDuration();
+            setInterval(updateProgress, 250);
+            window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'ready' }));
+        }
+
+        function onPlayerError(event) {
+            console.error('YouTube Player Error:', event.data);
+            // Error codes: 2=invalid param, 5=HTML5 error, 100=not found, 101/150=embed restricted
+            if (event.data === 100 || event.data === 101 || event.data === 150) {
+                // Video not available for embedding - show message
+                document.getElementById('buffering').innerHTML = '<p style="color:#fff;text-align:center;padding:20px;">This video cannot be played in the app.<br>Error: ' + event.data + '</p>';
+            } else {
+                useFallbackPlayer();
+            }
+        }
+
+        function onPlayerStateChange(event) {
+            var buffering = document.getElementById('buffering');
+            
+            if (event.data === YT.PlayerState.PLAYING) {
+                isPlaying = true;
+                updatePlayIcons();
+                buffering.classList.remove('show');
+                hideControlsDelayed();
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                isPlaying = false;
+                updatePlayIcons();
+                showControls();
+            } else if (event.data === YT.PlayerState.BUFFERING) {
+                buffering.classList.add('show');
+            } else if (event.data === YT.PlayerState.ENDED) {
+                isPlaying = false;
+                updatePlayIcons();
+                showControls();
+                window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'ended' }));
+            }
+        }
+
+        function updatePlayIcons() {
+            document.getElementById('play-icon').style.display = isPlaying ? 'none' : 'block';
+            document.getElementById('pause-icon').style.display = isPlaying ? 'block' : 'none';
+            document.getElementById('play-icon-small').style.display = isPlaying ? 'none' : 'block';
+            document.getElementById('pause-icon-small').style.display = isPlaying ? 'block' : 'none';
+        }
+
+        function togglePlay() {
+            if (!player || !playerReady) return;
+            try {
+                if (isPlaying) {
+                    player.pauseVideo();
+                } else {
+                    player.playVideo();
+                }
+            } catch (e) {
+                console.error('togglePlay error:', e);
+            }
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            var mins = Math.floor(seconds / 60);
+            var secs = Math.floor(seconds % 60);
+            return mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function updateProgress() {
+            if (!player || !playerReady || !player.getCurrentTime) return;
+            try {
+                var current = player.getCurrentTime();
+                var duration = player.getDuration();
+                var percent = duration > 0 ? (current / duration) * 100 : 0;
+                document.getElementById('progress-fill').style.width = percent + '%';
+                document.getElementById('current-time').textContent = formatTime(current);
+            } catch (e) {}
+        }
+
+        function updateDuration() {
+            if (!player || !playerReady || !player.getDuration) return;
+            try {
+                document.getElementById('duration').textContent = formatTime(player.getDuration());
+            } catch (e) {}
+        }
+
+        function seekTo(percent) {
+            if (!player || !playerReady) return;
+            try {
+                var duration = player.getDuration();
+                player.seekTo(percent * duration, true);
+            } catch (e) {}
+        }
+
+        function skip(seconds) {
+            if (!player || !playerReady) return;
+            try {
+                var current = player.getCurrentTime();
+                var duration = player.getDuration();
+                player.seekTo(Math.max(0, Math.min(duration, current + seconds)), true);
+            } catch (e) {}
+        }
+
+        function setSpeed(speed) {
+            if (!player || !playerReady) return;
+            try {
+                currentSpeed = speed;
+                player.setPlaybackRate(speed);
+                document.getElementById('speed-btn').textContent = speed === 1 ? '1×' : speed + '×';
+                
+                document.querySelectorAll('.speed-option').forEach(function(opt) {
+                    opt.classList.toggle('active', parseFloat(opt.dataset.speed) === speed);
+                });
+            } catch (e) {}
+        }
+
+        function showControls() {
+            document.getElementById('controls-overlay').classList.remove('hidden');
+            clearTimeout(controlsTimeout);
+        }
+
+        function hideControls() {
+            if (isPlaying) {
+                document.getElementById('controls-overlay').classList.add('hidden');
+            }
+        }
+
+        function hideControlsDelayed() {
+            clearTimeout(controlsTimeout);
+            controlsTimeout = setTimeout(hideControls, 3000);
+        }
+
+        function toggleControls() {
+            var overlay = document.getElementById('controls-overlay');
+            if (overlay.classList.contains('hidden')) {
+                showControls();
+                hideControlsDelayed();
+            } else {
+                hideControls();
+            }
+        }
+
+        function handleDoubleTap(side) {
+            var now = Date.now();
+            var lastTap = lastTapTime[side];
+            var skipSecs = 5;
+            
+            if (now - lastTap < 300) {
+                skipAmount += skipSecs;
+                clearTimeout(skipTimeout);
+                
+                var indicator = document.getElementById('skip-' + side);
+                var textEl = document.getElementById('skip-' + side + '-text');
+                
+                skip(side === 'left' ? -skipSecs : skipSecs);
+                textEl.textContent = skipAmount + 's';
+                indicator.classList.add('show');
+                
+                skipTimeout = setTimeout(function() {
+                    indicator.classList.remove('show');
+                    skipAmount = 0;
+                }, 600);
+                
+                lastTapTime[side] = 0;
+            } else {
+                lastTapTime[side] = now;
+                setTimeout(function() {
+                    if (lastTapTime[side] === now) {
+                        toggleControls();
+                    }
+                }, 300);
+            }
+        }
+
+        var longPressTimer;
+        function startLongPress() {
+            longPressTimer = setTimeout(function() {
+                if (isPlaying && !isHoldingForSpeed && player && playerReady) {
+                    isHoldingForSpeed = true;
+                    normalSpeed = currentSpeed;
+                    try { player.setPlaybackRate(2); } catch (e) {}
+                    document.getElementById('speed-indicator').classList.add('show');
+                }
+            }, 300);
+        }
+
+        function endLongPress() {
+            clearTimeout(longPressTimer);
+            if (isHoldingForSpeed) {
+                isHoldingForSpeed = false;
+                try { player.setPlaybackRate(normalSpeed); } catch (e) {}
+                document.getElementById('speed-indicator').classList.remove('show');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('play-btn').addEventListener('click', togglePlay);
+        document.getElementById('play-btn-small').addEventListener('click', togglePlay);
+        document.getElementById('skip-back-btn').addEventListener('click', function() { skip(-10); });
+        document.getElementById('skip-forward-btn').addEventListener('click', function() { skip(10); });
+        
+        document.getElementById('tap-left').addEventListener('click', function() { handleDoubleTap('left'); });
+        document.getElementById('tap-center').addEventListener('click', toggleControls);
+        document.getElementById('tap-right').addEventListener('click', function() { handleDoubleTap('right'); });
+        
+        document.getElementById('tap-right').addEventListener('touchstart', startLongPress);
+        document.getElementById('tap-right').addEventListener('touchend', endLongPress);
+        document.getElementById('tap-right').addEventListener('touchcancel', endLongPress);
+        
+        document.getElementById('progress-bar').addEventListener('click', function(e) {
+            var rect = e.currentTarget.getBoundingClientRect();
+            var percent = (e.clientX - rect.left) / rect.width;
+            seekTo(Math.max(0, Math.min(1, percent)));
+        });
+        
+        document.getElementById('speed-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('speed-menu').classList.toggle('show');
+        });
+        
+        document.querySelectorAll('.speed-option').forEach(function(opt) {
+            opt.addEventListener('click', function() {
+                setSpeed(parseFloat(opt.dataset.speed));
+                document.getElementById('speed-menu').classList.remove('show');
+            });
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#speed-btn') && !e.target.closest('#speed-menu')) {
+                document.getElementById('speed-menu').classList.remove('show');
+            }
+        });
+        
+        document.getElementById('fullscreen-btn').addEventListener('click', function() {
+            window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'fullscreen' }));
+        });
+        
+        // Initialize
+        document.getElementById('buffering').classList.add('show');
+        loadYouTubeAPI();
+    </script>
+</body>
+</html>
+`;
+};
 
 // Helper function to convert video URLs to embeddable format
 const getEmbedUrl = (url: string | null, provider: string = 'direct'): string | null => {
@@ -141,10 +847,15 @@ export default function CoursePlayerScreen() {
     const [isBuffering, setIsBuffering] = useState(false);
     const [videoProgress, setVideoProgress] = useState(0);
     const [videoDuration, setVideoDuration] = useState(0);
-
+    const [showControls, setShowControls] = useState(true);
+    const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+    const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const [videoError, setVideoError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isSpeedBoosted, setIsSpeedBoosted] = useState(false); // For hold-to-2x feature
+    const [normalSpeed, setNormalSpeed] = useState(1.0); // Store normal speed when boosting
 
+    const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
     // Download state
     const [downloadStates, setDownloadStates] = useState<Map<string, {
@@ -175,88 +886,24 @@ export default function CoursePlayerScreen() {
         visible: boolean;
     }>({ filename: '', progress: 0, visible: false });
 
-
+    // Double-tap and long-press state for video
+    const [lastTapTime, setLastTapTime] = useState<{ left: number; right: number }>({ left: 0, right: 0 });
+    const [skipIndicator, setSkipIndicator] = useState<{ visible: boolean; side: 'left' | 'right'; seconds: number }>({
+        visible: false, side: 'left', seconds: 0
+    });
 
     // Refs
-    // videoRef removed
+    const videoRef = useRef<Video>(null);
     const webViewRef = useRef<WebView>(null);
     const audioPlayerRef = useRef<any>(null);
-
+    const controlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const skipIndicatorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isTransitioning = useRef<boolean>(false);
     const lessonChangeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Current lesson
     const currentLesson = allLessons[currentIndex] || null;
-
-    // --- VIDEO PLAYER LOGIC START ---
-
-    // Get embed URL for YouTube/Vimeo/Wistia or direct URL
-    const videoProvider = currentLesson?.video_provider || 'direct';
-    const useEmbeddedPlayer = isEmbeddedVideo(videoProvider);
-
-    // For direct videos, check multiple sources for offline video
-    const getDirectVideoSource = () => {
-        if (!currentLesson?.video_url) return null;
-
-        if (currentLesson.video_url.startsWith('file://')) {
-            console.log('Using local video path from offline course:', currentLesson.video_url);
-            return { uri: currentLesson.video_url };
-        }
-
-        const state = downloadStates.get(currentLesson.id);
-        if (state?.isDownloaded) {
-            const localUri = getLocalLessonUri(currentLesson.id);
-            console.log('Using legacy downloaded video:', localUri);
-            return { uri: localUri };
-        }
-
-        return { uri: currentLesson.video_url };
-    };
-
-    const directVideoSource = !useEmbeddedPlayer ? getDirectVideoSource() : null;
-
-    // Initialize video player
-    const player = useVideoPlayer(directVideoSource?.uri ?? null, player => {
-        player.loop = false;
-    });
-
-    // Handle video events
-    useEffect(() => {
-        if (!player) return;
-
-        const statusSubscription = player.addListener('statusChange', (payload) => {
-            setIsBuffering(payload.status === 'loading');
-            if (payload.status === 'error') {
-                setVideoError(payload.error?.message || 'Playback error');
-            } else if (payload.status === 'readyToPlay') {
-                setVideoError(null);
-            }
-        });
-
-        const playingSubscription = player.addListener('playingChange', (payload) => {
-            setIsPlaying(payload.isPlaying);
-        });
-
-        const timeUpdateSubscription = player.addListener('timeUpdate', (payload) => {
-            setVideoProgress(payload.currentTime * 1000);
-            setVideoDuration(player.duration * 1000);
-        });
-
-        const endSubscription = player.addListener('playToEnd', () => {
-            setIsPlaying(false);
-            if (currentIndex < allLessons.length - 1) {
-                setTimeout(() => navigateLesson('next'), 1500);
-            }
-        });
-
-        return () => {
-            statusSubscription.remove();
-            playingSubscription.remove();
-            timeUpdateSubscription.remove();
-            endSubscription.remove();
-        };
-    }, [player, currentIndex, allLessons.length, id]);
-    // --- VIDEO PLAYER LOGIC END ---
 
     // Save progress and last lesson position when viewing a lesson
     useEffect(() => {
@@ -278,18 +925,33 @@ export default function CoursePlayerScreen() {
             loadCourseContent();
         }
 
+        // Auto-open sidebar on course load for better UX
+        // Open sidebar after a short delay to let the course content load
+        const sidebarTimeout = setTimeout(() => {
+            setShowSidebar(true);
+        }, 600);
+
         // Cleanup function - unload media when leaving the screen
         return () => {
+            clearTimeout(sidebarTimeout);
             // Clear any pending lesson change timeout
             if (lessonChangeTimeout.current) {
                 clearTimeout(lessonChangeTimeout.current);
             }
-            // Pause video player if active
-            if (player) {
-                player.pause();
-            }
+            // Use a separate cleanup function that unloads
+            const cleanup = async () => {
+                if (videoRef.current) {
+                    try {
+                        await videoRef.current.stopAsync();
+                        await videoRef.current.unloadAsync();
+                    } catch (e) {
+                        // Ignore errors during cleanup
+                    }
+                }
+            };
+            cleanup();
         };
-    }, [id, player]);
+    }, [id]);
 
     // Stop all media playback (used when changing lessons)
     const stopAllMedia = async (fullUnload: boolean = false) => {
@@ -298,9 +960,21 @@ export default function CoursePlayerScreen() {
             return;
         }
 
-        // Stop video
-        if (player) {
-            player.pause();
+        // Stop video - just pause, don't unload unless fullUnload is true
+        // (The key prop change on Video will handle destroying the old instance)
+        if (videoRef.current) {
+            try {
+                const status = await videoRef.current.getStatusAsync();
+                if (status.isLoaded) {
+                    await videoRef.current.pauseAsync();
+                    // Only unload when leaving the screen entirely
+                    if (fullUnload) {
+                        await videoRef.current.unloadAsync();
+                    }
+                }
+            } catch (e) {
+                // Ignore errors - video might not be loaded yet or already unloading
+            }
         }
 
         // Stop WebView (YouTube/embedded) by injecting pause script
@@ -367,7 +1041,18 @@ export default function CoursePlayerScreen() {
     // This prevents race conditions when switching lessons rapidly
 
     // Auto-hide controls
-
+    useEffect(() => {
+        if (showControls && isPlaying) {
+            controlsTimeout.current = setTimeout(() => {
+                setShowControls(false);
+            }, 3000);
+        }
+        return () => {
+            if (controlsTimeout.current) {
+                clearTimeout(controlsTimeout.current);
+            }
+        };
+    }, [showControls, isPlaying]);
 
     const loadCourseContent = async () => {
         try {
@@ -554,6 +1239,34 @@ export default function CoursePlayerScreen() {
     };
 
     const navigateLesson = async (direction: 'next' | 'prev') => {
+        // If moving forward from a quiz lesson, check if quiz was passed
+        if (direction === 'next' && currentLesson?.content_type === 'quiz') {
+            try {
+                // Get course settings to check if quiz pass is required
+                const settings = await getCourseSettings(id!);
+                if (settings.require_quiz_pass) {
+                    // Check if user has passed the quiz by checking lesson progress
+                    const { data: lessonProgress, error } = await supabase
+                        .from('lesson_progress')
+                        .select('quiz_passed, quiz_score')
+                        .eq('lesson_id', currentLesson.id)
+                        .eq('enrollment_id', (await supabase.from('diploma_enrollments').select('id').eq('diploma_id', id).single()).data?.id)
+                        .single();
+
+                    if (error || !lessonProgress?.quiz_passed) {
+                        Alert.alert(
+                            'Quiz Not Passed',
+                            `You need to pass this quiz with at least ${settings.min_passing_score}% before moving to the next lesson.`,
+                            [{ text: 'OK' }]
+                        );
+                        return; // Block navigation
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking quiz status:', error);
+            }
+        }
+
         const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
         if (newIndex >= 0 && newIndex < allLessons.length) {
             // Update progress when moving forward (completing a lesson)
@@ -567,9 +1280,46 @@ export default function CoursePlayerScreen() {
         }
     };
 
+    const handleVideoPlaybackStatus = (status: AVPlaybackStatus) => {
+        if (!status.isLoaded) {
+            // Only set buffering if we don't already have video loaded
+            if (videoDuration === 0) {
+                setIsBuffering(true);
+            }
+            return;
+        }
 
+        // Only show buffering when actually buffering AND not playing
+        // This prevents the buffering overlay from showing during normal playback
+        setIsBuffering(status.isBuffering && !status.isPlaying);
+        setIsPlaying(status.isPlaying);
+        setVideoProgress(status.positionMillis || 0);
+        setVideoDuration(status.durationMillis || 0);
 
+        if (status.didJustFinish) {
+            setIsPlaying(false);
+            if (currentIndex < allLessons.length - 1) {
+                setTimeout(() => navigateLesson('next'), 1500);
+            }
+        }
+    };
 
+    const changePlaybackSpeed = async (speed: number) => {
+        if (videoRef.current) {
+            setPlaybackSpeed(speed);
+            await videoRef.current.setRateAsync(speed, true);
+            setShowSpeedMenu(false);
+        }
+    };
+
+    const cyclePlaybackSpeed = async () => {
+        if (!videoRef.current) return;
+        const currentIndex = SPEED_OPTIONS.indexOf(playbackSpeed);
+        const nextIndex = (currentIndex + 1) % SPEED_OPTIONS.length;
+        const newSpeed = SPEED_OPTIONS[nextIndex];
+        setPlaybackSpeed(newSpeed);
+        await videoRef.current.setRateAsync(newSpeed, true);
+    };
 
     const handleDownload = async (lessonId: string, videoUrl: string) => {
         if (!videoUrl) return;
@@ -844,7 +1594,179 @@ export default function CoursePlayerScreen() {
         }
     };
 
+    // Show skip indicator animation
+    const showSkipIndicatorAnimation = (side: 'left' | 'right', seconds: number) => {
+        // Clear any existing timeout
+        if (skipIndicatorTimeout.current) {
+            clearTimeout(skipIndicatorTimeout.current);
+        }
 
+        setSkipIndicator({ visible: true, side, seconds });
+
+        skipIndicatorTimeout.current = setTimeout(() => {
+            setSkipIndicator({ visible: false, side: 'left', seconds: 0 });
+        }, 600);
+    };
+
+    // Handle video area tap - supports double-tap skip and single tap controls
+    const handleVideoAreaTap = async (side: 'left' | 'right' | 'center') => {
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+
+        if (side === 'left') {
+            // Check for double-tap on left
+            if (now - lastTapTime.left < DOUBLE_TAP_DELAY) {
+                // Double tap - skip back 10 seconds
+                const newPosition = Math.max(0, videoProgress - 10000);
+                seekVideo(newPosition);
+                showSkipIndicatorAnimation('left', -10);
+                setLastTapTime({ left: 0, right: lastTapTime.right });
+            } else {
+                // First tap - wait to see if it's a double tap
+                setLastTapTime({ left: now, right: lastTapTime.right });
+                setTimeout(() => {
+                    setLastTapTime(prev => {
+                        if (prev.left === now) {
+                            // Was a single tap - toggle controls
+                            setShowControls(c => !c);
+                        }
+                        return prev;
+                    });
+                }, DOUBLE_TAP_DELAY);
+            }
+        } else if (side === 'right') {
+            // Check for double-tap on right
+            if (now - lastTapTime.right < DOUBLE_TAP_DELAY) {
+                // Double tap - skip forward 10 seconds
+                const newPosition = Math.min(videoDuration, videoProgress + 10000);
+                seekVideo(newPosition);
+                showSkipIndicatorAnimation('right', 10);
+                setLastTapTime({ left: lastTapTime.left, right: 0 });
+            } else {
+                // First tap - wait to see if it's a double tap
+                setLastTapTime({ left: lastTapTime.left, right: now });
+                setTimeout(() => {
+                    setLastTapTime(prev => {
+                        if (prev.right === now) {
+                            // Was a single tap - toggle controls
+                            setShowControls(c => !c);
+                        }
+                        return prev;
+                    });
+                }, DOUBLE_TAP_DELAY);
+            }
+        } else {
+            // Center tap - toggle controls immediately
+            setShowControls(!showControls);
+        }
+    };
+
+    // Speed boost on long press (Instagram/FB style - hold right side for 2x)
+    const handleVideoLongPressStart = async (event: GestureResponderEvent) => {
+        const touchX = event.nativeEvent.locationX;
+        const screenWidth = SCREEN_WIDTH;
+
+        // If touch is on the right 40% of screen, start speed boost
+        if (touchX > screenWidth * 0.01) {
+            longPressTimer.current = setTimeout(async () => {
+                if (videoRef.current && isPlaying) {
+                    setNormalSpeed(playbackSpeed);
+                    setIsSpeedBoosted(true);
+                    try {
+                        await videoRef.current.setRateAsync(2.0, true);
+                    } catch (e) {
+                        console.warn('Could not set playback rate:', e);
+                    }
+                }
+            }, 300); // Start after 300ms hold
+        }
+    };
+
+    const handleVideoLongPressEnd = async () => {
+        // Clear the timer
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+
+        // If speed was boosted, restore normal speed
+        if (isSpeedBoosted && videoRef.current) {
+            setIsSpeedBoosted(false);
+            try {
+                await videoRef.current.setRateAsync(normalSpeed, true);
+            } catch (e) {
+                console.warn('Could not restore playback rate:', e);
+            }
+        }
+    };
+
+    // Toggle play/pause
+    const togglePlayPause = async () => {
+        if (!videoRef.current) return;
+        
+        try {
+            if (isPlaying) {
+                await videoRef.current.pauseAsync();
+                setIsPlaying(false);
+            } else {
+                await videoRef.current.playAsync();
+                setIsPlaying(true);
+            }
+        } catch (e) {
+            console.warn('Could not toggle play/pause:', e);
+        }
+    };
+
+    // Seek to a specific position in milliseconds
+    const seekVideo = async (positionMillis: number) => {
+        if (!videoRef.current) return;
+        
+        try {
+            await videoRef.current.setPositionAsync(positionMillis);
+            setVideoProgress(positionMillis);
+        } catch (e) {
+            console.warn('Could not seek video:', e);
+        }
+    };
+
+    // Toggle fullscreen using native player
+    const toggleFullscreen = async () => {
+        if (videoRef.current) {
+            if (isFullscreen) {
+                await videoRef.current.dismissFullscreenPlayer();
+            } else {
+                await videoRef.current.presentFullscreenPlayer();
+            }
+            setIsFullscreen(!isFullscreen);
+        }
+    };
+
+    // Toggle landscape mode
+    const toggleLandscape = async () => {
+        try {
+            const currentOrientation = await ScreenOrientation.getOrientationAsync();
+            const isCurrentlyLandscape =
+                currentOrientation === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
+                currentOrientation === ScreenOrientation.Orientation.LANDSCAPE_RIGHT;
+
+            if (isCurrentlyLandscape) {
+                // Go back to portrait
+                await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+            } else {
+                // Go to landscape
+                await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT);
+            }
+        } catch (e) {
+            console.warn('Could not change orientation:', e);
+        }
+    };
+
+    // Cleanup orientation lock when leaving screen
+    useEffect(() => {
+        return () => {
+            ScreenOrientation.unlockAsync().catch(() => { });
+        };
+    }, []);
 
     // Handle downloading entire lesson with all blocks
     const handleDownloadLesson = async () => {
@@ -924,7 +1846,14 @@ export default function CoursePlayerScreen() {
         );
     };
 
-
+    const getVideoSource = () => {
+        if (!currentLesson) return null;
+        const state = downloadStates.get(currentLesson.id);
+        if (state?.isDownloaded) {
+            return { uri: getLocalLessonUri(currentLesson.id) };
+        }
+        return currentLesson.video_url ? { uri: currentLesson.video_url } : null;
+    };
 
     const formatTime = (ms: number) => {
         const totalSeconds = Math.floor(ms / 1000);
@@ -946,14 +1875,27 @@ export default function CoursePlayerScreen() {
 
     const handleQuizComplete = async (result: QuizResult) => {
         console.log('Quiz completed:', result);
-        // Update progress when quiz is completed (regardless of pass/fail - user completed the lesson)
-        if (id) {
-            const completedLessons = currentIndex + 1;
-            await updateEnrollmentProgress(id, completedLessons, allLessons.length);
+        
+        if (!id || !currentLesson) return;
+
+        try {
+            // Get course settings to check passing requirements
+            const settings = await getCourseSettings(id);
+            const passed = result.score >= settings.min_passing_score;
+            
+            // Get enrollment ID from current course enrollment
+            // For now, we'll just update progress if passed - the DB will handle lesson completion
+            // The lesson_progress table tracks per-lesson completion and the RPC function unlocks next lessons
+            
+            // Update enrollment progress if passed
+            if (passed) {
+                const completedLessons = currentIndex + 1;
+                await updateEnrollmentProgress(id, completedLessons, allLessons.length);
+            }
 
             // Save quiz attempt for offline sync if offline
             const online = await checkIsOnline();
-            if (!online && currentLesson) {
+            if (!online) {
                 try {
                     const { saveQuizAttemptOffline } = await import('../../src/features/offline/offlineManager');
                     await saveQuizAttemptOffline({
@@ -962,7 +1904,7 @@ export default function CoursePlayerScreen() {
                         quizId: quizData?.id || currentLesson.id,
                         answers: result.answers || {},
                         score: result.score,
-                        passed: result.passed,
+                        passed: passed,
                         completedAt: new Date().toISOString(),
                         synced: false,
                     });
@@ -971,7 +1913,20 @@ export default function CoursePlayerScreen() {
                     console.warn('Failed to save quiz attempt offline:', e);
                 }
             }
+            
+            // Show feedback to user
+            if (!passed) {
+                Alert.alert(
+                    'Quiz Not Passed',
+                    `You scored ${result.score}%. You need ${settings.min_passing_score}% to pass and continue to the next lesson. Please try again!`,
+                    [{ text: 'OK' }]
+                );
+            }
+        } catch (error) {
+            console.error('Error handling quiz completion:', error);
+            Alert.alert('Error', 'Failed to save quiz results. Please try again.');
         }
+        
         // Don't auto-close - let user see results and click Continue
         // The quiz component shows results and has a Continue button that calls onCancel
     };
@@ -1031,7 +1986,61 @@ export default function CoursePlayerScreen() {
         );
     }
 
+    const downloadState = currentLesson ? downloadStates.get(currentLesson.id) : null;
+    const progressPercent = videoDuration > 0 ? (videoProgress / videoDuration) * 100 : 0;
 
+    // Get embed URL for YouTube/Vimeo/Wistia or direct URL
+    const videoProvider = currentLesson?.video_provider || 'direct';
+    const useEmbeddedPlayer = isEmbeddedVideo(videoProvider);
+    const isYouTube = videoProvider === 'youtube';
+
+    // For direct videos, check multiple sources for offline video
+    // 1. Check if video URL is already a local file:// path (from offline course data)
+    // 2. Check downloadStates for legacy downloadManager
+    // 3. Check offline course for video_local path
+    const getDirectVideoSource = () => {
+        if (!currentLesson?.video_url) return null;
+
+        // If video_url already starts with file://, it's already local (from offline course)
+        if (currentLesson.video_url.startsWith('file://')) {
+            console.log('Using local video path from offline course:', currentLesson.video_url);
+            return { uri: currentLesson.video_url };
+        }
+
+        // Check legacy download manager state
+        const state = downloadStates.get(currentLesson.id);
+        if (state?.isDownloaded) {
+            const localUri = getLocalLessonUri(currentLesson.id);
+            console.log('Using legacy downloaded video:', localUri);
+            return { uri: localUri };
+        }
+
+        // Return original URL for online playback
+        return { uri: currentLesson.video_url };
+    };
+
+    // Get the appropriate video URL
+    const embedUrl = useEmbeddedPlayer && currentLesson?.video_url
+        ? getEmbedUrl(currentLesson.video_url, videoProvider)
+        : null;
+    const directVideoSource = !useEmbeddedPlayer ? getDirectVideoSource() : null;
+
+    // For YouTube, generate custom HTML player for proper playback
+    const youtubeVideoId = isYouTube && currentLesson?.video_url
+        ? getYouTubeVideoId(currentLesson.video_url)
+        : null;
+    const youtubePlayerHTML = youtubeVideoId ? generateYouTubePlayerHTML(youtubeVideoId) : null;
+
+    // Debug logging for video issues
+    console.log('Video Debug:', {
+        lessonTitle: currentLesson?.title,
+        contentType: currentLesson?.content_type,
+        videoUrl: currentLesson?.video_url,
+        videoProvider,
+        useEmbeddedPlayer,
+        embedUrl,
+        directVideoSource,
+    });
 
     return (
         <View style={styles.container}>
@@ -1042,9 +2051,118 @@ export default function CoursePlayerScreen() {
                 <View style={[styles.mediaContainer]}>
                     {/* Safe area spacer for video */}
                     <View style={{ height: insets.top, backgroundColor: '#000' }} />
-                    {directVideoSource ? (
-                        <View style={styles.videoWrapper}>
-                            {videoError ? (
+                    {isYouTube && youtubePlayerHTML ? (
+                        /* YouTube player using HTML + baseUrl approach for proper origin */
+                        <View style={styles.embeddedVideoWrapper}>
+                            <WebView
+                                source={{
+                                    html: youtubePlayerHTML,
+                                    baseUrl: 'https://www.youtube.com'
+                                }}
+                                ref={webViewRef}
+                                style={styles.embeddedWebView}
+                                originWhitelist={['*']}
+                                allowsFullscreenVideo={true}
+                                allowsInlineMediaPlayback={true}
+                                mediaPlaybackRequiresUserAction={false}
+                                javaScriptEnabled={true}
+                                domStorageEnabled={true}
+                                startInLoadingState={false}
+                                mixedContentMode="always"
+                                allowsProtectedMedia={true}
+                                sharedCookiesEnabled={true}
+                                thirdPartyCookiesEnabled={true}
+                                cacheEnabled={true}
+                                setSupportMultipleWindows={false}
+                                overScrollMode="never"
+                                bounces={false}
+                                scalesPageToFit={false}
+                                scrollEnabled={false}
+                                onMessage={(event) => {
+                                    try {
+                                        const data = JSON.parse(event.nativeEvent.data);
+                                        if (data.type === 'ended') {
+                                            // Video ended - could auto-advance
+                                            console.log('YouTube video ended');
+                                        } else if (data.type === 'fullscreen') {
+                                            // Handle fullscreen request
+                                            console.log('Fullscreen requested');
+                                        } else if (data.type === 'ready') {
+                                            console.log('YouTube player ready');
+                                        }
+                                    } catch (e) {
+                                        // Not JSON message
+                                    }
+                                }}
+                                onError={(syntheticEvent) => {
+                                    const { nativeEvent } = syntheticEvent;
+                                    console.warn('WebView error:', nativeEvent);
+                                }}
+                            />
+                            {/* Floating back button */}
+                            <TouchableOpacity
+                                style={styles.embeddedBackButton}
+                                onPress={async () => {
+                                    await stopAllMedia(true);
+                                    router.back();
+                                }}
+                            >
+                                <Ionicons name="arrow-back" size={22} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : useEmbeddedPlayer && embedUrl ? (
+                        /* Embedded video player (Vimeo, Wistia) */
+                        <View style={styles.embeddedVideoWrapper}>
+                            <WebView
+                                source={{ uri: embedUrl }}
+                                style={styles.embeddedWebView}
+                                allowsFullscreenVideo={true}
+                                allowsInlineMediaPlayback={true}
+                                mediaPlaybackRequiresUserAction={false}
+                                javaScriptEnabled={true}
+                                domStorageEnabled={true}
+                                startInLoadingState={true}
+                                mixedContentMode="compatibility"
+                                allowsProtectedMedia={true}
+                                sharedCookiesEnabled={true}
+                                thirdPartyCookiesEnabled={true}
+                                cacheEnabled={true}
+                                setSupportMultipleWindows={false}
+                                overScrollMode="never"
+                                bounces={false}
+                                scalesPageToFit={true}
+                                userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                                onError={(syntheticEvent) => {
+                                    const { nativeEvent } = syntheticEvent;
+                                    console.warn('WebView error:', nativeEvent);
+                                }}
+                                onHttpError={(syntheticEvent) => {
+                                    const { nativeEvent } = syntheticEvent;
+                                    console.warn('WebView HTTP error:', nativeEvent.statusCode);
+                                }}
+                                renderLoading={() => (
+                                    <View style={styles.embeddedLoadingOverlay}>
+                                        <ActivityIndicator size="large" color="#fff" />
+                                        <Text style={styles.embeddedLoadingText}>Loading video...</Text>
+                                    </View>
+                                )}
+                            />
+                            {/* Floating back button - doesn't block video controls */}
+                            <TouchableOpacity
+                                style={styles.embeddedBackButton}
+                                onPress={async () => {
+                                    await stopAllMedia(true);
+                                    router.back();
+                                }}
+                            >
+                                <Ionicons name="arrow-back" size={22} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : directVideoSource ? (
+                        /* Native video player (direct URLs) */
+                        videoError ? (
+                            /* Video error state */
+                            <View style={styles.videoWrapper}>
                                 <View style={styles.videoErrorContainer}>
                                     <Ionicons name="alert-circle" size={48} color={colors.error} />
                                     <Text style={styles.videoErrorTitle}>Video Unavailable</Text>
@@ -1060,60 +2178,295 @@ export default function CoursePlayerScreen() {
                                         <Text style={styles.videoRetryText}>Retry</Text>
                                     </TouchableOpacity>
                                 </View>
-                            ) : (
-                                <VideoView
+                                {/* Back button */}
+                                <View style={styles.embeddedTopBar}>
+                                    <TouchableOpacity
+                                        style={styles.topBarButton}
+                                        onPress={async () => {
+                                            await stopAllMedia(true);
+                                            router.back();
+                                        }}
+                                    >
+                                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ) : (
+                            <View style={styles.videoWrapper}>
+                                {/* Video component - key forces re-creation when source changes to avoid decoder conflicts */}
+                                <Video
+                                    key={`video-${currentLesson?.id}-${directVideoSource?.uri}`}
+                                    ref={videoRef}
+                                    source={directVideoSource}
                                     style={styles.video}
-                                    player={player}
-                                    contentFit="contain"
-                                    allowsFullscreen
-                                    allowsPictureInPicture
-                                    nativeControls
+                                    resizeMode={ResizeMode.CONTAIN}
+                                    onPlaybackStatusUpdate={handleVideoPlaybackStatus}
+                                    shouldPlay={false}
+                                    useNativeControls={false}
+                                    progressUpdateIntervalMillis={500}
+                                    onFullscreenUpdate={({ fullscreenUpdate }) => {
+                                        if (fullscreenUpdate === 3) { // PLAYER_DID_DISMISS
+                                            setIsFullscreen(false);
+                                        } else if (fullscreenUpdate === 1) { // PLAYER_WILL_PRESENT
+                                            setIsFullscreen(true);
+                                        }
+                                    }}
+                                    onError={(error) => {
+                                        console.error('Video playback error:', error);
+                                        // Detect various error types
+                                        const errorStr = String(error);
+                                        let errorMsg = 'Unable to play video.';
+                                        if (errorStr.includes('SSL') || errorStr.includes('certificate') || errorStr.includes('SSLPeerUnverifiedException')) {
+                                            errorMsg = 'SSL Certificate Error: The video server has an invalid certificate.';
+                                        } else if (errorStr.includes('404') || errorStr.includes('not found')) {
+                                            errorMsg = 'Video not found. The file may have been moved or deleted.';
+                                        } else if (errorStr.includes('network') || errorStr.includes('connection')) {
+                                            errorMsg = 'Network error. Please check your internet connection.';
+                                        } else if (errorStr.includes('Decoder') || errorStr.includes('codec') || errorStr.includes('c2.qti')) {
+                                            // Hardware decoder error - suggest retry
+                                            errorMsg = 'Video decoder error. The video format may not be supported. Try again or contact support.';
+                                        }
+                                        setVideoError(errorMsg);
+                                        setIsBuffering(false);
+                                    }}
+                                    onLoad={() => {
+                                        setVideoError(null);
+                                        setIsBuffering(false);
+                                    }}
+                                    onReadyForDisplay={() => {
+                                        // Video is ready to display
+                                        setIsBuffering(false);
+                                    }}
                                 />
-                            )}
-                            <TouchableOpacity
-                                style={[styles.embeddedBackButton, { top: 10, left: 10 }]}
-                                onPress={async () => {
-                                    await stopAllMedia(true);
-                                    router.back();
-                                }}
-                            >
-                                <Ionicons name="arrow-back" size={24} color="#fff" />
-                            </TouchableOpacity>
-                        </View>
-                    ) : useEmbeddedPlayer && embedUrl ? (
-                        <View style={styles.embeddedVideoWrapper}>
-                            <WebView
-                                source={{ uri: embedUrl }}
-                                style={styles.embeddedWebView}
-                                allowsFullscreenVideo={true}
-                                javaScriptEnabled={true}
-                                domStorageEnabled={true}
-                            />
-                            <TouchableOpacity
-                                style={styles.embeddedBackButton}
-                                onPress={async () => {
-                                    await stopAllMedia(true);
-                                    router.back();
-                                }}
-                            >
-                                <Ionicons name="arrow-back" size={22} color="#fff" />
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <View style={styles.videoErrorContainer}>
-                            <Text style={{ color: 'white', marginBottom: 20 }}>Video source not supported.</Text>
-                            <TouchableOpacity
-                                style={styles.videoRetryButton}
-                                onPress={async () => {
-                                    await stopAllMedia(true);
-                                    router.back();
-                                }}
-                            >
-                                <Ionicons name="arrow-back" size={18} color="#fff" />
-                                <Text style={styles.videoRetryText}>Go Back</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+
+                                {/* Gesture layer - ALWAYS receives touches for double-tap/long-press */}
+                                <View style={styles.videoGestureContainer}>
+                                    {/* Left tap zone - double tap to rewind, single tap toggle controls */}
+                                    <Pressable
+                                        style={styles.videoTapZoneLeft}
+                                        onPress={() => handleVideoAreaTap('left')}
+                                        android_ripple={{ color: 'rgba(255,255,255,0.1)', borderless: true }}
+                                    />
+
+                                    {/* Center tap zone - toggle controls */}
+                                    <Pressable
+                                        style={styles.videoTapZoneCenter}
+                                        onPress={() => handleVideoAreaTap('center')}
+                                        android_ripple={{ color: 'rgba(255,255,255,0.1)', borderless: true }}
+                                    />
+
+                                    {/* Right tap zone - double tap to forward, long press for 2x */}
+                                    <Pressable
+                                        style={styles.videoTapZoneRight}
+                                        onPress={() => handleVideoAreaTap('right')}
+                                        onLongPress={async () => {
+                                            if (videoRef.current && isPlaying) {
+                                                setNormalSpeed(playbackSpeed);
+                                                setIsSpeedBoosted(true);
+                                                try {
+                                                    await videoRef.current.setRateAsync(2.0, true);
+                                                } catch (e) {
+                                                    console.warn('Could not set playback rate:', e);
+                                                }
+                                            }
+                                        }}
+                                        onPressOut={handleVideoLongPressEnd}
+                                        delayLongPress={300}
+                                        android_ripple={{ color: 'rgba(255,255,255,0.1)', borderless: true }}
+                                    />
+                                </View>
+
+                                {/* Skip indicator (shows -10s or +10s) */}
+                                {skipIndicator.visible && (
+                                    <View
+                                        style={[
+                                            styles.skipIndicator,
+                                            skipIndicator.side === 'left' ? styles.skipIndicatorLeft : styles.skipIndicatorRight
+                                        ]}
+                                        pointerEvents="none"
+                                    >
+                                        <Ionicons
+                                            name={skipIndicator.side === 'left' ? "play-back" : "play-forward"}
+                                            size={22}
+                                            color="#fff"
+                                        />
+                                        <Text style={styles.skipIndicatorText}>
+                                            {Math.abs(skipIndicator.seconds)}s
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {/* Speed boost indicator */}
+                                {isSpeedBoosted && (
+                                    <View style={styles.speedBoostIndicator} pointerEvents="none">
+                                        <Ionicons name="speedometer" size={14} color="#fff" />
+                                        <Text style={styles.speedBoostText}>2×</Text>
+                                    </View>
+                                )}
+
+                                {/* Buffering indicator - pointerEvents none so it doesn't block touches */}
+                                {isBuffering && (
+                                    <View style={styles.bufferingOverlay} pointerEvents="none">
+                                        <ActivityIndicator size="large" color="#fff" />
+                                    </View>
+                                )}
+
+                                {/* Video Controls Overlay - uses box-none to allow gestures through empty space */}
+                                {showControls && (
+                                    <View style={styles.controlsOverlay} pointerEvents="box-none">
+                                        {/* Top gradient for visibility */}
+                                        <LinearGradient
+                                            colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'transparent']}
+                                            style={styles.topGradient}
+                                            pointerEvents="none"
+                                        />
+                                        
+                                        {/* Top bar */}
+                                        <View style={styles.topBar}>
+                                            <TouchableOpacity
+                                                style={styles.topBarButton}
+                                                onPress={async () => {
+                                                    // If in fullscreen, exit fullscreen first
+                                                    if (isFullscreen && videoRef.current) {
+                                                        await videoRef.current.dismissFullscreenPlayer();
+                                                        setIsFullscreen(false);
+                                                    } else {
+                                                        await stopAllMedia(true);
+                                                        router.back();
+                                                    }
+                                                }}
+                                            >
+                                                <Ionicons name="arrow-back" size={24} color="#fff" />
+                                            </TouchableOpacity>
+                                            <View style={styles.topBarRight}>
+                                                {currentLesson.video_url && !useEmbeddedPlayer && (
+                                                    <TouchableOpacity
+                                                        style={styles.topBarButton}
+                                                        onPress={() => {
+                                                            if (downloadState?.isDownloaded) {
+                                                                deleteLessonDownload(currentLesson.id);
+                                                                setDownloadStates(prev => {
+                                                                    const newMap = new Map(prev);
+                                                                    newMap.set(currentLesson.id, { isDownloaded: false, isDownloading: false, progress: 0 });
+                                                                    return newMap;
+                                                                });
+                                                            } else if (!downloadState?.isDownloading) {
+                                                                handleDownload(currentLesson.id, currentLesson.video_url!);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {downloadState?.isDownloading ? (
+                                                            <ActivityIndicator size="small" color="#fff" />
+                                                        ) : (
+                                                            <Ionicons
+                                                                name={downloadState?.isDownloaded ? "checkmark-circle" : "cloud-download-outline"}
+                                                                size={24}
+                                                                color={downloadState?.isDownloaded ? colors.success : "#fff"}
+                                                            />
+                                                        )}
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+
+                                        {/* Center play button */}
+                                        <TouchableOpacity
+                                            style={styles.centerPlayButton}
+                                            onPress={togglePlayPause}
+                                        >
+                                            <View style={styles.playButtonCircle}>
+                                                <Ionicons
+                                                    name={isPlaying ? "pause" : "play"}
+                                                    size={28}
+                                                    color="#fff"
+                                                />
+                                            </View>
+                                        </TouchableOpacity>
+
+                                        {/* Bottom controls - Netflix/YouTube style */}
+                                        <View style={[styles.bottomControlsContainer]}>
+                                            {/* Elegant gradient background for visibility */}
+                                            <LinearGradient
+                                                colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.85)']}
+                                                locations={[0, 0.5, 1]}
+                                                style={styles.bottomGradient}
+                                                pointerEvents="none"
+                                            />
+
+                                            {/* Seekable progress bar */}
+                                            <View style={styles.progressContainer}>
+                                                <View
+                                                    style={styles.progressBar}
+                                                    onStartShouldSetResponder={() => true}
+                                                    onMoveShouldSetResponder={() => true}
+                                                    onResponderGrant={(e) => {
+                                                        const { locationX } = e.nativeEvent;
+                                                        const barWidth = SCREEN_WIDTH - 24; // Adjusted for new padding
+                                                        const percent = Math.max(0, Math.min(1, locationX / barWidth));
+                                                        seekVideo(percent * videoDuration);
+                                                    }}
+                                                    onResponderMove={(e) => {
+                                                        const { locationX } = e.nativeEvent;
+                                                        const barWidth = SCREEN_WIDTH - 24;
+                                                        const percent = Math.max(0, Math.min(1, locationX / barWidth));
+                                                        seekVideo(percent * videoDuration);
+                                                    }}
+                                                >
+                                                    <View style={styles.progressTrack}>
+                                                        <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+                                                        {/* Draggable thumb */}
+                                                        <View style={[styles.progressThumb, { left: `${progressPercent}%` }]} />
+                                                    </View>
+                                                </View>
+                                            </View>
+
+                                            {/* Time and controls row - minimal padding */}
+                                            <View style={[styles.timeRow, { paddingBottom: Math.max(insets.bottom, 6) }]}>
+                                                <Text style={styles.timeText}>
+                                                    {formatTime(videoProgress)} / {formatTime(videoDuration)}
+                                                </Text>
+                                                <View style={styles.bottomRightControls}>
+                                                    <TouchableOpacity
+                                                        style={styles.controlIconButton}
+                                                        onPress={() => seekVideo(Math.max(0, videoProgress - 10000))}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                    >
+                                                        <Ionicons name="play-back" size={18} color="#fff" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        style={styles.controlIconButton}
+                                                        onPress={() => seekVideo(Math.min(videoDuration, videoProgress + 10000))}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                    >
+                                                        <Ionicons name="play-forward" size={18} color="#fff" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        style={styles.speedPill}
+                                                        onPress={() => setShowSpeedMenu(true)}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                                                    >
+                                                        <Text style={styles.speedPillText}>{playbackSpeed}x</Text>
+                                                    </TouchableOpacity>
+                                                    {/* Landscape/Portrait rotation button */}
+                                                    <TouchableOpacity
+                                                        style={styles.controlIconButton}
+                                                        onPress={toggleLandscape}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                    >
+                                                        <Ionicons
+                                                            name="phone-landscape-outline"
+                                                            size={18}
+                                                            color="#fff"
+                                                        />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        )
+                    ) : null}
                 </View>
             ) : (
                 /* Non-video header area (quiz, text, etc.) */
@@ -1417,7 +2770,25 @@ export default function CoursePlayerScreen() {
                                         {block.type === 'video' && block.content?.url && (
                                             <View style={styles.additionalVideoBlock}>
                                                 <Text style={styles.blockTitle}>{block.title || 'Video'}</Text>
-                                                {block.content?.provider === 'youtube' || isEmbeddedVideo(block.content?.provider) ? (
+                                                {block.content?.provider === 'youtube' ? (
+                                                    // YouTube block with HTML + baseUrl approach
+                                                    <View style={styles.embeddedVideoContainer}>
+                                                        <WebView
+                                                            source={{
+                                                                html: generateYouTubePlayerHTML(getYouTubeVideoId(block.content.url) || ''),
+                                                                baseUrl: 'https://www.youtube.com'
+                                                            }}
+                                                            style={styles.embeddedVideo}
+                                                            originWhitelist={['*']}
+                                                            allowsFullscreenVideo={true}
+                                                            allowsInlineMediaPlayback={true}
+                                                            mediaPlaybackRequiresUserAction={false}
+                                                            javaScriptEnabled={true}
+                                                            domStorageEnabled={true}
+                                                            scrollEnabled={false}
+                                                        />
+                                                    </View>
+                                                ) : isEmbeddedVideo(block.content?.provider) ? (
                                                     <View style={styles.embeddedVideoContainer}>
                                                         <WebView
                                                             source={{ uri: getEmbedUrl(block.content.url, block.content.provider || 'direct') || '' }}
@@ -1428,9 +2799,14 @@ export default function CoursePlayerScreen() {
                                                         />
                                                     </View>
                                                 ) : (
-                                                    <VideoBlock
-                                                        url={block.content.url}
+                                                    <Video
+                                                        source={{ uri: block.content.url }}
                                                         style={styles.blockVideo}
+                                                        resizeMode={ResizeMode.CONTAIN}
+                                                        useNativeControls={true}
+                                                        onError={(error) => {
+                                                            console.warn('Block video error:', error);
+                                                        }}
                                                     />
                                                 )}
                                             </View>
@@ -1727,7 +3103,45 @@ export default function CoursePlayerScreen() {
                 </View>
             </Modal>
 
-
+            {/* Playback Speed Selection Modal */}
+            <Modal
+                visible={showSpeedMenu}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowSpeedMenu(false)}
+            >
+                <TouchableOpacity
+                    style={styles.speedMenuOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowSpeedMenu(false)}
+                >
+                    <View style={styles.speedMenuContainer}>
+                        <Text style={styles.speedMenuTitle}>Playback Speed</Text>
+                        {SPEED_OPTIONS.map((speed) => (
+                            <TouchableOpacity
+                                key={speed}
+                                style={[
+                                    styles.speedMenuItem,
+                                    playbackSpeed === speed && styles.speedMenuItemActive,
+                                ]}
+                                onPress={() => changePlaybackSpeed(speed)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.speedMenuItemText,
+                                        playbackSpeed === speed && styles.speedMenuItemTextActive,
+                                    ]}
+                                >
+                                    {speed}x {speed === 1 && '(Normal)'}
+                                </Text>
+                                {playbackSpeed === speed && (
+                                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
 
             {/* PDF Viewer Modal - Native PDF viewer for offline support */}
             <Modal
@@ -2027,23 +3441,6 @@ export default function CoursePlayerScreen() {
     );
 }
 
-function VideoBlock({ url, style }: { url: string; style: any }) {
-    const player = useVideoPlayer(url, player => {
-        player.loop = false;
-    });
-
-    return (
-        <VideoView
-            style={style}
-            player={player}
-            allowsFullscreen
-            allowsPictureInPicture
-            contentFit="contain"
-            nativeControls
-        />
-    );
-}
-
 const createHtmlStyles = (colors: any): any => ({
     body: {
         fontSize: Theme.fontSize.base,
@@ -2246,14 +3643,14 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         mediaContainer: {
             backgroundColor: '#000',
             width: '100%',
-            overflow: 'hidden',
+            overflow: 'hidden', // Contains all video elements within bounds
         },
         videoWrapper: {
             width: '100%',
             aspectRatio: 16 / 9,
             backgroundColor: '#000',
             position: 'relative',
-            overflow: 'hidden',
+            overflow: 'hidden', // CRITICAL: Keep controls inside video area
         },
         video: {
             flex: 1,
@@ -2265,7 +3662,12 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             alignItems: 'center',
             backgroundColor: 'rgba(0,0,0,0.3)',
         },
-
+        controlsOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: 'transparent',
+            zIndex: 100,
+            justifyContent: 'space-between', // Distribute top and bottom controls
+        },
 
         // World-class embedded video player styles (YouTube, Vimeo, etc.)
         embeddedVideoWrapper: {
@@ -2309,10 +3711,244 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             elevation: 5,
         },
 
+        // Top gradient for elegant controls visibility
+        topGradient: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 80,
+            zIndex: 15,
+        },
 
+        topBar: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 8,
+            paddingVertical: 6,
+            zIndex: 110,
+            pointerEvents: 'auto', // Ensure touches are received
+        },
+        topBarButton: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.2,
+            shadowRadius: 2,
+            elevation: 3,
+        },
+        topBarRight: {
+            flexDirection: 'row',
+            gap: Theme.spacing.sm,
+        },
+        embeddedTopBar: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            padding: Theme.spacing.md,
+            flexDirection: 'row',
+            justifyContent: 'flex-start',
+            zIndex: 10,
+        },
+        centerPlayButton: {
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            marginTop: -68, // Center in viewable area: -28 (half button) - 40 (offset for controls) 
+            marginLeft: -28,
+            zIndex: 105,
+            pointerEvents: 'auto', // Ensure touches are received
+        },
+        playButtonCircle: {
+            width: 56, // Larger for easier tapping
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 1.5,
+            borderColor: 'rgba(255,255,255,0.25)',
+        },
 
-        // Netflix/YouTube style bottom controls
-
+        // Netflix/YouTube style bottom controls - SLIM & ELEGANT
+        bottomControlsContainer: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 120,
+            pointerEvents: 'auto', // Ensure touches are received
+            // No solid background - gradient handles visibility
+        },
+        bottomGradient: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 120, // Elegant gradient extends up for readability
+            zIndex: 25,
+        },
+        bottomControls: {
+            paddingHorizontal: 12,
+            paddingTop: 4,
+            paddingBottom: 4,
+            backgroundColor: 'transparent',
+            zIndex: 30,
+        },
+        progressContainer: {
+            paddingHorizontal: 12,
+            paddingTop: 4,
+            paddingBottom: 2,
+            zIndex: 30,
+        },
+        progressBar: {
+            height: 32, // Smaller touch area
+            justifyContent: 'center',
+            paddingVertical: 12,
+        },
+        progressTrack: {
+            height: 3, // Thinner progress bar
+            backgroundColor: 'rgba(255,255,255,0.25)',
+            borderRadius: 1.5,
+            position: 'relative',
+            overflow: 'visible',
+        },
+        progressFill: {
+            height: '100%',
+            backgroundColor: '#E50914', // Netflix red
+            borderRadius: 1.5,
+        },
+        progressThumb: {
+            position: 'absolute',
+            top: -5,
+            width: 12, // Smaller thumb
+            height: 12,
+            borderRadius: 6,
+            backgroundColor: '#E50914',
+            marginLeft: -6,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.3,
+            shadowRadius: 2,
+            elevation: 3,
+            borderWidth: 1.5,
+            borderColor: '#fff',
+        },
+        timeRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingTop: 4,
+            paddingBottom: 4, // Minimal padding
+            zIndex: 30,
+        },
+        timeText: {
+            color: 'rgba(255,255,255,0.9)',
+            fontSize: 11, // Smaller font
+            fontWeight: '600',
+            fontVariant: ['tabular-nums'],
+        },
+        bottomRightControls: {
+            flexDirection: 'row',
+            gap: 12, // Tighter spacing
+            alignItems: 'center',
+        },
+        controlIconButton: {
+            width: 40, // Larger touch target
+            height: 40,
+            borderRadius: 20,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255,255,255,0.2)',
+        },
+        skipButton: {
+            padding: 6,
+        },
+        speedPill: {
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 10,
+            minWidth: 36,
+            alignItems: 'center',
+        },
+        speedPillText: {
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: '700',
+        },
+        speedButton: {
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 4,
+        },
+        speedButtonText: {
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: '600',
+        },
+        rotateButton: {
+            padding: 4,
+        },
+        fullscreenButton: {
+            padding: 4,
+        },
+        speedMenuOverlay: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        speedMenuContainer: {
+            backgroundColor: colors.surface,
+            borderRadius: Theme.borderRadius.lg,
+            padding: Theme.spacing.md,
+            width: 260,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+        },
+        speedMenuTitle: {
+            fontSize: Theme.fontSize.base,
+            fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            textAlign: 'center',
+            marginBottom: Theme.spacing.md,
+        },
+        speedMenuItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingVertical: Theme.spacing.sm,
+            paddingHorizontal: Theme.spacing.md,
+            borderRadius: Theme.borderRadius.md,
+        },
+        speedMenuItemActive: {
+            backgroundColor: `${colors.primary}15`,
+        },
+        speedMenuItemText: {
+            fontSize: Theme.fontSize.base,
+            color: colors.textSecondary,
+        },
+        speedMenuItemTextActive: {
+            color: colors.primary,
+            fontWeight: Theme.fontWeight.semibold,
+        },
 
         // Video Error
         videoErrorContainer: {
@@ -2919,13 +4555,80 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         },
 
         // Video touch area
+        videoTouchArea: {
+            width: '100%',
+            height: '100%',
+        },
 
+        // Video gesture container for tap zones - covers full video for gestures
+        videoGestureContainer: {
+            ...StyleSheet.absoluteFillObject,
+            flexDirection: 'row',
+            zIndex: 50, // Above video, below controls
+        },
+        videoTapZoneLeft: {
+            flex: 0.35,
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        videoTapZoneCenter: {
+            flex: 0.30,
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        videoTapZoneRight: {
+            flex: 0.35,
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
 
         // Skip indicator (shows when double-tapping)
-
+        skipIndicator: {
+            position: 'absolute',
+            top: '50%',
+            transform: [{ translateY: -35 }],
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            paddingHorizontal: 20,
+            paddingVertical: 14,
+            borderRadius: 50,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            gap: 6,
+        },
+        skipIndicatorLeft: {
+            left: 50,
+        },
+        skipIndicatorRight: {
+            right: 50,
+        },
+        skipIndicatorText: {
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: '700',
+        },
 
         // Speed boost indicator (Instagram/FB style 2x)
-
+        speedBoostIndicator: {
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 4,
+            gap: 4,
+        },
+        speedBoostText: {
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: '700',
+        },
 
         // Block image styles
         blockImage: {

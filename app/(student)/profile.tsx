@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -18,7 +19,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Theme from '../../constants/theme';
 import { Card } from '../../src/components/Card';
 import { ComingSoonModal } from '../../src/components/ComingSoonModal';
+import { LanguageSelector } from '../../src/components/LanguageSelector';
 import { ProfilePhotoUpload } from '../../src/components/media/ProfilePhotoUpload';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
@@ -45,14 +48,17 @@ export default function ProfileScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors, isDark, theme, setTheme } = useTheme();
-    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL } = useLocalization();
+    const styles = React.useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState<StatsData>({ courses: 0, progress: 0, certificates: 0 });
 
     // Modal states
     const [editProfileVisible, setEditProfileVisible] = useState(false);
     const [changePasswordVisible, setChangePasswordVisible] = useState(false);
-
+    const [languageModalVisible, setLanguageModalVisible] = useState(false);
+    const [legalModalVisible, setLegalModalVisible] = useState(false);
+    const [legalContent, setLegalContent] = useState<'privacy' | 'terms' | 'data'>('privacy');
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [themeModalVisible, setThemeModalVisible] = useState(false);
     const [comingSoonVisible, setComingSoonVisible] = useState(false);
@@ -149,7 +155,7 @@ export default function ProfileScreen() {
 
     const handleUpdateProfile = async () => {
         if (!fullName.trim()) {
-            Alert.alert('Error', 'Please enter your name');
+            Alert.alert(t.error, t.required);
             return;
         }
         try {
@@ -161,11 +167,11 @@ export default function ProfileScreen() {
                     .eq('id', user.id);
 
                 if (error) throw error;
-                Alert.alert('Success', 'Profile updated successfully');
+                Alert.alert(t.success, t.profileUpdated);
                 setEditProfileVisible(false);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update profile');
+            Alert.alert(t.error, error.message || 'Failed to update profile');
         }
     };
 
@@ -188,29 +194,88 @@ export default function ProfileScreen() {
 
     const handleChangePassword = async () => {
         if (!newPassword || newPassword.length < 6) {
-            Alert.alert('Error', 'Password must be at least 6 characters');
+            Alert.alert(t.error, t.passwordMinLength);
             return;
         }
         if (newPassword !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+            Alert.alert(t.error, t.passwordsNotMatch);
             return;
         }
         try {
             const { error } = await supabase.auth.updateUser({ password: newPassword });
             if (error) throw error;
-            Alert.alert('Success', 'Password updated successfully');
+            Alert.alert(t.success, t.passwordUpdated);
             setChangePasswordVisible(false);
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to update password');
+            Alert.alert(t.error, error.message || 'Failed to update password');
         }
     };
 
+    const handleDeleteAccountRequest = () => {
+        Alert.alert(
+            t.deleteAccountTitle,
+            t.deleteAccountWarning,
+            [
+                { text: t.cancel, style: 'cancel' },
+                {
+                    text: t.requestDeletion,
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (!user) {
+                                Alert.alert(t.error, t.signIn);
+                                return;
+                            }
+                            
+                            // Insert deletion request into database
+                            const { error } = await supabase
+                                .from('account_deletion_requests')
+                                .insert({
+                                    user_id: user.id,
+                                    email: user.email,
+                                    reason: 'User requested via mobile app',
+                                    status: 'pending'
+                                });
+                            
+                            if (error) {
+                                // If table doesn't exist yet, show alternative message
+                                if (error.code === '42P01') {
+                                    Alert.alert(
+                                        t.deletionRequested,
+                                        t.deletionConfirmation,
+                                        [{ text: t.ok }]
+                                    );
+                                } else {
+                                    throw error;
+                                }
+                            } else {
+                                Alert.alert(
+                                    t.deletionRequested,
+                                    t.deletionConfirmation,
+                                    [{ text: t.ok, onPress: signOut }]
+                                );
+                            }
+                        } catch (error: any) {
+                            Alert.alert(t.error, error.message || 'Failed to submit deletion request');
+                        }
+                    }
+                },
+            ]
+        );
+    };
 
-
-
+    const handleOpenLink = async (url: string) => {
+        try {
+            await Linking.openURL(url);
+        } catch (error) {
+            console.error('Error opening link:', error);
+            Alert.alert('Error', 'Could not open link');
+        }
+    };
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -220,112 +285,137 @@ export default function ProfileScreen() {
 
     const handleSignOut = () => {
         Alert.alert(
-            'Sign Out',
-            'Are you sure you want to sign out?',
+            t.signOut,
+            t.signOutConfirm,
             [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Sign Out', style: 'destructive', onPress: signOut },
+                { text: t.cancel, style: 'cancel' },
+                { text: t.signOut, style: 'destructive', onPress: signOut },
             ]
         );
     };
 
     const menuSections: { title: string; items: MenuItem[] }[] = [
         {
-            title: 'Account',
+            title: t.accountSettings,
             items: [
                 {
                     icon: 'person-outline',
-                    label: 'Edit Profile',
-                    subtitle: 'Update your personal information',
+                    label: t.editProfile,
+                    subtitle: t.personalInfo,
                     onPress: () => setEditProfileVisible(true)
                 },
                 {
                     icon: 'lock-closed-outline',
-                    label: 'Change Password',
-                    subtitle: 'Update your security settings',
+                    label: t.changePassword,
+                    subtitle: t.accountSettings,
                     onPress: () => setChangePasswordVisible(true)
                 },
             ],
         },
         {
-            title: 'Learning',
+            title: t.learn,
             items: [
                 {
                     icon: 'cloud-download-outline',
-                    label: 'Downloads',
-                    subtitle: 'Manage offline content',
+                    label: t.downloads,
+                    subtitle: t.offlineAvailable,
                     onPress: () => router.push('/(student)/downloads')
                 },
                 {
                     icon: 'bookmark-outline',
-                    label: 'Bookmarks',
-                    subtitle: 'Saved lessons and resources',
+                    label: t.bookmarks,
+                    subtitle: t.savedLessons,
                     onPress: () => showComingSoon(
-                        'Bookmarks',
-                        'Save your favorite lessons and resources for quick access. This feature is coming in our next update!',
+                        t.bookmarks,
+                        t.featureComingSoon,
                         'bookmark-outline'
                     )
                 },
                 {
                     icon: 'trophy-outline',
-                    label: 'Certificates',
-                    subtitle: 'View your achievements',
+                    label: t.certificates,
+                    subtitle: t.myCertificates,
                     badge: stats.certificates > 0 ? String(stats.certificates) : undefined,
                     onPress: () => router.push('/(student)/certificates')
                 },
             ],
         },
         {
-            title: 'Preferences',
+            title: t.settings,
             items: [
                 {
                     icon: 'notifications-outline',
-                    label: 'Notifications',
-                    subtitle: notificationsEnabled ? 'Enabled' : 'Disabled',
+                    label: t.notifications,
+                    subtitle: notificationsEnabled ? t.active : t.offline,
                     onPress: () => {
                         setNotificationsEnabled(!notificationsEnabled);
                         Alert.alert(
-                            'Notifications',
-                            `Notifications ${!notificationsEnabled ? 'enabled' : 'disabled'}`
+                            t.notifications,
+                            `${t.notifications} ${!notificationsEnabled ? t.active : t.offline}`
                         );
                     }
                 },
                 {
                     icon: isDark ? 'moon' : 'sunny-outline',
-                    label: 'Appearance',
-                    subtitle: theme === 'system' ? 'System' : (isDark ? 'Dark Mode' : 'Light Mode'),
+                    label: t.appearance,
+                    subtitle: theme === 'system' ? t.systemMode : (isDark ? t.darkMode : t.lightMode),
                     onPress: () => setThemeModalVisible(true)
                 },
                 {
                     icon: 'language-outline',
-                    label: 'Language',
-                    subtitle: 'English',
-                    onPress: () => showComingSoon(
-                        'Multiple Languages',
-                        'Support for Arabic, French, and more languages is coming soon. Stay tuned for our internationalization update!',
-                        'language-outline'
-                    )
+                    label: t.language,
+                    subtitle: 'English / العربية',
+                    onPress: () => setLanguageModalVisible(true),
                 },
             ],
         },
         {
-            title: 'Support',
+            title: t.support,
             items: [
                 {
                     icon: 'chatbubble-outline',
-                    label: 'Contact Support',
-                    subtitle: 'Get help from our team',
+                    label: t.contactSupport,
+                    subtitle: t.faq,
                     onPress: () => router.push('/(student)/support')
                 },
                 {
+                    icon: 'shield-checkmark-outline',
+                    label: t.privacyPolicy,
+                    subtitle: t.dataProtection,
+                    onPress: () => {
+                        setLegalContent('privacy');
+                        setLegalModalVisible(true);
+                    }
+                },
+                {
                     icon: 'document-text-outline',
-                    label: 'Terms & Privacy',
-                    subtitle: 'Legal information',
-                    onPress: () => showComingSoon(
-                        'Terms & Privacy',
-                        'Our terms of service and privacy policy documentation is being finalized. These will be available before public launch.',
-                        'document-text-outline'
-                    )
+                    label: t.termsOfService,
+                    subtitle: t.legalInfo,
+                    onPress: () => {
+                        setLegalContent('terms');
+                        setLegalModalVisible(true);
+                    }
+                },
+                {
+                    icon: 'finger-print-outline',
+                    label: t.yourDataRights,
+                    subtitle: t.dataProtection,
+                    onPress: () => {
+                        setLegalContent('data');
+                        setLegalModalVisible(true);
+                    }
+                },
+            ],
+        },
+        {
+            title: t.deleteAccountTitle,
+            items: [
+                {
+                    icon: 'trash-outline',
+                    label: t.deleteAccount,
+                    subtitle: t.deleteAccountWarning,
+                    danger: true,
+                    onPress: handleDeleteAccountRequest,
                 },
             ],
         },
@@ -671,11 +761,147 @@ export default function ProfileScreen() {
                 description={comingSoonConfig.description}
                 icon={comingSoonConfig.icon}
             />
+
+            {/* Language Selector Modal */}
+            <LanguageSelector
+                visible={languageModalVisible}
+                onClose={() => setLanguageModalVisible(false)}
+            />
+
+            {/* Legal Information Modal */}
+            <Modal
+                visible={legalModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setLegalModalVisible(false)}
+            >
+                <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
+                    <View style={[styles.legalModalContent, { backgroundColor: colors.surface }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                                {legalContent === 'privacy' ? t.privacyPolicy : 
+                                 legalContent === 'terms' ? t.termsOfService : t.yourDataRights}
+                            </Text>
+                            <TouchableOpacity onPress={() => setLegalModalVisible(false)}>
+                                <Ionicons name="close" size={24} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.legalScrollContent} showsVerticalScrollIndicator={false}>
+                            {legalContent === 'privacy' && (
+                                <View>
+                                    <View style={[styles.legalInfoCard, { backgroundColor: colors.primary + '10' }]}>
+                                        <Ionicons name="shield-checkmark-outline" size={24} color={colors.primary} />
+                                        <Text style={[styles.legalInfoText, { color: colors.textSecondary }]}>
+                                            {isRTL 
+                                                ? 'نحن ملتزمون بحماية خصوصيتك وبياناتك الشخصية.'
+                                                : 'We are committed to protecting your privacy and personal data.'}
+                                        </Text>
+                                    </View>
+                                    <Text style={[styles.legalText, { color: colors.textSecondary }]}>
+                                        {isRTL ? (
+                                            `سياسة الخصوصية\n\nنحن نجمع فقط المعلومات الضرورية لتقديم خدماتنا التعليمية. يشمل ذلك:\n\n• معلومات الحساب (الاسم، البريد الإلكتروني)\n• بيانات التعلم (التقدم، الدرجات، الشهادات)\n• معلومات الجهاز للدعم الفني\n\nلن نشارك بياناتك مع أطراف ثالثة دون موافقتك الصريحة. يمكنك طلب حذف بياناتك في أي وقت من خلال إعدادات الحساب.`
+                                        ) : (
+                                            `Privacy Policy\n\nWe only collect information necessary to provide our educational services. This includes:\n\n• Account information (name, email)\n• Learning data (progress, grades, certificates)\n• Device information for technical support\n\nWe will not share your data with third parties without your explicit consent. You can request deletion of your data at any time through account settings.`
+                                        )}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {legalContent === 'terms' && (
+                                <View>
+                                    <View style={[styles.legalInfoCard, { backgroundColor: colors.primary + '10' }]}>
+                                        <Ionicons name="document-text-outline" size={24} color={colors.primary} />
+                                        <Text style={[styles.legalInfoText, { color: colors.textSecondary }]}>
+                                            {isRTL 
+                                                ? 'باستخدام خدماتنا، فإنك توافق على هذه الشروط.'
+                                                : 'By using our services, you agree to these terms.'}
+                                        </Text>
+                                    </View>
+                                    <Text style={[styles.legalText, { color: colors.textSecondary }]}>
+                                        {isRTL ? (
+                                            `شروط الخدمة\n\n1. الاستخدام المقبول\nيجب استخدام المنصة للأغراض التعليمية فقط. يُحظر مشاركة بيانات الدخول.\n\n2. المحتوى\nجميع المواد التعليمية محمية بحقوق الطبع والنشر. لا يجوز نسخها أو توزيعها.\n\n3. الحسابات\nأنت مسؤول عن الحفاظ على سرية حسابك وكلمة المرور.\n\n4. الإنهاء\nيحق لنا إنهاء الحسابات التي تنتهك هذه الشروط.`
+                                        ) : (
+                                            `Terms of Service\n\n1. Acceptable Use\nThe platform must be used for educational purposes only. Sharing login credentials is prohibited.\n\n2. Content\nAll educational materials are protected by copyright. They may not be copied or distributed.\n\n3. Accounts\nYou are responsible for maintaining the confidentiality of your account and password.\n\n4. Termination\nWe reserve the right to terminate accounts that violate these terms.`
+                                        )}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {legalContent === 'data' && (
+                                <View>
+                                    <View style={[styles.legalInfoCard, { backgroundColor: colors.primary + '10' }]}>
+                                        <Ionicons name="finger-print-outline" size={24} color={colors.primary} />
+                                        <Text style={[styles.legalInfoText, { color: colors.textSecondary }]}>
+                                            {isRTL 
+                                                ? 'لديك حقوق كاملة في التحكم ببياناتك الشخصية.'
+                                                : 'You have full rights to control your personal data.'}
+                                        </Text>
+                                    </View>
+                                    
+                                    <Text style={[styles.legalSectionTitle, { color: colors.text }]}>
+                                        {t.yourDataRights}
+                                    </Text>
+                                    
+                                    <View style={styles.dataRightsGrid}>
+                                        <View style={[styles.dataRightItem, { backgroundColor: colors.background }]}>
+                                            <Ionicons name="eye-outline" size={24} color={colors.primary} />
+                                            <Text style={[styles.dataRightTitle, { color: colors.text }]}>{t.accessData}</Text>
+                                            <Text style={[styles.dataRightDesc, { color: colors.textSecondary }]}>
+                                                {isRTL ? 'عرض جميع بياناتك' : 'View all your data'}
+                                            </Text>
+                                        </View>
+                                        <View style={[styles.dataRightItem, { backgroundColor: colors.background }]}>
+                                            <Ionicons name="create-outline" size={24} color={colors.primary} />
+                                            <Text style={[styles.dataRightTitle, { color: colors.text }]}>{t.correctData}</Text>
+                                            <Text style={[styles.dataRightDesc, { color: colors.textSecondary }]}>
+                                                {isRTL ? 'تعديل معلوماتك' : 'Update your info'}
+                                            </Text>
+                                        </View>
+                                        <View style={[styles.dataRightItem, { backgroundColor: colors.background }]}>
+                                            <Ionicons name="trash-outline" size={24} color={colors.primary} />
+                                            <Text style={[styles.dataRightTitle, { color: colors.text }]}>{t.deleteData}</Text>
+                                            <Text style={[styles.dataRightDesc, { color: colors.textSecondary }]}>
+                                                {isRTL ? 'حذف حسابك' : 'Delete your account'}
+                                            </Text>
+                                        </View>
+                                        <View style={[styles.dataRightItem, { backgroundColor: colors.background }]}>
+                                            <Ionicons name="download-outline" size={24} color={colors.primary} />
+                                            <Text style={[styles.dataRightTitle, { color: colors.text }]}>{t.exportData}</Text>
+                                            <Text style={[styles.dataRightDesc, { color: colors.textSecondary }]}>
+                                                {isRTL ? 'تصدير بياناتك' : 'Export your data'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+
+                            {/* Contact Info */}
+                            <View style={[styles.legalContactCard, { borderColor: colors.border }]}>
+                                <Text style={[styles.legalContactTitle, { color: colors.text }]}>
+                                    {t.questionsContact}
+                                </Text>
+                                <TouchableOpacity
+                                    style={[styles.legalEmailButton, { backgroundColor: colors.primary }]}
+                                    onPress={() => Linking.openURL('mailto:legal@bdi.com')}
+                                >
+                                    <Ionicons name="mail-outline" size={18} color="#fff" />
+                                    <Text style={styles.legalEmailButtonText}>legal@bdi.com</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={[styles.legalLastUpdated, { color: colors.textTertiary }]}>
+                                {t.lastUpdated}: February 1, 2026
+                            </Text>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
 
-const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean = false) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
@@ -1034,7 +1260,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         gap: Theme.spacing.sm,
     },
     themeOption: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         padding: Theme.spacing.md,
         borderRadius: Theme.borderRadius.md,
@@ -1045,5 +1271,95 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         flex: 1,
         fontSize: Theme.fontSize.base,
         fontFamily: 'Inter-Medium',
+        textAlign: isRTL ? 'right' : 'left',
+    },
+    // Legal Modal styles
+    legalModalContent: {
+        backgroundColor: colors.surface,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: Theme.spacing.lg,
+        paddingBottom: Theme.spacing["3xl"],
+        maxHeight: '85%',
+    },
+    legalScrollContent: {
+        flex: 1,
+    },
+    legalInfoCard: {
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        alignItems: 'center',
+        padding: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.md,
+        marginBottom: Theme.spacing.lg,
+        gap: Theme.spacing.sm,
+    },
+    legalInfoText: {
+        flex: 1,
+        fontSize: Theme.fontSize.sm,
+        lineHeight: 20,
+        textAlign: isRTL ? 'right' : 'left',
+    },
+    legalText: {
+        fontSize: Theme.fontSize.sm,
+        lineHeight: 22,
+        textAlign: isRTL ? 'right' : 'left',
+    },
+    legalSectionTitle: {
+        fontSize: Theme.fontSize.lg,
+        fontWeight: Theme.fontWeight.bold,
+        marginBottom: Theme.spacing.md,
+        textAlign: isRTL ? 'right' : 'left',
+    },
+    dataRightsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Theme.spacing.md,
+        marginTop: Theme.spacing.md,
+    },
+    dataRightItem: {
+        width: '47%',
+        padding: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.md,
+        alignItems: 'center',
+        gap: Theme.spacing.xs,
+    },
+    dataRightTitle: {
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.semibold,
+    },
+    dataRightDesc: {
+        fontSize: Theme.fontSize.xs,
+        textAlign: 'center',
+    },
+    legalContactCard: {
+        padding: Theme.spacing.lg,
+        borderRadius: Theme.borderRadius.lg,
+        borderWidth: 1,
+        alignItems: 'center',
+        marginTop: Theme.spacing.xl,
+    },
+    legalContactTitle: {
+        fontSize: Theme.fontSize.sm,
+        textAlign: 'center',
+        marginBottom: Theme.spacing.md,
+    },
+    legalEmailButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Theme.spacing.xs,
+        paddingHorizontal: Theme.spacing.lg,
+        paddingVertical: Theme.spacing.sm,
+        borderRadius: Theme.borderRadius.full,
+    },
+    legalEmailButtonText: {
+        color: '#fff',
+        fontSize: Theme.fontSize.sm,
+        fontWeight: Theme.fontWeight.semibold,
+    },
+    legalLastUpdated: {
+        fontSize: Theme.fontSize.xs,
+        textAlign: 'center',
+        marginTop: Theme.spacing.lg,
+        marginBottom: Theme.spacing.xl,
     },
 });

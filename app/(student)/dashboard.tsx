@@ -303,6 +303,77 @@ export default function DashboardScreen() {
                         )}
                     </View>
 
+                    {/* Continue Learning Card */}
+                    {inProgressCourses > 0 && enrollments.length > 0 && (() => {
+                        // Find the most recently accessed in-progress course
+                        const recentCourse = enrollments
+                            .filter(e => e.progress > 0 && e.progress < 100)
+                            .sort((a, b) => {
+                                const dateA = a.last_accessed_at ? new Date(a.last_accessed_at).getTime() : 0;
+                                const dateB = b.last_accessed_at ? new Date(b.last_accessed_at).getTime() : 0;
+                                return dateB - dateA;
+                            })[0];
+
+                        if (!recentCourse || !recentCourse.courses || recentCourse.courses.length === 0) return null;
+
+                        // Find first incomplete course
+                        const courseInProgress = recentCourse.courses.find(c => {
+                            // Assuming courses have a progress field or we can calculate it
+                            return true; // We'll navigate to the course and let it figure out where to continue
+                        }) || recentCourse.courses[0];
+
+                        const progress = recentCourse.progress || 0;
+
+                        return (
+                            <View style={styles.section}>
+                                <View style={styles.sectionHeader}>
+                                    <Text style={styles.sectionTitle}>Continue Learning</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.continueCard}
+                                    onPress={() => router.push(`/course/${courseInProgress.id}`)}
+                                    activeOpacity={0.95}
+                                >
+                                    <LinearGradient
+                                        colors={[colors.primary, colors.primaryDark || '#7C3AED']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={styles.continueGradient}
+                                    >
+                                        <View style={styles.continueContent}>
+                                            <View style={styles.continueIconContainer}>
+                                                <Ionicons name="play-circle" size={40} color="#fff" />
+                                            </View>
+                                            <View style={styles.continueInfo}>
+                                                <Text style={styles.continueDiplomaName} numberOfLines={1}>
+                                                    {recentCourse.diploma?.title || 'Your Diploma'}
+                                                </Text>
+                                                <Text style={styles.continueCourseName} numberOfLines={2}>
+                                                    {courseInProgress.title}
+                                                </Text>
+                                                <View style={styles.continueProgressContainer}>
+                                                    <View style={styles.continueProgressBar}>
+                                                        <View 
+                                                            style={[
+                                                                styles.continueProgressFill,
+                                                                { width: `${progress}%` }
+                                                            ]} 
+                                                        />
+                                                    </View>
+                                                    <Text style={styles.continueProgressText}>{progress}%</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <View style={styles.continueButton}>
+                                            <Text style={styles.continueButtonText}>Continue</Text>
+                                            <Ionicons name="arrow-forward" size={20} color="#fff" />
+                                        </View>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </View>
+                        );
+                    })()}
+
                     {/* Featured Live Sessions */}
                     {liveSessions.length > 0 && (
                         <View style={styles.section}>
@@ -1388,6 +1459,86 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
     diplomaPrice: {
         fontSize: Theme.fontSize.sm,
         color: colors.primary,
+        fontWeight: Theme.fontWeight.bold,
+    },
+
+    // Continue Learning Card
+    continueCard: {
+        borderRadius: Theme.borderRadius.xl,
+        overflow: 'hidden',
+        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
+    },
+    continueGradient: {
+        padding: Theme.spacing.lg,
+        gap: Theme.spacing.md,
+    },
+    continueContent: {
+        flexDirection: 'row',
+        gap: Theme.spacing.md,
+        alignItems: 'center',
+    },
+    continueIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    continueInfo: {
+        flex: 1,
+        gap: Theme.spacing.xs,
+    },
+    continueDiplomaName: {
+        fontSize: Theme.fontSize.xs,
+        color: 'rgba(255,255,255,0.8)',
+        fontWeight: Theme.fontWeight.medium,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    continueCourseName: {
+        fontSize: Theme.fontSize.lg,
+        color: '#fff',
+        fontWeight: Theme.fontWeight.bold,
+        lineHeight: 22,
+    },
+    continueProgressContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Theme.spacing.sm,
+        marginTop: Theme.spacing.xs,
+    },
+    continueProgressBar: {
+        flex: 1,
+        height: 6,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    continueProgressFill: {
+        height: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 3,
+    },
+    continueProgressText: {
+        fontSize: Theme.fontSize.sm,
+        color: '#fff',
+        fontWeight: Theme.fontWeight.bold,
+        minWidth: 42,
+        textAlign: 'right',
+    },
+    continueButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: Theme.spacing.sm,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingVertical: Theme.spacing.md,
+        borderRadius: Theme.borderRadius.lg,
+    },
+    continueButtonText: {
+        fontSize: Theme.fontSize.base,
+        color: '#fff',
         fontWeight: Theme.fontWeight.bold,
     },
 

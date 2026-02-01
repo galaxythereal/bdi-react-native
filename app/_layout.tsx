@@ -7,6 +7,7 @@ import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ImpersonationProvider } from '../src/context/ImpersonationContext';
+import { LocalizationProvider } from '../src/context/LocalizationContext';
 import { NotificationProvider } from '../src/context/NotificationContext';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthContext';
@@ -82,13 +83,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AuthProvider>
-            <ImpersonationWrapper>
-              <NotificationProvider>
-                <RootLayoutContent />
-              </NotificationProvider>
-            </ImpersonationWrapper>
-          </AuthProvider>
+          <LocalizationProvider>
+            <AuthProvider>
+              <ImpersonationWrapper>
+                <NotificationProvider>
+                  <RootLayoutContent />
+                </NotificationProvider>
+              </ImpersonationWrapper>
+            </AuthProvider>
+          </LocalizationProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

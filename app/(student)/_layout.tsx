@@ -1,7 +1,7 @@
 import { Theme } from '@/constants/theme';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bell, BookOpen, LayoutDashboard, User } from 'lucide-react-native';
+import { Bell, BookOpen, LayoutDashboard, Trophy, User } from 'lucide-react-native';
 import { Platform, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotifications } from '../../src/context/NotificationContext';
@@ -77,6 +77,21 @@ export default function StudentLayout() {
                         tabBarIcon: ({ color, focused }) => (
                             <View style={{ alignItems: 'center' }}>
                                 <BookOpen
+                                    color={color}
+                                    size={24}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                            </View>
+                        ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="leaderboard"
+                    options={{
+                        title: 'Rankings',
+                        tabBarIcon: ({ color, focused }) => (
+                            <View style={{ alignItems: 'center' }}>
+                                <Trophy
                                     color={color}
                                     size={24}
                                     strokeWidth={focused ? 2.5 : 2}
