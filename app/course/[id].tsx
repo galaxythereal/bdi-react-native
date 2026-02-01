@@ -1894,6 +1894,29 @@ export default function CoursePlayerScreen() {
     }
   };
 
+  const exitFullscreenView = async () => {
+    try {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
+      );
+    } catch (e) {
+      console.warn("Could not exit fullscreen:", e);
+    }
+    setIsFullscreen(false);
+  };
+
+  const isCurrentlyLandscape = async (): Promise<boolean> => {
+    try {
+      const orientation = await ScreenOrientation.getOrientationAsync();
+      return (
+        orientation === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
+        orientation === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
+      );
+    } catch (e) {
+      return false;
+    }
+  };
+
   // Cleanup orientation lock when leaving screen
   useEffect(() => {
     return () => {
@@ -2240,6 +2263,12 @@ export default function CoursePlayerScreen() {
           style={[
             styles.mediaContainer,
             isLandscape && styles.mediaContainerLandscape,
+            isLandscape && {
+              paddingLeft: insets.left,
+              paddingRight: insets.right,
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
           ]}
         >
           {/* Safe area spacer for video - hide in landscape */}
@@ -2252,6 +2281,10 @@ export default function CoursePlayerScreen() {
               style={[
                 styles.embeddedVideoWrapper,
                 isLandscape && styles.embeddedVideoWrapperLandscape,
+                isLandscape && {
+                  width: screenDimensions.width - insets.left - insets.right,
+                  height: screenDimensions.height - insets.top - insets.bottom,
+                },
               ]}
             >
               <WebView
@@ -2303,6 +2336,16 @@ export default function CoursePlayerScreen() {
               <TouchableOpacity
                 style={styles.embeddedBackButton}
                 onPress={async () => {
+                  const landscapeNow = await isCurrentlyLandscape();
+                  if (isFullscreen && videoRef.current) {
+                    await videoRef.current.dismissFullscreenPlayer();
+                    setIsFullscreen(false);
+                    return;
+                  }
+                  if (landscapeNow) {
+                    await exitFullscreenView();
+                    return;
+                  }
                   await stopAllMedia(true);
                   router.back();
                 }}
@@ -2312,7 +2355,12 @@ export default function CoursePlayerScreen() {
             </View>
           ) : useEmbeddedPlayer && embedUrl ? (
             /* Embedded video player (Vimeo, Wistia) */
-            <View style={styles.embeddedVideoWrapper}>
+            <View
+              style={[
+                styles.embeddedVideoWrapper,
+                isLandscape && styles.embeddedVideoWrapperLandscape,
+              ]}
+            >
               <WebView
                 source={{ uri: embedUrl }}
                 style={styles.embeddedWebView}
@@ -2353,6 +2401,16 @@ export default function CoursePlayerScreen() {
               <TouchableOpacity
                 style={styles.embeddedBackButton}
                 onPress={async () => {
+                  const landscapeNow = await isCurrentlyLandscape();
+                  if (isFullscreen && videoRef.current) {
+                    await videoRef.current.dismissFullscreenPlayer();
+                    setIsFullscreen(false);
+                    return;
+                  }
+                  if (landscapeNow) {
+                    await exitFullscreenView();
+                    return;
+                  }
                   await stopAllMedia(true);
                   router.back();
                 }}
@@ -2389,6 +2447,16 @@ export default function CoursePlayerScreen() {
                   <TouchableOpacity
                     style={styles.topBarButton}
                     onPress={async () => {
+                      const landscapeNow = await isCurrentlyLandscape();
+                      if (isFullscreen && videoRef.current) {
+                        await videoRef.current.dismissFullscreenPlayer();
+                        setIsFullscreen(false);
+                        return;
+                      }
+                      if (landscapeNow) {
+                        await exitFullscreenView();
+                        return;
+                      }
                       await stopAllMedia(true);
                       router.back();
                     }}
@@ -2402,6 +2470,11 @@ export default function CoursePlayerScreen() {
                 style={[
                   styles.videoWrapper,
                   isLandscape && styles.videoWrapperLandscape,
+                  isLandscape && {
+                    width: screenDimensions.width - insets.left - insets.right,
+                    height:
+                      screenDimensions.height - insets.top - insets.bottom,
+                  },
                 ]}
               >
                 {/* Video component - key forces re-creation when source changes to avoid decoder conflicts */}
@@ -2576,14 +2649,18 @@ export default function CoursePlayerScreen() {
                       <TouchableOpacity
                         style={styles.topBarButton}
                         onPress={async () => {
-                          // If in fullscreen, exit fullscreen first
+                          const landscapeNow = await isCurrentlyLandscape();
                           if (isFullscreen && videoRef.current) {
                             await videoRef.current.dismissFullscreenPlayer();
                             setIsFullscreen(false);
-                          } else {
-                            await stopAllMedia(true);
-                            router.back();
+                            return;
                           }
+                          if (landscapeNow) {
+                            await exitFullscreenView();
+                            return;
+                          }
+                          await stopAllMedia(true);
+                          router.back();
                         }}
                       >
                         <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -4231,6 +4308,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
       right: 0,
       bottom: 0,
       zIndex: 1000,
+      justifyContent: "center",
+      alignItems: "center",
     },
     // Container landscape mode
     containerLandscape: {

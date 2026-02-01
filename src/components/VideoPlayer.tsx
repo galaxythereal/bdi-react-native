@@ -411,13 +411,28 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     // ========================================================================
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    // Get the correct dimensions for fullscreen (always use the larger dimension for width in landscape)
+    // Get the correct dimensions for fullscreen
+    // Use window dimensions which update correctly on rotation
     const fullscreenDimensions = useMemo(() => {
-      const { width, height } = Dimensions.get("screen");
-      // In landscape, width should be the larger value
-      const landscapeWidth = Math.max(width, height);
-      const landscapeHeight = Math.min(width, height);
-      return { width: landscapeWidth, height: landscapeHeight };
+      // Get both window and screen dimensions
+      const windowDims = Dimensions.get("window");
+      const screenDims = Dimensions.get("screen");
+
+      // Use the larger values to ensure we cover the full screen in landscape
+      const width = Math.max(
+        windowDims.width,
+        windowDims.height,
+        screenDims.width,
+        screenDims.height,
+      );
+      const height = Math.min(
+        windowDims.width,
+        windowDims.height,
+        screenDims.width,
+        screenDims.height,
+      );
+
+      return { width, height };
     }, [dimensions]);
 
     const containerStyle = useMemo<ViewStyle>(() => {
@@ -425,14 +440,15 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         return styles.container;
       }
 
+      // In fullscreen, use flex to fill the entire screen
+      // This avoids issues with explicit dimensions not matching the actual screen
       return {
         position: "absolute",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        width: fullscreenDimensions.width,
-        height: fullscreenDimensions.height,
+        flex: 1,
         zIndex: 9999,
         elevation: 9999,
         backgroundColor: "#000000",
@@ -627,17 +643,21 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     const handleVideoPress = useCallback(
       (event: GestureResponderEvent) => {
         const now = Date.now();
-        const { locationX } = event.nativeEvent;
+        const { locationX, pageX } = event.nativeEvent;
+        // Get the actual layout width of the pressable area
+        const { width: layoutWidth } = event.nativeEvent.target
+          ? Dimensions.get("window")
+          : { width: dimensions.width };
+        const actualWidth = isFullscreen
+          ? Dimensions.get("window").width
+          : layoutWidth;
 
         if (
           now - lastTapTime.current < DOUBLE_TAP_THRESHOLD &&
           Math.abs(locationX - lastTapX.current) < 50
         ) {
-          // Double tap - determine side based on tap location relative to current container
-          const containerWidth = isFullscreen
-            ? fullscreenDimensions.width
-            : dimensions.width;
-          const side = locationX < containerWidth / 2 ? "left" : "right";
+          // Double tap - determine side based on tap location
+          const side = locationX < actualWidth / 2 ? "left" : "right";
           handleDoubleTap(side);
           lastTapTime.current = 0;
         } else {
@@ -665,7 +685,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         showControls,
         isFullscreen,
         dimensions,
-        fullscreenDimensions,
         controlsOpacity,
         showControlsWithAnimation,
         handleDoubleTap,
@@ -941,11 +960,31 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     // ========================================================================
     return (
       <View style={containerStyle}>
-        <Pressable style={styles.videoWrapper} onPress={handleVideoPress}>
+        <Pressable
+          style={[
+            styles.videoWrapper,
+            isFullscreen && {
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              // Add safe area padding in landscape for notch/cutout
+              paddingLeft: isFullscreen ? insets.left : 0,
+              paddingRight: isFullscreen ? insets.right : 0,
+            },
+          ]}
+          onPress={handleVideoPress}
+        >
           <Video
             ref={videoRef}
             source={source}
-            style={StyleSheet.absoluteFill}
+            style={
+              isFullscreen
+                ? {
+                    width: "100%",
+                    height: "100%",
+                  }
+                : StyleSheet.absoluteFill
+            }
             resizeMode={ResizeMode.CONTAIN}
             shouldPlay={autoPlay}
             isLooping={false}
@@ -955,6 +994,9 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             posterSource={poster ? { uri: poster } : undefined}
             usePoster={!!poster}
             posterStyle={styles.poster}
+            videoStyle={
+              isFullscreen ? { width: "100%", height: "100%" } : undefined
+            }
           />
 
           {/* Loading Overlay */}
@@ -982,7 +1024,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
               <SafeAreaView
                 style={styles.controlsContent}
-                edges={isFullscreen ? ["left", "right"] : []}
+                edges={isFullscreen ? ["left", "right", "top", "bottom"] : []}
               >
                 {/* Top Controls */}
                 <View
