@@ -1,6 +1,6 @@
 /**
  * Leaderboard Screen
- * Shows course/diploma rankings with user's position
+ * Shows batch rankings with user's position
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import {
-    getCourseLeaderboard,
+    getBatchLeaderboard,
     getUserLeaderboardPosition,
     LeaderboardEntry,
 } from '../../src/features/leaderboard/leaderboardService';
@@ -35,9 +35,9 @@ import { Theme } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface CourseLeaderboard {
-    courseId: string;
-    courseName: string;
+interface BatchLeaderboard {
+    batchId: string;
+    batchName: string;
     diplomaName: string;
     entries: LeaderboardEntry[];
     userPosition: LeaderboardEntry | null;
@@ -46,8 +46,8 @@ interface CourseLeaderboard {
 export default function LeaderboardScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [leaderboards, setLeaderboards] = useState<CourseLeaderboard[]>([]);
-    const [selectedCourseIndex, setSelectedCourseIndex] = useState(0);
+    const [leaderboards, setLeaderboards] = useState<BatchLeaderboard[]>([]);
+    const [selectedBatchIndex, setSelectedBatchIndex] = useState(0);
     const [error, setError] = useState<string | null>(null);
     
     const { colors, isDark } = useTheme();
@@ -61,7 +61,7 @@ export default function LeaderboardScreen() {
         try {
             setError(null);
             
-            // Get user's enrolled courses
+            // Get user's enrollments (which include batch info)
             const enrollments = await fetchMyEnrollments();
             
             if (!enrollments || enrollments.length === 0) {
@@ -71,36 +71,36 @@ export default function LeaderboardScreen() {
                 return;
             }
 
-            // Collect all courses from all diplomas
-            const allCourses: { id: string; title: string; diplomaTitle: string }[] = [];
+            // Collect unique batches from enrollments
+            const batchesMap = new Map<string, { id: string; name: string; diplomaTitle: string }>();
             
             for (const enrollment of enrollments) {
-                if (enrollment.courses && enrollment.courses.length > 0) {
-                    for (const course of enrollment.courses) {
-                        allCourses.push({
-                            id: course.id,
-                            title: course.title,
-                            diplomaTitle: enrollment.diploma?.title || 'Diploma',
-                        });
-                    }
+                if (enrollment.batch_id && enrollment.batch) {
+                    batchesMap.set(enrollment.batch_id, {
+                        id: enrollment.batch_id,
+                        name: enrollment.batch.name || 'Batch',
+                        diplomaTitle: enrollment.diploma?.title || 'Diploma',
+                    });
                 }
             }
 
-            // Load leaderboard for each course
-            const leaderboardData: CourseLeaderboard[] = [];
+            const allBatches = Array.from(batchesMap.values());
+
+            // Load leaderboard for each batch
+            const leaderboardData: BatchLeaderboard[] = [];
             
-            for (const course of allCourses) {
+            for (const batch of allBatches) {
                 const [entries, userPosition] = await Promise.all([
-                    getCourseLeaderboard(course.id, 50),
-                    getUserLeaderboardPosition(course.id),
+                    getBatchLeaderboard(batch.id, 50),
+                    getUserLeaderboardPosition(batch.id),
                 ]);
 
                 // Only include if there's any leaderboard data
                 if (entries.length > 0 || userPosition) {
                     leaderboardData.push({
-                        courseId: course.id,
-                        courseName: course.title,
-                        diplomaName: course.diplomaTitle,
+                        batchId: batch.id,
+                        batchName: batch.name,
+                        diplomaName: batch.diplomaTitle,
                         entries,
                         userPosition,
                     });
@@ -240,7 +240,7 @@ export default function LeaderboardScreen() {
                     </Text>
                     <View style={styles.statsRow}>
                         <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                            {item.total_quizzes_completed} quizzes
+                            {item.quizzes_completed} quizzes
                         </Text>
                         {item.total_perfect_scores > 0 && (
                             <View style={styles.perfectBadge}>
@@ -264,7 +264,7 @@ export default function LeaderboardScreen() {
         );
     };
 
-    const currentLeaderboard = leaderboards[selectedCourseIndex];
+    const currentLeaderboard = leaderboards[selectedBatchIndex];
 
     if (loading) {
         return (
@@ -312,7 +312,7 @@ export default function LeaderboardScreen() {
                         No Rankings Yet
                     </Text>
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                        Complete quizzes in your courses to appear on the leaderboard!
+                        Complete quizzes in your batches to appear on the leaderboard!
                     </Text>
                     <TouchableOpacity
                         style={[styles.startButton, { backgroundColor: colors.primary }]}
@@ -324,7 +324,7 @@ export default function LeaderboardScreen() {
                 </View>
             ) : (
                 <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-                    {/* Course Selector */}
+                    {/* Batch Selector */}
                     {leaderboards.length > 1 && (
                         <ScrollView
                             horizontal
@@ -334,30 +334,30 @@ export default function LeaderboardScreen() {
                         >
                             {leaderboards.map((lb, index) => (
                                 <TouchableOpacity
-                                    key={lb.courseId}
+                                    key={lb.batchId}
                                     style={[
                                         styles.courseTab,
                                         {
-                                            backgroundColor: selectedCourseIndex === index
+                                            backgroundColor: selectedBatchIndex === index
                                                 ? colors.primary
                                                 : colors.surface,
                                             borderColor: colors.border,
                                         },
                                     ]}
-                                    onPress={() => setSelectedCourseIndex(index)}
+                                    onPress={() => setSelectedBatchIndex(index)}
                                 >
                                     <Text
                                         style={[
                                             styles.courseTabText,
                                             {
-                                                color: selectedCourseIndex === index
+                                                color: selectedBatchIndex === index
                                                     ? '#FFF'
                                                     : colors.text,
                                             },
                                         ]}
                                         numberOfLines={1}
                                     >
-                                        {lb.courseName}
+                                        {lb.batchName}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -390,7 +390,7 @@ export default function LeaderboardScreen() {
                                         <View style={styles.userStatDivider} />
                                         <View style={styles.userStat}>
                                             <Text style={styles.userStatValue}>
-                                                {currentLeaderboard.userPosition.total_quizzes_completed}
+                                                {currentLeaderboard.userPosition.quizzes_completed}
                                             </Text>
                                             <Text style={styles.userStatLabel}>Quizzes</Text>
                                         </View>

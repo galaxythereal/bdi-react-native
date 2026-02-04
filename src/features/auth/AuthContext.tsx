@@ -115,9 +115,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, [router]);
 
     useEffect(() => {
+        let isMounted = true;
+        
         const initAuth = async () => {
+            console.log('Starting auth initialization...');
+            
+            // Set a timeout to prevent hanging forever
+            const timeoutId = setTimeout(() => {
+                if (isMounted && isLoading) {
+                    console.warn('Auth initialization timed out, proceeding as signed out');
+                    setSession(null);
+                    setIsLoading(false);
+                }
+            }, 10000); // 10 second timeout
+            
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
+                
+                clearTimeout(timeoutId);
 
                 if (error) {
                     console.error('Error getting session:', error);
@@ -131,18 +146,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                             // Ignore signout errors
                         }
                     }
-                    setSession(null);
+                    if (isMounted) setSession(null);
                 } else {
-                    setSession(session);
+                    console.log('Session retrieved:', session ? 'exists' : 'null');
+                    if (isMounted) {
+                        setSession(session);
+                        // Fetch user profile if session exists
+                        if (session?.user?.id) {
+                            const profile = await fetchUserProfile(session.user.id);
+                            if (isMounted) setUserProfile(profile);
+                        }
+                    }
                 }
             } catch (error: any) {
+                clearTimeout(timeoutId);
                 console.error('Auth init error:', error);
                 if (isRefreshTokenError(error)) {
                     await clearAuthStorage();
                 }
-                setSession(null);
+                if (isMounted) setSession(null);
             } finally {
-                setIsLoading(false);
+                console.log('Auth initialization complete');
+                if (isMounted) setIsLoading(false);
             }
         };
 
@@ -157,7 +182,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (event === 'TOKEN_REFRESHED' && !session) {
                 console.log('Token refresh failed, forcing sign out');
                 await clearAuthStorage();
-                setSession(null);
+                if (isMounted) setSession(null);
                 setUserProfile(null);
                 setIsLoading(false);
                 router.replace('/(auth)/login');
@@ -203,6 +228,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         return () => {
+            isMounted = false;
             subscription.unsubscribe();
             appStateSubscription.remove();
         };

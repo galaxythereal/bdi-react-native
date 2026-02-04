@@ -51,13 +51,7 @@ export const fetchCourseContent = async (courseId: string): Promise<CourseDetail
           *,
           lessons (
             *,
-            lesson_blocks (
-              id,
-              block_type,
-              title,
-              content,
-              order_index
-            )
+            lesson_blocks (*)
           )
         )
       `)
@@ -120,8 +114,21 @@ export const fetchCourseContent = async (courseId: string): Promise<CourseDetail
 function transformLesson(lesson: any): Lesson {
   const blocks = lesson.lesson_blocks || [];
 
-  // Determine primary content type from first block or lesson_type
+  // Sort blocks by order_index
+  const sortedBlocks = blocks.sort((a: any, b: any) =>
+    (a.order_index || 0) - (b.order_index || 0)
+  );
+
+  // Determine primary content type from FIRST block (by order) or lesson_type
   let content_type = lesson.lesson_type || 'text';
+  if (sortedBlocks.length > 0) {
+    const firstBlock = sortedBlocks[0];
+    // Only set content_type to first block's type if it's a primary content type
+    if (['video', 'text', 'quiz', 'audio', 'pdf'].includes(firstBlock.block_type)) {
+      content_type = firstBlock.block_type;
+    }
+  }
+
   let video_url: string | null = null;
   let video_provider: 'youtube' | 'vimeo' | 'wistia' | 'direct' = 'direct';
   let content_html: string | null = null;
@@ -129,40 +136,30 @@ function transformLesson(lesson: any): Lesson {
   let audio_url: string | null = null;
   let pdf_url: string | null = null;
 
-  // Sort blocks by order_index
-  const sortedBlocks = blocks.sort((a: any, b: any) =>
-    (a.order_index || 0) - (b.order_index || 0)
-  );
+  // Extract primary content ONLY from the first block
+  if (sortedBlocks.length > 0) {
+    const firstBlock = sortedBlocks[0];
+    const content = firstBlock.content || {};
 
-  // Extract primary content from blocks
-  for (const block of sortedBlocks) {
-    const content = block.content || {};
-
-    switch (block.block_type) {
+    switch (firstBlock.block_type) {
       case 'video':
-        if (!video_url) {
-          video_url = content.url || content.video_url || null;
-          video_provider = (content.provider || 'direct') as typeof video_provider;
-          content_type = 'video';
-        }
+        video_url = content.url || content.video_url || null;
+        video_provider = (content.provider || 'direct') as typeof video_provider;
         break;
       case 'text':
-        if (!content_html) {
-          content_html = content.html || null;
-          if (content_type === 'text') content_type = 'text';
-        }
+        content_html = content.html || null;
         break;
       case 'quiz':
-        if (!quiz_data && content.questions) {
+        if (content.questions) {
           quiz_data = {
-            id: block.id,
-            title: content.title || block.title || lesson.title,
+            id: firstBlock.id,
+            title: content.title || firstBlock.title || lesson.title,
             description: 'Test your knowledge',
             time_limit: content.time_limit || 15,
             passing_score: content.passing_score || 70,
             allow_retry: true,
             questions: (content.questions || []).map((q: any, idx: number) => ({
-              id: q.id || `${block.id}_q${idx + 1}`,
+              id: q.id || `${firstBlock.id}_q${idx + 1}`,
               question: q.question || 'Question',
               type: q.question_type || 'multiple_choice',
               options: (q.options || []).map((opt: any) => opt.text || opt),
@@ -171,20 +168,13 @@ function transformLesson(lesson: any): Lesson {
               points: q.points || 1,
             })),
           };
-          content_type = 'quiz';
         }
         break;
       case 'audio':
-        if (!audio_url) {
-          audio_url = content.url || content.audio_url || null;
-          content_type = 'audio';
-        }
+        audio_url = content.url || content.audio_url || null;
         break;
       case 'pdf':
-        if (!pdf_url) {
-          pdf_url = content.url || null;
-          content_type = 'pdf';
-        }
+        pdf_url = content.url || null;
         break;
     }
   }
@@ -258,9 +248,12 @@ function transformOfflineCourse(offlineCourse: any): CourseDetail {
 
 /**
  * Update enrollment progress when lessons are completed
+ * @param courseId - The course ID (used to look up enrollment)
+ * @param completedLessons - Number of completed lessons
+ * @param totalLessons - Total number of lessons in the course
  */
 export const updateEnrollmentProgress = async (
-  enrollmentId: string,
+  courseId: string,
   completedLessons: number,
   totalLessons: number
 ): Promise<void> => {
@@ -271,9 +264,41 @@ export const updateEnrollmentProgress = async (
       return;
     }
 
+    // First, get the course to find its diploma_id
+    const { data: course, error: courseError } = await supabase
+      .from('courses')
+      .select('diploma_id')
+      .eq('id', courseId)
+      .single();
+
+    if (courseError || !course?.diploma_id) {
+      console.warn('Could not find course or diploma:', courseError);
+      return;
+    }
+
+    // Find the user's enrollment for this diploma
+    const { data: enrollment, error: enrollmentError } = await supabase
+      .from('diploma_enrollments')
+      .select('id, progress')
+      .eq('user_id', user.id)
+      .eq('diploma_id', course.diploma_id)
+      .eq('status', 'active')
+      .single();
+
+    if (enrollmentError || !enrollment) {
+      console.warn('No active enrollment found:', enrollmentError);
+      return;
+    }
+
     const progress = totalLessons > 0
       ? Math.round((completedLessons / totalLessons) * 100)
       : 0;
+
+    // Only update if new progress is higher (don't go backwards)
+    if (progress <= (enrollment.progress || 0)) {
+      console.log('Progress not updated - current progress is higher or equal');
+      return;
+    }
 
     const { error } = await supabase
       .from('diploma_enrollments')
@@ -283,7 +308,7 @@ export const updateEnrollmentProgress = async (
         completed_at: progress >= 100 ? new Date().toISOString() : null,
         last_accessed_at: new Date().toISOString(),
       })
-      .eq('id', enrollmentId);
+      .eq('id', enrollment.id);
 
     if (error) {
       console.error('Error updating enrollment progress:', error);
@@ -335,13 +360,7 @@ export const fetchMyEnrollments = async (): Promise<any[]> => {
           title,
           title_ar,
           description,
-          thumbnail_url,
-          courses (
-            id,
-            title,
-            thumbnail_url,
-            order_index
-          )
+          thumbnail_url
         )
       `)
       .eq('user_id', user.id)
@@ -353,8 +372,45 @@ export const fetchMyEnrollments = async (): Promise<any[]> => {
       throw error;
     }
 
+    // Fetch courses for each diploma
+    const enrollmentsWithCourses = await Promise.all(
+      (enrollments || []).map(async (enrollment: any) => {
+        // Try junction table first
+        const { data: junctionData } = await supabase
+          .from('diploma_courses')
+          .select(`
+            course:courses(
+              id,
+              title,
+              thumbnail_url,
+              order_index
+            )
+          `)
+          .eq('diploma_id', enrollment.diploma_id)
+          .order('order_index');
+
+        let courses = junctionData?.map((dc: any) => dc.course).filter(Boolean) || [];
+
+        // Fallback: query courses directly by diploma_id
+        if (courses.length === 0) {
+          const { data: directCourses } = await supabase
+            .from('courses')
+            .select('id, title, thumbnail_url, order_index')
+            .eq('diploma_id', enrollment.diploma_id)
+            .order('order_index');
+          
+          courses = directCourses || [];
+        }
+
+        return {
+          ...enrollment,
+          courses,
+        };
+      })
+    );
+
     // Transform enrollments to diploma-centric format
-    return (enrollments || []).map((enrollment: any) => ({
+    return enrollmentsWithCourses.map((enrollment: any) => ({
       id: enrollment.id,
       diploma_id: enrollment.diploma_id,
       user_id: enrollment.user_id,
@@ -369,7 +425,7 @@ export const fetchMyEnrollments = async (): Promise<any[]> => {
       // Include diploma info
       diploma: enrollment.diploma,
       // Include courses within the diploma for navigation
-      courses: enrollment.diploma?.courses || [],
+      courses: enrollment.courses || [],
     }));
   } catch (error) {
     console.error('fetchMyEnrollments error:', error);
@@ -384,15 +440,7 @@ export const fetchAvailableDiplomas = async (): Promise<any[]> => {
   try {
     const { data: diplomas, error } = await supabase
       .from('diplomas')
-      .select(`
-        *,
-        courses (
-          id,
-          title,
-          thumbnail_url,
-          order_index
-        )
-      `)
+      .select('*')
       .eq('status', 'published')
       .order('created_at', { ascending: false });
 
@@ -401,7 +449,44 @@ export const fetchAvailableDiplomas = async (): Promise<any[]> => {
       throw error;
     }
 
-    return diplomas || [];
+    // Fetch courses for each diploma
+    const diplomasWithCourses = await Promise.all(
+      (diplomas || []).map(async (diploma: any) => {
+        // Try junction table first
+        const { data: junctionData } = await supabase
+          .from('diploma_courses')
+          .select(`
+            course:courses(
+              id,
+              title,
+              thumbnail_url,
+              order_index
+            )
+          `)
+          .eq('diploma_id', diploma.id)
+          .order('order_index');
+
+        let courses = junctionData?.map((dc: any) => dc.course).filter(Boolean) || [];
+
+        // Fallback: query courses directly by diploma_id
+        if (courses.length === 0) {
+          const { data: directCourses } = await supabase
+            .from('courses')
+            .select('id, title, thumbnail_url, order_index')
+            .eq('diploma_id', diploma.id)
+            .order('order_index');
+          
+          courses = directCourses || [];
+        }
+
+        return {
+          ...diploma,
+          courses,
+        };
+      })
+    );
+
+    return diplomasWithCourses;
   } catch (error) {
     console.error('fetchAvailableDiplomas error:', error);
     return [];

@@ -3213,7 +3213,7 @@ export default function CoursePlayerScreen() {
               {currentLesson.blocks.map((block: any, index: number) => {
                 // Skip the primary video block (already displayed in video area)
                 if (
-                  block.type === "video" &&
+                  block.block_type === "video" &&
                   index === 0 &&
                   currentLesson.content_type === "video"
                 ) {
@@ -3222,7 +3222,7 @@ export default function CoursePlayerScreen() {
 
                 // Skip the primary quiz block ONLY if quiz is the first block (shown in main quiz prompt)
                 if (
-                  block.type === "quiz" &&
+                  block.block_type === "quiz" &&
                   index === 0 &&
                   currentLesson.content_type === "quiz"
                 ) {
@@ -3231,7 +3231,7 @@ export default function CoursePlayerScreen() {
 
                 return (
                   <View key={block.id || index} style={styles.blockItem}>
-                    {block.type === "text" &&
+                    {block.block_type === "text" &&
                       (block.content?.html ||
                         block.content?.text ||
                         block.content) && (
@@ -3263,7 +3263,7 @@ export default function CoursePlayerScreen() {
                         </View>
                       )}
 
-                    {block.type === "video" && block.content?.url && (
+                    {block.block_type === "video" && block.content?.url && (
                       <View style={styles.additionalVideoBlock}>
                         <Text style={styles.blockTitle}>
                           {block.title || "Video"}
@@ -3318,7 +3318,7 @@ export default function CoursePlayerScreen() {
                       </View>
                     )}
 
-                    {block.type === "image" && block.content?.url && (
+                    {block.block_type === "image" && block.content?.url && (
                       <View style={styles.imageBlock}>
                         {block.title && (
                           <Text style={styles.blockTitle}>{block.title}</Text>
@@ -3336,7 +3336,7 @@ export default function CoursePlayerScreen() {
                       </View>
                     )}
 
-                    {block.type === "file" && block.content?.url && (
+                    {block.block_type === "file" && block.content?.url && (
                       <TouchableOpacity
                         style={styles.fileBlock}
                         onPress={() =>
@@ -3368,7 +3368,7 @@ export default function CoursePlayerScreen() {
                     )}
 
                     {/* Audio block with custom player */}
-                    {block.type === "audio" && block.content?.url && (
+                    {block.block_type === "audio" && block.content?.url && (
                       <View style={styles.audioBlock}>
                         <Text style={styles.blockTitle}>
                           {block.title || "Audio"}
@@ -3381,7 +3381,7 @@ export default function CoursePlayerScreen() {
                     )}
 
                     {/* Quiz block - show inline quiz card when NOT the primary quiz prompt */}
-                    {block.type === "quiz" &&
+                    {block.block_type === "quiz" &&
                       !(
                         index === 0 && currentLesson.content_type === "quiz"
                       ) && (

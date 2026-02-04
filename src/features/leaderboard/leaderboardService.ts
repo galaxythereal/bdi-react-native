@@ -1,6 +1,7 @@
 /**
  * Leaderboard Service
  * Handles quiz scoring, leaderboard rankings, and lesson progression with locking
+ * Note: Leaderboard is now batch-based (not course-based)
  */
 
 import { supabase } from '../../lib/supabase';
@@ -53,15 +54,15 @@ export interface QuizAttempt extends QuizAttemptData {
 
 export interface LeaderboardEntry {
     id: string;
-    course_id: string;
+    batch_id: string;
     user_id: string;
     total_score: number;
-    total_quizzes_completed: number;
+    quizzes_completed: number;
     total_perfect_scores: number;
     average_score: number;
     rank: number;
     previous_rank: number | null;
-    last_quiz_at: string;
+    last_activity_at: string;
     // Joined user data
     full_name?: string;
     avatar_url?: string;
@@ -355,29 +356,29 @@ export const getRemainingAttempts = async (
 };
 
 // ============================================================================
-// LEADERBOARD
+// LEADERBOARD (Batch-based)
 // ============================================================================
 
 /**
- * Get course leaderboard
+ * Get batch leaderboard
  */
-export const getCourseLeaderboard = async (
-    courseId: string,
+export const getBatchLeaderboard = async (
+    batchId: string,
     limit: number = 100
 ): Promise<LeaderboardEntry[]> => {
     try {
-        // First, get leaderboard entries
+        // Get leaderboard entries for this batch
         const { data: leaderboardData, error: lbError } = await supabase
             .from('leaderboard')
             .select('*')
-            .eq('course_id', courseId)
+            .eq('batch_id', batchId)
             .order('rank', { ascending: true })
             .limit(limit);
 
         if (lbError) {
-            // Table might not exist - try to get from quiz_attempts instead
+            // Table might not exist - try to calculate from quiz_attempts
             if (lbError.code === '42P01') {
-                return await calculateLeaderboardFromAttempts(courseId, limit);
+                return await calculateLeaderboardFromAttempts(batchId, limit);
             }
             throw lbError;
         }
@@ -404,24 +405,47 @@ export const getCourseLeaderboard = async (
             avatar_url: profileMap.get(entry.user_id)?.avatar_url,
         }));
     } catch (error) {
-        console.error('Error fetching leaderboard:', error);
+        console.error('Error fetching batch leaderboard:', error);
         // Fallback to calculating from quiz_attempts
-        return await calculateLeaderboardFromAttempts(courseId, limit);
+        return await calculateLeaderboardFromAttempts(batchId, limit);
     }
+};
+
+/**
+ * Legacy function - redirects to batch leaderboard
+ * @deprecated Use getBatchLeaderboard instead
+ */
+export const getCourseLeaderboard = async (
+    batchId: string,
+    limit: number = 100
+): Promise<LeaderboardEntry[]> => {
+    return getBatchLeaderboard(batchId, limit);
 };
 
 /**
  * Calculate leaderboard from quiz_attempts when leaderboard table is unavailable
  */
 const calculateLeaderboardFromAttempts = async (
-    courseId: string,
+    batchId: string,
     limit: number = 100
 ): Promise<LeaderboardEntry[]> => {
     try {
+        // Get all enrollments for this batch
+        const { data: enrollments, error: enrollError } = await supabase
+            .from('diploma_enrollments')
+            .select('id, user_id')
+            .eq('batch_id', batchId);
+
+        if (enrollError || !enrollments || enrollments.length === 0) {
+            return [];
+        }
+
+        const enrollmentIds = enrollments.map(e => e.id);
+
         const { data: attempts, error } = await supabase
             .from('quiz_attempts')
             .select('user_id, score, percentage')
-            .eq('course_id', courseId)
+            .in('enrollment_id', enrollmentIds)
             .eq('is_first_attempt', true);
 
         if (error || !attempts || attempts.length === 0) {
@@ -465,16 +489,16 @@ const calculateLeaderboardFromAttempts = async (
         // Convert to entries and rank
         const entries = Object.entries(userScores)
             .map(([userId, data]) => ({
-                id: `${courseId}-${userId}`,
-                course_id: courseId,
+                id: `${batchId}-${userId}`,
+                batch_id: batchId,
                 user_id: userId,
                 total_score: data.total_score,
-                total_quizzes_completed: data.quizzes,
+                quizzes_completed: data.quizzes,
                 total_perfect_scores: data.perfect,
                 average_score: data.quizzes > 0 ? data.total_percentage / data.quizzes : 0,
                 rank: 0,
                 previous_rank: null,
-                last_quiz_at: new Date().toISOString(),
+                last_activity_at: new Date().toISOString(),
                 full_name: profileMap.get(userId)?.full_name,
                 avatar_url: profileMap.get(userId)?.avatar_url,
             }))
@@ -490,10 +514,10 @@ const calculateLeaderboardFromAttempts = async (
 };
 
 /**
- * Get user's leaderboard position
+ * Get user's leaderboard position in a batch
  */
 export const getUserLeaderboardPosition = async (
-    courseId: string
+    batchId: string
 ): Promise<LeaderboardEntry | null> => {
     try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -503,14 +527,14 @@ export const getUserLeaderboardPosition = async (
         const { data, error } = await supabase
             .from('leaderboard')
             .select('*')
-            .eq('course_id', courseId)
+            .eq('batch_id', batchId)
             .eq('user_id', user.id)
             .single();
 
         if (error) {
             // If table doesn't exist or no entry, calculate from quiz_attempts
             if (error.code === 'PGRST116' || error.code === '42P01') {
-                const leaderboard = await calculateLeaderboardFromAttempts(courseId, 1000);
+                const leaderboard = await calculateLeaderboardFromAttempts(batchId, 1000);
                 return leaderboard.find(e => e.user_id === user.id) || null;
             }
             throw error;
@@ -536,7 +560,7 @@ export const getUserLeaderboardPosition = async (
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return null;
-            const leaderboard = await calculateLeaderboardFromAttempts(courseId, 1000);
+            const leaderboard = await calculateLeaderboardFromAttempts(batchId, 1000);
             return leaderboard.find(e => e.user_id === user.id) || null;
         } catch {
             return null;
@@ -545,12 +569,12 @@ export const getUserLeaderboardPosition = async (
 };
 
 /**
- * Recalculate leaderboard for a course (admin function)
+ * Recalculate leaderboard for a batch (admin function)
  */
-export const recalculateLeaderboard = async (courseId: string): Promise<void> => {
+export const recalculateLeaderboard = async (batchId: string): Promise<void> => {
     try {
         const { error } = await supabase.rpc('calculate_leaderboard_scores', {
-            p_course_id: courseId,
+            p_batch_id: batchId,
         });
 
         if (error) throw error;

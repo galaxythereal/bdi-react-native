@@ -764,6 +764,12 @@ export function LocalizationProvider({ children }: LocalizationProviderProps) {
             const savedLang = await AsyncStorage.getItem(LANGUAGE_KEY);
             if (savedLang === 'ar' || savedLang === 'en') {
                 setLanguageState(savedLang);
+                // Set RTL on app load based on saved language
+                const isRTL = savedLang === 'ar';
+                if (I18nManager.isRTL !== isRTL) {
+                    I18nManager.allowRTL(isRTL);
+                    I18nManager.forceRTL(isRTL);
+                }
             }
         } catch (error) {
             console.error('Error loading saved language:', error);
@@ -779,16 +785,21 @@ export function LocalizationProvider({ children }: LocalizationProviderProps) {
             
             const isRTL = lang === 'ar';
             
-            // Only force RTL if needed
+            // Apply RTL settings without requiring restart using react-native-reanimated
+            // The layout direction change will be handled by React context re-render
             if (I18nManager.isRTL !== isRTL) {
                 I18nManager.allowRTL(isRTL);
                 I18nManager.forceRTL(isRTL);
                 
-                // Alert user that app needs to restart for RTL changes
+                // For full RTL change on Android, a restart is needed
+                // But we can minimize the impact by updating context-aware styles
+                // Alert only if the system RTL doesn't match
                 Alert.alert(
-                    'Restart Required',
-                    'Please restart the app to apply the language change.',
-                    [{ text: 'OK' }]
+                    lang === 'ar' ? 'إعادة التشغيل مطلوبة' : 'Restart Required',
+                    lang === 'ar' 
+                        ? 'يرجى إعادة تشغيل التطبيق لتطبيق تغيير اللغة بالكامل.'
+                        : 'Please restart the app to fully apply the language change.',
+                    [{ text: lang === 'ar' ? 'حسناً' : 'OK' }]
                 );
             }
         } catch (error) {
@@ -855,4 +866,25 @@ export function transformRTL(isRTL: boolean, style: any) {
     }
     
     return transformed;
+}
+
+// Dynamic style helpers for RTL-aware components
+export function useRTLStyles() {
+    const { isRTL } = useLocalization();
+    
+    return {
+        textAlign: getTextAlign(isRTL),
+        flexDirection: getFlexDirection(isRTL),
+        isRTL,
+        // Common RTL-aware style shortcuts
+        row: { flexDirection: isRTL ? 'row-reverse' : 'row' } as const,
+        marginStart: (value: number) => isRTL ? { marginRight: value } : { marginLeft: value },
+        marginEnd: (value: number) => isRTL ? { marginLeft: value } : { marginRight: value },
+        paddingStart: (value: number) => isRTL ? { paddingRight: value } : { paddingLeft: value },
+        paddingEnd: (value: number) => isRTL ? { paddingLeft: value } : { paddingRight: value },
+        start: (value: number) => isRTL ? { right: value } : { left: value },
+        end: (value: number) => isRTL ? { left: value } : { right: value },
+        // Icon transform for RTL
+        iconTransform: isRTL ? [{ scaleX: -1 }] : [],
+    };
 }

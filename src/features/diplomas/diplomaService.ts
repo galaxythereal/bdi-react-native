@@ -49,12 +49,33 @@ export const fetchDiplomaCatalog = async (): Promise<CatalogDiploma[]> => {
         // Fetch courses for each diploma
         const catalogWithCourses: CatalogDiploma[] = await Promise.all(
             (diplomas || []).map(async (diploma) => {
-                const { data: courses } = await supabase
-                    .from('courses')
-                    .select('id, title, title_ar, description, thumbnail_url, order_index, status')
+                // Try junction table first (many-to-many)
+                const { data: junctionData } = await supabase
+                    .from('diploma_courses')
+                    .select(`
+                        course:courses(
+                            id, title, title_ar, description, thumbnail_url, order_index, status
+                        )
+                    `)
                     .eq('diploma_id', diploma.id)
-                    .eq('status', 'published')
                     .order('order_index');
+
+                let courses = junctionData?.map((dc: any) => dc.course).filter(Boolean) || [];
+
+                // Fallback: query courses directly by diploma_id (legacy)
+                if (courses.length === 0) {
+                    const { data: directCourses } = await supabase
+                        .from('courses')
+                        .select('id, title, title_ar, description, thumbnail_url, order_index, status')
+                        .eq('diploma_id', diploma.id)
+                        .eq('status', 'published')
+                        .order('order_index');
+                    
+                    courses = directCourses || [];
+                }
+
+                // Filter published courses
+                courses = courses.filter((c: any) => c.status === 'published');
 
                 // Fetch chapters for each course
                 const coursesWithChapters = await Promise.all(
@@ -160,12 +181,33 @@ export const fetchDiplomaById = async (diplomaId: string): Promise<CatalogDiplom
         if (!diploma) return null;
 
         // Fetch courses for the diploma
-        const { data: courses } = await supabase
-            .from('courses')
-            .select('id, title, title_ar, description, thumbnail_url, order_index, status')
+        // Try junction table first (many-to-many)
+        const { data: junctionData } = await supabase
+            .from('diploma_courses')
+            .select(`
+                course:courses(
+                    id, title, title_ar, description, thumbnail_url, order_index, status
+                )
+            `)
             .eq('diploma_id', diploma.id)
-            .eq('status', 'published')
             .order('order_index');
+
+        let courses = junctionData?.map((dc: any) => dc.course).filter(Boolean) || [];
+
+        // Fallback: query courses directly by diploma_id (legacy)
+        if (courses.length === 0) {
+            const { data: directCourses } = await supabase
+                .from('courses')
+                .select('id, title, title_ar, description, thumbnail_url, order_index, status')
+                .eq('diploma_id', diploma.id)
+                .eq('status', 'published')
+                .order('order_index');
+            
+            courses = directCourses || [];
+        }
+
+        // Filter published courses
+        courses = courses.filter((c: any) => c.status === 'published');
 
         // Fetch chapters for each course
         const coursesWithChapters = await Promise.all(
@@ -319,12 +361,20 @@ export const fetchDiplomaContent = async (diplomaId: string): Promise<DiplomaDet
             throw new Error('Not enrolled in this diploma');
         }
 
-        // Fetch full diploma with all content
+        // Fetch diploma
         const { data: diploma, error } = await supabase
             .from('diplomas')
+            .select('*')
+            .eq('id', diplomaId)
+            .single();
+
+        if (error) throw error;
+
+        // Fetch courses via junction table first
+        const { data: junctionData } = await supabase
+            .from('diploma_courses')
             .select(`
-                *,
-                courses:courses (
+                course:courses (
                     *,
                     chapters:chapters (
                         *,
@@ -332,15 +382,32 @@ export const fetchDiplomaContent = async (diplomaId: string): Promise<DiplomaDet
                     )
                 )
             `)
-            .eq('id', diplomaId)
-            .single();
+            .eq('diploma_id', diplomaId)
+            .order('order_index');
 
-        if (error) throw error;
+        let courses = junctionData?.map((dc: any) => dc.course).filter(Boolean) || [];
+
+        // Fallback: query courses directly by diploma_id
+        if (courses.length === 0) {
+            const { data: directCourses } = await supabase
+                .from('courses')
+                .select(`
+                    *,
+                    chapters:chapters (
+                        *,
+                        lessons:lessons (*)
+                    )
+                `)
+                .eq('diploma_id', diplomaId)
+                .order('order_index');
+            
+            courses = directCourses || [];
+        }
 
         // Sort courses, chapters, and lessons by order_index
         const detail: DiplomaDetail = {
             ...diploma,
-            courses: (diploma.courses || [])
+            courses: (courses || [])
                 .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
                 .map((course: any) => ({
                     ...course,
@@ -626,11 +693,23 @@ const recalculateEnrollmentProgress = async (enrollmentId: string): Promise<void
 
             if (!enrollment) return;
 
-            // Get all courses for the diploma
-            const { data: courses } = await supabase
-                .from('courses')
-                .select('id')
+            // Get all courses for the diploma via junction table first
+            const { data: junctionData } = await supabase
+                .from('diploma_courses')
+                .select('course:courses(id)')
                 .eq('diploma_id', enrollment.diploma_id);
+
+            let courses = junctionData?.map((dc: any) => dc.course).filter(Boolean) || [];
+
+            // Fallback: query courses directly by diploma_id
+            if (courses.length === 0) {
+                const { data: directCourses } = await supabase
+                    .from('courses')
+                    .select('id')
+                    .eq('diploma_id', enrollment.diploma_id);
+                
+                courses = directCourses || [];
+            }
 
             if (!courses || courses.length === 0) return;
 

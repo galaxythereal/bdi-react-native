@@ -3,38 +3,38 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Dimensions,
-    Image,
-    Linking,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  Linking,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { useNotifications } from "../../src/context/NotificationContext";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useAuth } from "../../src/features/auth/AuthContext";
 import { fetchMyEnrollments } from "../../src/features/courses/courseService";
 import {
-    fetchDiplomaCatalog,
-    fetchUpcomingLiveSessions,
+  fetchDiplomaCatalog,
+  fetchUpcomingLiveSessions,
 } from "../../src/features/diplomas/diplomaService";
 import { NotificationBell } from "../../src/features/notifications/NotificationComponents";
 import { CatalogDiploma, Enrollment, LiveSession } from "../../src/types";
@@ -410,7 +410,7 @@ export default function DashboardScreen() {
                     activeOpacity={0.95}
                   >
                     <LinearGradient
-                      colors={[colors.primary, "#7C3AED"]}
+                      colors={[colors.primary, "#5e1616"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.continueGradient}
