@@ -30,6 +30,7 @@ import {
 } from "react-native-safe-area-context";
 import { useNotifications } from "../../src/context/NotificationContext";
 import { useTheme } from "../../src/context/ThemeContext";
+import { useLocalization } from "../../src/context/LocalizationContext";
 import { useAuth } from "../../src/features/auth/AuthContext";
 import { fetchMyEnrollments } from "../../src/features/courses/courseService";
 import {
@@ -207,6 +208,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const { colors, isDark } = useTheme();
+  const { t, formatDate, formatTime } = useLocalization();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const loadData = async () => {
@@ -294,6 +296,10 @@ export default function DashboardScreen() {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
+        scrollEventThrottle={16}
+        bounces={true}
+        alwaysBounceVertical={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -520,7 +526,7 @@ export default function DashboardScreen() {
                       {isLive && (
                         <View style={styles.liveNowBadge}>
                           <View style={styles.liveNowDot} />
-                          <Text style={styles.liveNowText}>LIVE NOW</Text>
+                          <Text style={styles.liveNowText}>{t.liveNow}</Text>
                         </View>
                       )}
 
@@ -541,10 +547,10 @@ export default function DashboardScreen() {
                             />
                             <Text style={styles.liveSessionMetaText}>
                               {isLive
-                                ? "Happening now"
+                                ? t.happeningNow
                                 : isToday
-                                  ? `Today, ${sessionDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
-                                  : sessionDate.toLocaleDateString("en-US", {
+                                  ? `${t.today}, ${formatTime(sessionDate, { hour: "numeric", minute: "2-digit" })}`
+                                  : formatDate(sessionDate, {
                                       weekday: "short",
                                       month: "short",
                                       day: "numeric",
@@ -561,7 +567,7 @@ export default function DashboardScreen() {
                                 color="rgba(255,255,255,0.8)"
                               />
                               <Text style={styles.liveSessionMetaText}>
-                                {session.duration_minutes} min session
+                                {session.duration_minutes} {t.minutes} {t.session}
                               </Text>
                             </View>
                           )}

@@ -1,7 +1,8 @@
-import { Text, type TextProps } from 'react-native';
+import { Platform, Text, type TextProps } from 'react-native';
 
 import { Theme } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useLocalization } from '@/src/context/LocalizationContext';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
@@ -19,6 +20,7 @@ export function ThemedText({
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const { isRTL } = useLocalization();
 
   // Map legacy 'type' prop to new system if 'variant' is not provided
   let textStyle = {};
@@ -65,6 +67,13 @@ export function ThemedText({
       style={[
         { color },
         type === 'link' ? { color: linkColor } : undefined,
+        isRTL
+          ? {
+              writingDirection: 'rtl',
+              textAlign: 'right',
+              fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
+            }
+          : { writingDirection: 'ltr', textAlign: 'left' },
         textStyle,
         style,
       ]}

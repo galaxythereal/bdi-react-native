@@ -476,6 +476,10 @@ export default function ProfileScreen() {
           { paddingBottom: TAB_BAR_HEIGHT + Theme.spacing.lg },
         ]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
+        scrollEventThrottle={16}
+        bounces={true}
+        alwaysBounceVertical={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1045,6 +1049,10 @@ export default function ProfileScreen() {
             <ScrollView
               style={styles.legalScrollContent}
               showsVerticalScrollIndicator={false}
+              scrollEnabled={true}
+              scrollEventThrottle={16}
+              bounces={true}
+              alwaysBounceVertical={true}
             >
               {legalContent === "privacy" && (
                 <View>

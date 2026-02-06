@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Theme from '../../constants/theme';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchDiplomaCatalog, fetchMyEnrollments, submitDiplomaInquiry } from '../../src/features/diplomas/diplomaService';
@@ -44,6 +45,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
     onInquire,
 }) => {
     const { colors, isDark } = useTheme();
+    const { t, formatNumber } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const totalCourses = diploma.courses?.length || 0;
@@ -90,12 +92,12 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                     {isEnrolled ? (
                         <View style={[styles.statusBadge, styles.enrolledBadge]}>
                             <Ionicons name="checkmark-circle" size={14} color="#fff" />
-                            <Text style={styles.statusBadgeText}>Enrolled</Text>
+                            <Text style={styles.statusBadgeText}>{t.enrolled}</Text>
                         </View>
                     ) : (
                         <View style={[styles.statusBadge, styles.lockedBadge]}>
                             <Ionicons name="lock-closed" size={14} color="#fff" />
-                            <Text style={styles.statusBadgeText}>Locked</Text>
+                            <Text style={styles.statusBadgeText}>{t.notEnrolled}</Text>
                         </View>
                     )}
 
@@ -103,7 +105,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                     {diploma.price && !isEnrolled && (
                         <View style={styles.priceBadge}>
                             <Text style={styles.priceText}>
-                                {diploma.currency} {diploma.price.toLocaleString()}
+                                {diploma.currency} {formatNumber(diploma.price)}
                             </Text>
                         </View>
                     )}
@@ -139,7 +141,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                         )}
                     </View>
 
-                    {/* Progress or Inquire Button */}
+                    {/* Progress or Locked Message */}
                     {isEnrolled && enrollmentProgress !== undefined ? (
                         <View style={styles.progressSection}>
                             <View style={styles.progressHeader}>
@@ -161,14 +163,10 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                             </View>
                         </View>
                     ) : (
-                        <TouchableOpacity
-                            style={styles.inquireButton}
-                            onPress={onInquire}
-                            activeOpacity={0.8}
-                        >
-                            <Ionicons name="logo-whatsapp" size={18} color="#fff" />
-                            <Text style={styles.inquireButtonText}>Inquire via WhatsApp</Text>
-                        </TouchableOpacity>
+                        <View style={styles.lockedInfoContainer}>
+                            <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+                            <Text style={styles.lockedInfoText}>Enrollment required</Text>
+                        </View>
                     )}
                 </View>
             </TouchableOpacity>
@@ -342,24 +340,12 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                             <Ionicons name="arrow-forward" size={20} color="#fff" />
                         </TouchableOpacity>
                     ) : (
-                        <>
-                            {diploma.price && (
-                                <View style={styles.priceInfo}>
-                                    <Text style={styles.priceLabel}>Price</Text>
-                                    <Text style={styles.priceAmount}>
-                                        {diploma.currency} {diploma.price.toLocaleString()}
-                                    </Text>
-                                </View>
-                            )}
-                            <TouchableOpacity
-                                style={styles.whatsappButton}
-                                onPress={onInquire}
-                                activeOpacity={0.8}
-                            >
-                                <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-                                <Text style={styles.whatsappButtonText}>Inquire to Enroll</Text>
-                            </TouchableOpacity>
-                        </>
+                        <View style={styles.enrollmentRequiredInfo}>
+                            <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+                            <Text style={styles.enrollmentRequiredText}>
+                                Contact your administrator for enrollment
+                            </Text>
+                        </View>
                     )}
                 </View>
             </SafeAreaView>
@@ -526,6 +512,7 @@ export default function DiplomaCatalogScreen() {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showInquiryModal, setShowInquiryModal] = useState(false);
     const { colors, isDark } = useTheme();
+    const { formatNumber } = useLocalization();
     const router = useRouter();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
@@ -619,6 +606,10 @@ export default function DiplomaCatalogScreen() {
             <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
+                scrollEnabled={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                alwaysBounceVertical={true}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -641,8 +632,7 @@ export default function DiplomaCatalogScreen() {
                                 setShowDetailModal(true);
                             }}
                             onInquire={() => {
-                                setSelectedDiploma(diploma);
-                                setShowInquiryModal(true);
+                                // Inquiry functionality removed for Apple App Store compliance
                             }}
                         />
                     ))
@@ -666,18 +656,9 @@ export default function DiplomaCatalogScreen() {
                 visible={showDetailModal}
                 onClose={() => setShowDetailModal(false)}
                 onInquire={() => {
-                    setShowDetailModal(false);
-                    setShowInquiryModal(true);
+                    // Inquiry functionality removed for Apple App Store compliance
                 }}
                 onContinue={handleContinueLearning}
-            />
-
-            {/* Inquiry Modal */}
-            <InquiryModal
-                diploma={selectedDiploma}
-                visible={showInquiryModal}
-                onClose={() => setShowInquiryModal(false)}
-                onSubmit={handleInquiry}
             />
         </SafeAreaView>
     );
@@ -851,19 +832,19 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             height: '100%',
             borderRadius: Theme.borderRadius.full,
         },
-        inquireButton: {
+        lockedInfoContainer: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#25D366', // WhatsApp green
+            backgroundColor: colors.surfaceVariant,
             paddingVertical: Theme.spacing.sm,
             borderRadius: Theme.borderRadius.md,
             gap: Theme.spacing.xs,
         },
-        inquireButtonText: {
-            fontSize: Theme.fontSize.base,
-            fontWeight: Theme.fontWeight.semibold,
-            color: '#fff',
+        lockedInfoText: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.textSecondary,
         },
         emptyState: {
             alignItems: 'center',
@@ -1053,20 +1034,20 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
         },
-        whatsappButton: {
+        enrollmentRequiredInfo: {
             flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#25D366',
+            backgroundColor: colors.surfaceVariant,
             paddingVertical: Theme.spacing.md,
             borderRadius: Theme.borderRadius.md,
-            gap: Theme.spacing.xs,
+            gap: Theme.spacing.sm,
         },
-        whatsappButtonText: {
-            fontSize: Theme.fontSize.base,
-            fontWeight: Theme.fontWeight.semibold,
-            color: '#fff',
+        enrollmentRequiredText: {
+            fontSize: Theme.fontSize.sm,
+            fontWeight: Theme.fontWeight.medium,
+            color: colors.textSecondary,
         },
         continueButton: {
             flex: 1,

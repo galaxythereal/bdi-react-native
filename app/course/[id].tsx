@@ -4760,9 +4760,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
     contentArea: {
       flex: 1,
       backgroundColor: colors.background,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      marginTop: -20,
+      marginTop: 0,
     },
     lessonHeader: {
       flexDirection: "row",

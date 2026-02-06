@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Theme from '../../constants/theme';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import {
@@ -42,6 +43,7 @@ interface TicketCardProps {
 }
 
 const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles }) => {
+    const { formatDateTime } = useLocalization();
     const cardAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -84,7 +86,7 @@ const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles 
                             {ticket.subject}
                         </Text>
                         <Text style={styles.cardDate}>
-                            {new Date(ticket.created_at).toLocaleDateString('en-US', {
+                            {formatDateTime(ticket.created_at, {
                                 month: 'short',
                                 day: 'numeric',
                                 hour: '2-digit',
@@ -141,6 +143,7 @@ export default function SupportScreen() {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const messagesScrollRef = useRef<ScrollView>(null);
     const { colors, isDark } = useTheme();
+    const { formatDateTime, formatTime } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = async () => {
@@ -283,6 +286,10 @@ export default function SupportScreen() {
                     />
                 }
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                alwaysBounceVertical={true}
             >
                 {tickets.length === 0 ? (
                     <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
@@ -338,7 +345,13 @@ export default function SupportScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.modalContent}>
+                    <ScrollView 
+                        style={styles.modalContent}
+                        scrollEnabled={true}
+                        scrollEventThrottle={16}
+                        bounces={true}
+                        alwaysBounceVertical={true}
+                    >
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Subject *</Text>
                             <TextInput
@@ -431,7 +444,7 @@ export default function SupportScreen() {
                         <Text style={styles.originalLabel}>Original Message</Text>
                         <Text style={styles.originalText}>{selectedTicket?.description}</Text>
                         <Text style={styles.originalDate}>
-                            {selectedTicket && new Date(selectedTicket.created_at).toLocaleString()}
+                            {selectedTicket && formatDateTime(selectedTicket.created_at)}
                         </Text>
                     </View>
 
@@ -445,6 +458,10 @@ export default function SupportScreen() {
                             ref={messagesScrollRef}
                             style={styles.messagesList}
                             contentContainerStyle={styles.messagesContent}
+                            scrollEnabled={true}
+                            scrollEventThrottle={16}
+                            bounces={true}
+                            alwaysBounceVertical={true}
                         >
                             {loadingMessages ? (
                                 <View style={styles.messagesLoading}>
@@ -481,7 +498,7 @@ export default function SupportScreen() {
                                                 styles.messageTime,
                                                 isMe && styles.messageTimeMe,
                                             ]}>
-                                                {new Date(msg.created_at).toLocaleTimeString([], {
+                                                {formatTime(msg.created_at, {
                                                     hour: '2-digit',
                                                     minute: '2-digit',
                                                 })}

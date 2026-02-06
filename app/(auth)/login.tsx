@@ -1,7 +1,6 @@
 import { Theme } from "@/constants/theme";
-import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
     Alert,
     Keyboard,
@@ -27,14 +26,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { signInWithPassword, signUp, session, isLoading } = useAuth();
   const { colors, isDark } = useTheme();
-  const router = useRouter();
 
-  // Navigate to dashboard when session is available
-  useEffect(() => {
-    if (!isLoading && session) {
-      router.replace("/(student)/dashboard");
-    }
-  }, [session, isLoading, router]);
+  // Auth navigation is handled by AuthContext — no Redirect here to avoid conflicts
 
   const handleSubmit = async () => {
     if (!email || !password) {

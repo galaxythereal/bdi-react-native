@@ -3,14 +3,19 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ImpersonationProvider } from '../src/context/ImpersonationContext';
-import { LocalizationProvider } from '../src/context/LocalizationContext';
+import { LocalizationProvider, useLocalization } from '../src/context/LocalizationContext';
 import { NotificationProvider } from '../src/context/NotificationContext';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthContext';
+import { setupBackgroundMessageHandler } from '../src/services/pushNotifications';
+
+// Initialize Firebase background message handler (must be top-level)
+// Wrapped in try/catch: in release builds Firebase may not be initialized yet
+try { setupBackgroundMessageHandler(); } catch (e) { /* Firebase not ready */ }
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,6 +44,25 @@ function RootLayoutContent() {
       </Stack>
     </>
   );
+}
+
+function GlobalTextDirection() {
+  const { isRTL } = useLocalization();
+  const rtl = isRTL === true;
+
+  useEffect(() => {
+    const baseStyle = rtl
+      ? { writingDirection: 'rtl', textAlign: 'right' as const, fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }) }
+      : { writingDirection: 'ltr', textAlign: 'left' as const };
+
+    Text.defaultProps = Text.defaultProps || {};
+    Text.defaultProps.style = baseStyle;
+
+    TextInput.defaultProps = TextInput.defaultProps || {};
+    TextInput.defaultProps.style = baseStyle;
+  }, [rtl]);
+
+  return null;
 }
 
 // Wrapper to provide impersonation context with user ID
@@ -87,6 +111,7 @@ export default function RootLayout() {
             <AuthProvider>
               <ImpersonationWrapper>
                 <NotificationProvider>
+                  <GlobalTextDirection />
                   <RootLayoutContent />
                 </NotificationProvider>
               </ImpersonationWrapper>

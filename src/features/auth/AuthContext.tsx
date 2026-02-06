@@ -116,23 +116,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         let isMounted = true;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
         
         const initAuth = async () => {
             console.log('Starting auth initialization...');
             
-            // Set a timeout to prevent hanging forever
-            const timeoutId = setTimeout(() => {
+            // Set a timeout to prevent hanging forever - but only if no session found
+            timeoutId = setTimeout(() => {
                 if (isMounted && isLoading) {
                     console.warn('Auth initialization timed out, proceeding as signed out');
                     setSession(null);
                     setIsLoading(false);
                 }
-            }, 10000); // 10 second timeout
+            }, 15000); // 15 second timeout (increased for slow networks)
             
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
-                clearTimeout(timeoutId);
+                // Clear timeout as soon as we get a response
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
 
                 if (error) {
                     console.error('Error getting session:', error);
@@ -159,7 +164,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     }
                 }
             } catch (error: any) {
-                clearTimeout(timeoutId);
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
                 console.error('Auth init error:', error);
                 if (isRefreshTokenError(error)) {
                     await clearAuthStorage();
@@ -178,6 +186,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('Auth state changed:', event, session?.user?.email || 'no user');
 
+            // Clear timeout on any auth state change - we have a response
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+
             // Handle token refresh errors
             if (event === 'TOKEN_REFRESHED' && !session) {
                 console.log('Token refresh failed, forcing sign out');
@@ -186,6 +200,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUserProfile(null);
                 setIsLoading(false);
                 router.replace('/(auth)/login');
+                return;
+            }
+
+            // Handle successful token refresh - update session but don't navigate
+            if (event === 'TOKEN_REFRESHED' && session) {
+                console.log('Token refreshed successfully');
+                if (isMounted) {
+                    setSession(session);
+                    if (session.user?.id) {
+                        const profile = await fetchUserProfile(session.user.id);
+                        setUserProfile(profile);
+                    }
+                    setIsLoading(false);
+                }
                 return;
             }
 
@@ -201,13 +229,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             // Fetch profile when user signs in
-            if (session?.user?.id) {
-                const profile = await fetchUserProfile(session.user.id);
-                setUserProfile(profile);
+            // Set session IMMEDIATELY so navigation can react, then fetch profile
+            if (isMounted) {
+                setSession(session);
+                setIsLoading(false);
             }
 
-            setSession(session);
-            setIsLoading(false);
+            if (session?.user?.id) {
+                const profile = await fetchUserProfile(session.user.id);
+                if (isMounted) setUserProfile(profile);
+            }
         });
 
         // Handle app state changes for token refresh
@@ -250,9 +281,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             router.replace('/(auth)/login');
         } else if (session && inAuthGroup && !hasNavigated.current) {
             // Authenticated and on auth screen - redirect based on role
+            // Wait for profile to be loaded so we know the correct role
+            if (!userProfile) {
+                console.log('Session exists but profile not loaded yet, waiting...');
+                return;
+            }
+
             hasNavigated.current = true;
-            if (userProfile?.role === 'admin') {
-                console.log('Admin authenticated, redirecting to admin dashboard');
+            const role = userProfile.role;
+            if (role === 'admin' || role === 'instructor') {
+                console.log('Admin/instructor authenticated, redirecting to admin dashboard');
                 router.replace('/(admin)/dashboard');
             } else {
                 console.log('User authenticated, redirecting to student dashboard');

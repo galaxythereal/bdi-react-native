@@ -1,64 +1,59 @@
 import { Theme } from '@/constants/theme';
 import { Tabs } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { Bell, BookOpen, LayoutDashboard, Trophy, User } from 'lucide-react-native';
 import { Platform, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotifications } from '../../src/context/NotificationContext';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 
 export default function StudentLayout() {
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
     const { unreadCount } = useNotifications();
+    const { t, isRTL } = useLocalization();
 
     // Calculate proper bottom padding for the tab bar
     const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 24);
 
     return (
-        <>
-            <StatusBar
-                style={isDark ? 'light' : 'dark'}
-                backgroundColor={colors.background}
-            />
-            <Tabs
-                screenOptions={{
-                    headerShown: false,
-                    tabBarActiveTintColor: colors.primary,
-                    tabBarInactiveTintColor: colors.textTertiary,
-                    tabBarStyle: {
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        borderTopWidth: 0,
-                        height: 60 + bottomPadding,
-                        paddingBottom: bottomPadding,
-                        paddingTop: Theme.spacing.sm,
-                        backgroundColor: colors.surface,
-                        borderTopLeftRadius: Theme.borderRadius.xl,
-                        borderTopRightRadius: Theme.borderRadius.xl,
-                        ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
-                    },
-                    tabBarLabelStyle: {
-                        fontSize: Theme.fontSize.xs,
-                        fontWeight: Theme.fontWeight.semibold,
-                        marginTop: Theme.spacing.xs,
-                    },
-                    tabBarIconStyle: {
-                        marginTop: 2,
-                    },
-                    tabBarHideOnKeyboard: true,
-                    sceneStyle: {
-                        backgroundColor: colors.background,
-                    },
-                }}
-            >
+        <Tabs
+            screenOptions={{
+                headerShown: false,
+                tabBarActiveTintColor: colors.primary,
+                tabBarInactiveTintColor: colors.textTertiary,
+                tabBarPosition: 'bottom',
+                tabBarStyle: {
+                    borderTopWidth: 0,
+                    height: 60 + bottomPadding,
+                    paddingBottom: bottomPadding,
+                    paddingTop: Theme.spacing.sm,
+                    backgroundColor: colors.surface,
+                    borderTopLeftRadius: Theme.borderRadius.xl,
+                    borderTopRightRadius: Theme.borderRadius.xl,
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
+                },
+                tabBarLabelStyle: {
+                    fontSize: Theme.fontSize.xs,
+                    fontWeight: Theme.fontWeight.semibold,
+                    marginTop: Theme.spacing.xs,
+                },
+                tabBarIconStyle: {
+                    marginTop: 2,
+                },
+                tabBarHideOnKeyboard: true,
+                sceneStyle: {
+                    backgroundColor: colors.background,
+                    flex: 1,
+                },
+            }}
+        >
                 {/* ========== VISIBLE TABS (4 total) ========== */}
                 <Tabs.Screen
                     name="dashboard"
                     options={{
-                        title: 'Home',
+                        title: t.home,
                         tabBarIcon: ({ color, focused }) => (
                             <View style={{ alignItems: 'center' }}>
                                 <LayoutDashboard
@@ -73,7 +68,7 @@ export default function StudentLayout() {
                 <Tabs.Screen
                     name="courses"
                     options={{
-                        title: 'Learn',
+                        title: t.learn,
                         tabBarIcon: ({ color, focused }) => (
                             <View style={{ alignItems: 'center' }}>
                                 <BookOpen
@@ -88,7 +83,7 @@ export default function StudentLayout() {
                 <Tabs.Screen
                     name="leaderboard"
                     options={{
-                        title: 'Rankings',
+                        title: t.rankings,
                         tabBarIcon: ({ color, focused }) => (
                             <View style={{ alignItems: 'center' }}>
                                 <Trophy
@@ -103,7 +98,7 @@ export default function StudentLayout() {
                 <Tabs.Screen
                     name="notifications"
                     options={{
-                        title: 'Alerts',
+                        title: t.alerts,
                         tabBarIcon: ({ color, focused }) => (
                             <View style={{ alignItems: 'center' }}>
                                 <Bell
@@ -115,7 +110,7 @@ export default function StudentLayout() {
                                     <View style={{
                                         position: 'absolute',
                                         top: -4,
-                                        right: -8,
+                                        ...(isRTL ? { left: -8 } : { right: -8 }),
                                         backgroundColor: '#EF4444',
                                         borderRadius: 10,
                                         minWidth: 18,
@@ -142,7 +137,7 @@ export default function StudentLayout() {
                 <Tabs.Screen
                     name="profile"
                     options={{
-                        title: 'Profile',
+                        title: t.profile,
                         tabBarIcon: ({ color, focused }) => (
                             <View style={{ alignItems: 'center' }}>
                                 <User
@@ -187,6 +182,5 @@ export default function StudentLayout() {
                     }}
                 />
             </Tabs>
-        </>
     );
 }

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Theme from '../../constants/theme';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import {
     clearAllOfflineData,
@@ -40,17 +41,26 @@ const formatBytes = (bytes: number): string => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-const formatDate = (dateString: string): string => {
+const formatRelativeDate = (
+    dateString: string,
+    t: any,
+    isRTL: boolean,
+    formatDateFn: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string
+): string => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays === 0) return t.today;
+    if (diffDays === 1) return t.yesterday;
+    if (diffDays < 7) {
+        return isRTL
+            ? `${t.ago} ${diffDays} ${t.days}`
+            : `${diffDays} ${t.days} ${t.ago}`;
+    }
 
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return formatDateFn(date, { month: 'short', day: 'numeric' });
 };
 
 // ============================================================================
@@ -154,6 +164,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
     styles
 }) => {
     const router = useRouter();
+    const { t, isRTL, formatDate } = useLocalization();
     const rotateAnim = useRef(new Animated.Value(expanded ? 1 : 0)).current;
 
     useEffect(() => {
@@ -185,7 +196,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
                         <View style={styles.metaItem}>
                             <Ionicons name="cloud-download" size={14} color={colors.primary} />
                             <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                                {downloadedLessons}/{totalLessons} lessons
+                                {downloadedLessons}/{totalLessons} {t.lessons}
                             </Text>
                         </View>
                         <View style={styles.metaItem}>
@@ -196,7 +207,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
                         </View>
                     </View>
                     <Text style={[styles.downloadDate, { color: colors.textTertiary }]}>
-                        Downloaded {formatDate(course.downloadedAt)}
+                        {t.downloadedOn} {formatRelativeDate(course.downloadedAt, t, isRTL, formatDate)}
                     </Text>
                 </View>
 

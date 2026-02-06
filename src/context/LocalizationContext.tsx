@@ -203,6 +203,7 @@ interface Translations {
     removeDownload: string;
     noDownloads: string;
     offlineAvailable: string;
+    downloadedOn: string;
     
     // Certificates
     myCertificates: string;
@@ -218,6 +219,13 @@ interface Translations {
     liveSessions: string;
     upcomingSession: string;
     joinSession: string;
+    joinNow: string;
+    started: string;
+    startingNow: string;
+    in: string;
+    liveNow: string;
+    happeningNow: string;
+    session: string;
     sessionEnded: string;
     sessionStartsIn: string;
     noSessions: string;
@@ -238,6 +246,7 @@ interface Translations {
     hours: string;
     days: string;
     weeks: string;
+    ago: string;
     
     // Misc
     comingSoon: string;
@@ -446,6 +455,7 @@ const en: Translations = {
     removeDownload: 'Remove Download',
     noDownloads: 'No downloaded content',
     offlineAvailable: 'Available Offline',
+    downloadedOn: 'Downloaded',
     
     // Certificates
     myCertificates: 'My Certificates',
@@ -461,6 +471,13 @@ const en: Translations = {
     liveSessions: 'Live Sessions',
     upcomingSession: 'Upcoming Session',
     joinSession: 'Join Session',
+    joinNow: 'Join Now',
+    started: 'Started',
+    startingNow: 'Starting now',
+    in: 'In',
+    liveNow: 'LIVE NOW',
+    happeningNow: 'Happening now',
+    session: 'session',
     sessionEnded: 'Session Ended',
     sessionStartsIn: 'Starts in',
     noSessions: 'No upcoming sessions',
@@ -481,6 +498,7 @@ const en: Translations = {
     hours: 'hours',
     days: 'days',
     weeks: 'weeks',
+    ago: 'ago',
     
     // Misc
     comingSoon: 'Coming Soon',
@@ -689,6 +707,7 @@ const ar: Translations = {
     removeDownload: 'إزالة التحميل',
     noDownloads: 'لا يوجد محتوى محمل',
     offlineAvailable: 'متاح بدون اتصال',
+    downloadedOn: 'تم التنزيل',
     
     // Certificates
     myCertificates: 'شهاداتي',
@@ -704,6 +723,13 @@ const ar: Translations = {
     liveSessions: 'الجلسات المباشرة',
     upcomingSession: 'جلسة قادمة',
     joinSession: 'انضم للجلسة',
+    joinNow: 'انضم الآن',
+    started: 'بدأت',
+    startingNow: 'تبدأ الآن',
+    in: 'بعد',
+    liveNow: 'مباشر الآن',
+    happeningNow: 'يحدث الآن',
+    session: 'جلسة',
     sessionEnded: 'انتهت الجلسة',
     sessionStartsIn: 'تبدأ خلال',
     noSessions: 'لا توجد جلسات قادمة',
@@ -724,6 +750,7 @@ const ar: Translations = {
     hours: 'ساعات',
     days: 'أيام',
     weeks: 'أسابيع',
+    ago: 'منذ',
     
     // Misc
     comingSoon: 'قريباً',
@@ -740,6 +767,11 @@ interface LocalizationContextType {
     language: Language;
     isRTL: boolean;
     t: Translations;
+    locale: string;
+    formatDate: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
+    formatTime: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
+    formatDateTime: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
     setLanguage: (lang: Language) => Promise<void>;
 }
 
@@ -807,10 +839,29 @@ export function LocalizationProvider({ children }: LocalizationProviderProps) {
         }
     };
 
+    const locale = language === 'ar' ? 'ar' : 'en-US';
+
+    const formatDate = (date: Date | string | number, options?: Intl.DateTimeFormatOptions) =>
+        new Date(date).toLocaleDateString(locale, options);
+
+    const formatTime = (date: Date | string | number, options?: Intl.DateTimeFormatOptions) =>
+        new Date(date).toLocaleTimeString(locale, options);
+
+    const formatDateTime = (date: Date | string | number, options?: Intl.DateTimeFormatOptions) =>
+        new Date(date).toLocaleString(locale, options);
+
+    const formatNumber = (value: number, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat(locale, options).format(value);
+
     const value: LocalizationContextType = {
         language,
         isRTL: language === 'ar',
         t: translations[language],
+        locale,
+        formatDate,
+        formatTime,
+        formatDateTime,
+        formatNumber,
         setLanguage,
     };
 

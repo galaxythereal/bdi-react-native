@@ -1,10 +1,60 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Platform, PermissionsAndroid, NativeModules } from 'react-native';
 import { supabase } from '../lib/supabase';
 
-// Configure how notifications are handled when app is in foreground
+// Detect if Firebase native modules are installed (native build vs Expo Go)
+const isNativeBuild = !!NativeModules.RNFBAppModule;
+
+// ─── Firebase lazy loader ───────────────────────────────────────────
+// We do NOT import @react-native-firebase/* at the top level because
+// that immediately loads the native module which crashes in Expo Go.
+// Instead we lazily require() it and fall back to expo-notifications.
+
+let _messaging: any = null;
+let _firebaseAvailable: boolean | null = null;
+
+function getFirebaseMessaging(): any {
+    if (_firebaseAvailable === false) return null;
+    if (_messaging) return _messaging;
+
+    try {
+        // Require the app module first to trigger native auto-init
+        require('@react-native-firebase/app');
+        const mod = require('@react-native-firebase/messaging');
+        const fn = mod.default || mod;
+        _messaging = fn();
+        _firebaseAvailable = true;
+        return _messaging;
+    } catch (e: any) {
+        const msg = e?.message || '';
+        if (!isNativeBuild) {
+            // Native module not present (Expo Go) → permanent failure
+            console.warn('Firebase native modules not installed (Expo Go), using expo-notifications');
+            _firebaseAvailable = false;
+        } else {
+            // Native build but Firebase not yet initialized → allow retry
+            console.warn('Firebase messaging not ready yet, will retry:', msg);
+        }
+        return null;
+    }
+}
+
+function getFirebaseAuthorizationStatus() {
+    try {
+        const mod = require('@react-native-firebase/messaging');
+        const fn = mod.default || mod;
+        return {
+            AUTHORIZED: fn.AuthorizationStatus?.AUTHORIZED ?? 1,
+            PROVISIONAL: fn.AuthorizationStatus?.PROVISIONAL ?? 2,
+        };
+    } catch {
+        return { AUTHORIZED: 1, PROVISIONAL: 2 };
+    }
+}
+
+// ─── Notification display handler ──────────────────────────────────
+// expo-notifications still handles the display part in both modes
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
@@ -16,16 +66,104 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Register for push notifications and save token to profile
+ * Register for push notifications.
+ * - Native build: Firebase Cloud Messaging (FCM token)
+ * - Expo Go:      Expo Push Notifications (Expo push token)
  */
 export async function registerForPushNotifications(): Promise<string | null> {
-    // Must be a physical device
     if (!Device.isDevice) {
         console.log('Push notifications only work on physical devices');
         return null;
     }
 
-    // Request permission
+    try {
+        // In native builds, retry a few times if Firebase isn't initialized yet
+        if (isNativeBuild) {
+            let fbMessaging = getFirebaseMessaging();
+            if (!fbMessaging) {
+                // Firebase may not be initialized yet in release builds — retry
+                for (let i = 0; i < 5; i++) {
+                    console.log(`Firebase not ready, retry ${i + 1}/5...`);
+                    await new Promise(r => setTimeout(r, 1000));
+                    fbMessaging = getFirebaseMessaging();
+                    if (fbMessaging) break;
+                }
+            }
+            if (fbMessaging) {
+                return await registerWithFirebase(fbMessaging);
+            } else {
+                console.error('Firebase failed to initialize after retries in native build');
+                return null;
+            }
+        } else {
+            // Expo Go — use Expo Push tokens
+            return await registerWithExpo();
+        }
+    } catch (error) {
+        console.error('Error registering for push notifications:', error);
+        return null;
+    }
+}
+
+// ─── FCM registration (native builds) ──────────────────────────────
+async function registerWithFirebase(fbMessaging: any): Promise<string | null> {
+    if (Platform.OS === 'android') {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+            console.log('Android notification permission not granted');
+            return null;
+        }
+
+        // Android 13+ explicit runtime permission
+        if (Platform.Version >= 33) {
+            try {
+                const postNotif = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+                );
+                if (postNotif !== PermissionsAndroid.RESULTS.GRANTED) {
+                    console.log('POST_NOTIFICATIONS permission not granted');
+                    return null;
+                }
+            } catch (e) {
+                console.warn('PermissionsAndroid.request failed:', e);
+            }
+        }
+    } else {
+        // iOS: Request via Firebase messaging
+        const authStatuses = getFirebaseAuthorizationStatus();
+        const authStatus = await fbMessaging.requestPermission();
+        const enabled =
+            authStatus === authStatuses.AUTHORIZED ||
+            authStatus === authStatuses.PROVISIONAL;
+
+        if (!enabled) {
+            console.log('iOS notification permission not granted');
+            return null;
+        }
+    }
+
+    const token = await fbMessaging.getToken();
+    console.log('FCM token:', token);
+
+    await saveTokenToProfile(token);
+
+    fbMessaging.onTokenRefresh(async (newToken: string) => {
+        console.log('FCM token refreshed:', newToken);
+        await saveTokenToProfile(newToken);
+    });
+
+    return token;
+}
+
+// ─── Expo Push registration (Expo Go) ──────────────────────────────
+async function registerWithExpo(): Promise<string | null> {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -35,52 +173,46 @@ export async function registerForPushNotifications(): Promise<string | null> {
     }
 
     if (finalStatus !== 'granted') {
-        console.log('Permission not granted for push notifications');
+        console.log('Notification permission not granted');
         return null;
     }
 
-    // Get Expo push token
-    try {
-        const projectId = Constants.expoConfig?.extra?.eas?.projectId ??
-            (Constants as any).easConfig?.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: '56489819-36c2-4d3c-b474-38cd0182a5f8',
+    });
+    const token = tokenData.data;
+    console.log('Expo push token:', token);
 
-        if (!projectId) {
-            console.log('No project ID found. Make sure you have configured EAS.');
-            // Try to get token anyway (works in some Expo configurations)
-        }
-
-        const tokenData = await Notifications.getExpoPushTokenAsync({
-            projectId: projectId || undefined
-        });
-        const token = tokenData.data;
-
-        console.log('Expo push token:', token);
-
-        // Save token to user profile
-        await saveTokenToProfile(token);
-
-        return token;
-    } catch (error) {
-        console.error('Error getting push token:', error);
-        return null;
-    }
+    await saveTokenToProfile(token);
+    return token;
 }
 
 /**
- * Save push token to user's Supabase profile
+ * Save token to user's Supabase profile
  */
 async function saveTokenToProfile(token: string) {
     try {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-            const { error } = await supabase
+            // Try saving to fcm_token column
+            const { error: fcmError } = await supabase
+                .from('profiles')
+                .update({ fcm_token: token })
+                .eq('id', user.id);
+
+            if (fcmError) {
+                console.warn('Could not save to fcm_token column (run migration 004?):', fcmError.message);
+            }
+
+            // Also save to expo_push_token as fallback
+            const { error: legacyError } = await supabase
                 .from('profiles')
                 .update({ expo_push_token: token })
                 .eq('id', user.id);
 
-            if (error) {
-                console.error('Error saving push token:', error);
+            if (legacyError) {
+                console.error('Error saving token to legacy column:', legacyError);
             } else {
                 console.log('Push token saved to profile');
             }
@@ -97,21 +229,16 @@ export function setupNotificationListeners(
     onNotificationReceived?: (notification: Notifications.Notification) => void,
     onNotificationResponse?: (response: Notifications.NotificationResponse) => void
 ) {
-    // When notification is received while app is foregrounded
     const notificationListener = Notifications.addNotificationReceivedListener((notification: Notifications.Notification) => {
         console.log('Notification received:', notification.request.content);
         onNotificationReceived?.(notification);
     });
 
-    // When user taps on notification
     const responseListener = Notifications.addNotificationResponseReceivedListener((response: Notifications.NotificationResponse) => {
         console.log('Notification tapped:', response.notification.request.content);
         onNotificationResponse?.(response);
 
-        // Get custom data from notification
         const data = response.notification.request.content.data;
-
-        // You can implement navigation here based on data
         if (data?.screen) {
             console.log('Should navigate to:', data.screen);
         }
@@ -120,10 +247,32 @@ export function setupNotificationListeners(
         }
     });
 
-    // Return cleanup function
+    // Firebase foreground message handler (native builds only)
+    let unsubscribeOnMessage: (() => void) | null = null;
+    const fbMessaging = getFirebaseMessaging();
+
+    if (fbMessaging) {
+        unsubscribeOnMessage = fbMessaging.onMessage(async (remoteMessage: any) => {
+            console.log('FCM foreground message:', remoteMessage);
+
+            if (remoteMessage.notification) {
+                await Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: remoteMessage.notification.title || '',
+                        body: remoteMessage.notification.body || '',
+                        data: remoteMessage.data || {},
+                        sound: 'default',
+                    },
+                    trigger: null,
+                });
+            }
+        });
+    }
+
     return () => {
         notificationListener.remove();
         responseListener.remove();
+        unsubscribeOnMessage?.();
     };
 }
 
@@ -136,10 +285,9 @@ export async function setupAndroidChannel() {
             name: 'Default',
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#C8A052', // Your brand gold color
+            lightColor: '#C8A052',
         });
 
-        // Optional: Create additional channels for different notification types
         await Notifications.setNotificationChannelAsync('live-sessions', {
             name: 'Live Sessions',
             description: 'Alerts for upcoming live sessions',
@@ -156,7 +304,27 @@ export async function setupAndroidChannel() {
 }
 
 /**
- * Send a local notification (for testing or local alerts)
+ * Setup Firebase background message handler
+ * Safe to call even in Expo Go — silently skips if Firebase is unavailable.
+ * Must be called at app entry level (outside components).
+ */
+export function setupBackgroundMessageHandler() {
+    try {
+        const mod = require('@react-native-firebase/messaging');
+        const fn = mod.default || mod;
+        const msg = fn();
+        msg.setBackgroundMessageHandler(async (remoteMessage: any) => {
+            console.log('FCM background message:', remoteMessage);
+        });
+    } catch (e: any) {
+        // Firebase not available (Expo Go) or not yet initialized (early startup)
+        // This is fine — FCM still shows notification-payload messages natively.
+        console.warn('Firebase background handler skipped:', e?.message);
+    }
+}
+
+/**
+ * Send a local notification
  */
 export async function sendLocalNotification(
     title: string,
@@ -164,13 +332,8 @@ export async function sendLocalNotification(
     data?: Record<string, any>
 ) {
     await Notifications.scheduleNotificationAsync({
-        content: {
-            title,
-            body,
-            data: data || {},
-            sound: 'default',
-        },
-        trigger: null, // null = immediate
+        content: { title, body, data: data || {}, sound: 'default' },
+        trigger: null,
     });
 }
 
@@ -186,22 +349,14 @@ export async function scheduleNotification(
     const trigger = scheduledDate.getTime() - Date.now();
 
     if (trigger <= 0) {
-        console.log('Scheduled date is in the past, sending immediately');
         return sendLocalNotification(title, body, data);
     }
 
-    const seconds = Math.floor(trigger / 1000);
-
     return await Notifications.scheduleNotificationAsync({
-        content: {
-            title,
-            body,
-            data: data || {},
-            sound: 'default',
-        },
+        content: { title, body, data: data || {}, sound: 'default' },
         trigger: {
             type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: seconds,
+            seconds: Math.floor(trigger / 1000),
         },
     });
 }
@@ -213,23 +368,37 @@ export async function cancelAllScheduledNotifications() {
     await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
-/**
- * Get the badge count
- */
 export async function getBadgeCount(): Promise<number> {
     return await Notifications.getBadgeCountAsync();
 }
 
-/**
- * Set the badge count
- */
 export async function setBadgeCount(count: number) {
     await Notifications.setBadgeCountAsync(count);
 }
 
-/**
- * Clear the badge
- */
 export async function clearBadge() {
     await Notifications.setBadgeCountAsync(0);
+}
+
+/**
+ * Delete the push token (for logout/token invalidation)
+ */
+export async function deleteToken() {
+    try {
+        const fbMessaging = getFirebaseMessaging();
+        if (fbMessaging) {
+            await fbMessaging.deleteToken();
+            console.log('FCM token deleted');
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            try {
+                await supabase.from('profiles').update({ fcm_token: null }).eq('id', user.id);
+            } catch {}
+            await supabase.from('profiles').update({ expo_push_token: null }).eq('id', user.id);
+        }
+    } catch (error) {
+        console.error('Error deleting push token:', error);
+    }
 }

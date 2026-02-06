@@ -303,6 +303,10 @@ export default function CoursesScreen() {
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                alwaysBounceVertical={true}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}

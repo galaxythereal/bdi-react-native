@@ -11,6 +11,11 @@ import {
     subscribeToNotifications,
     NotificationPayload,
 } from '../features/notifications';
+import {
+    registerForPushNotifications,
+    setupNotificationListeners,
+    setupAndroidChannel,
+} from '../services/pushNotifications';
 
 interface NotificationContextType {
     notifications: Notification[];
@@ -98,6 +103,42 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
             setIsLoading(false);
         }
     }, [isAuthenticated, session?.user?.id, triggerNotificationHaptic]);
+
+    // Initialize push notifications
+    useEffect(() => {
+        // Setup Android notification channels
+        setupAndroidChannel();
+        
+        // Setup push notification listeners
+        const cleanupPushListeners = setupNotificationListeners(
+            (notification) => {
+                // Handle foreground push notification
+                console.log('Push notification received in foreground:', notification.request.content);
+                // Refresh in-app notifications
+                loadNotifications(true);
+            },
+            (response) => {
+                // Handle push notification tap
+                const data = response.notification.request.content.data;
+                console.log('Push notification tapped with data:', data);
+                // Navigation can be handled here based on data
+            }
+        );
+
+        return cleanupPushListeners;
+    }, [loadNotifications]);
+
+    // Register for push notifications when authenticated
+    useEffect(() => {
+        if (isAuthenticated && session?.user?.id) {
+            // Register device for push notifications
+            registerForPushNotifications().then((token) => {
+                if (token) {
+                    console.log('Device registered for push notifications');
+                }
+            });
+        }
+    }, [isAuthenticated, session?.user?.id]);
 
     // Set up real-time subscription
     useEffect(() => {

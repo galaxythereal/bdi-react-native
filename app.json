@@ -15,18 +15,24 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bdi.lms"
+      "bundleIdentifier": "com.ise.lms",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.bdi.lms",
+      "package": "com.ise.lms",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.INTERNET"
@@ -38,11 +44,21 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       [
         "expo-image-picker",
         {
           "photosPermission": "The app needs access to your photos to let you upload profile pictures.",
           "cameraPermission": "The app needs access to your camera to let you take profile pictures."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#C8A052",
+          "sounds": []
         }
       ],
       "expo-router",

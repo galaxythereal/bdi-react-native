@@ -1,6 +1,5 @@
 import { Colors, ColorScheme, ThemeColors } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StatusBar } from 'expo-status-bar';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
@@ -68,7 +67,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     return (
         <ThemeContext.Provider value={{ theme, isDark, colors, setTheme, toggleTheme }}>
-            <StatusBar style={isDark ? 'light' : 'dark'} />
             {children}
         </ThemeContext.Provider>
     );

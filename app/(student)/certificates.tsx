@@ -20,6 +20,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import Theme from '../../constants/theme';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyCertificates, generateCertificateHTML, loadCertificateTemplate } from '../../src/features/certificates/certificateService';
@@ -35,6 +36,7 @@ interface CertificateCardProps {
 
 const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, onPress }) => {
     const { colors, isDark } = useTheme();
+    const { t, formatDate } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
 
@@ -62,10 +64,10 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
                     </View>
                     <View style={styles.cardHeaderText}>
                         <Text style={styles.cardTitle} numberOfLines={2}>
-                            {certificate.diploma?.title || 'Diploma Certificate'}
+                            {certificate.diploma?.title || t.myCertificates}
                         </Text>
                         <Text style={styles.cardDate}>
-                            Issued {new Date(certificate.issued_at).toLocaleDateString('en-US', {
+                            {t.issuedOn} {formatDate(certificate.issued_at, {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
@@ -78,13 +80,13 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
 
                 <View style={styles.cardDetails}>
                     <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Certificate #</Text>
+                        <Text style={styles.detailLabel}>{t.certificateNumber}</Text>
                         <Text style={styles.detailValue} numberOfLines={1}>
                             {certificate.certificate_number}
                         </Text>
                     </View>
                     <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Verification</Text>
+                        <Text style={styles.detailLabel}>{t.verificationCode}</Text>
                         <Text style={[styles.detailValue, styles.verificationCode]}>
                             {certificate.verification_code}
                         </Text>
@@ -283,6 +285,10 @@ export default function CertificatesScreen() {
                     styles.scrollContent,
                     { paddingBottom: insets.bottom + 100 },
                 ]}
+                scrollEnabled={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                alwaysBounceVertical={true}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}

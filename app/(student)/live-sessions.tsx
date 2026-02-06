@@ -16,39 +16,29 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { fetchMyBatches, fetchUpcomingLiveSessions } from '../../src/features/diplomas/diplomaService';
 import { Batch, LiveSession } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Helper to format date/time
-const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return {
-        date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-        time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-        isToday: new Date().toDateString() === date.toDateString(),
-        isTomorrow: new Date(Date.now() + 86400000).toDateString() === date.toDateString(),
-    };
-};
-
-// Time until session
-const getTimeUntil = (dateString: string): string => {
+// Helper to format date/time and relative labels
+const getTimeUntil = (dateString: string, t: any): string => {
     const now = new Date();
     const sessionDate = new Date(dateString);
     const diff = sessionDate.getTime() - now.getTime();
 
-    if (diff < 0) return 'Started';
+    if (diff < 0) return t?.started || 'Started';
 
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `In ${days} day${days > 1 ? 's' : ''}`;
-    if (hours > 0) return `In ${hours} hour${hours > 1 ? 's' : ''}`;
-    if (minutes > 0) return `In ${minutes} min${minutes > 1 ? 's' : ''}`;
-    return 'Starting now';
+    if (days > 0) return `${t?.in || 'In'} ${days} ${t?.days || 'days'}`;
+    if (hours > 0) return `${t?.in || 'In'} ${hours} ${t?.hours || 'hours'}`;
+    if (minutes > 0) return `${t?.in || 'In'} ${minutes} ${t?.minutes || 'minutes'}`;
+    return t?.startingNow || 'Starting now';
 };
 
 // Session Card Component
@@ -60,9 +50,14 @@ interface SessionCardProps {
 
 const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => {
     const { colors, isDark } = useTheme();
+    const { t, formatDate, formatTime } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
-    const { date, time, isToday, isTomorrow } = formatDateTime(session.scheduled_at);
+    const sessionDate = new Date(session.scheduled_at);
+    const date = formatDate(sessionDate, { weekday: 'short', month: 'short', day: 'numeric' });
+    const time = formatTime(sessionDate, { hour: 'numeric', minute: '2-digit', hour12: true });
+    const isToday = new Date().toDateString() === sessionDate.toDateString();
+    const isTomorrow = new Date(Date.now() + 86400000).toDateString() === sessionDate.toDateString();
     const isLive = session.status === 'live';
 
     useEffect(() => {
@@ -127,7 +122,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                     </View>
                     <View style={[styles.timeUntilBadge, isLive && styles.timeUntilBadgeLive]}>
                         <Text style={[styles.timeUntilText, isLive && styles.timeUntilTextLive]}>
-                            {isLive ? 'Join Now' : getTimeUntil(session.scheduled_at)}
+                            {isLive ? (t?.joinSession || 'Join Now') : getTimeUntil(session.scheduled_at, t)}
                         </Text>
                     </View>
                 </View>
@@ -245,16 +240,6 @@ const BatchCard: React.FC<BatchCardProps> = ({ batch, index, onPress }) => {
                             {new Date(batch.start_date).toLocaleDateString()}
                         </Text>
                     </View>
-
-                    {batch.whatsapp_group_link && (
-                        <TouchableOpacity
-                            style={styles.whatsappBadge}
-                            onPress={() => Linking.openURL(batch.whatsapp_group_link!)}
-                        >
-                            <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
-                            <Text style={styles.whatsappBadgeText}>Group</Text>
-                        </TouchableOpacity>
-                    )}
                 </View>
             </TouchableOpacity>
         </Animated.View>
@@ -373,6 +358,10 @@ export default function LiveSessionsScreen() {
             <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
+                scrollEnabled={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                alwaysBounceVertical={true}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -409,10 +398,7 @@ export default function LiveSessionsScreen() {
                                 batch={batch}
                                 index={index}
                                 onPress={() => {
-                                    // Navigate to batch detail or show more info
-                                    if (batch.whatsapp_group_link) {
-                                        Linking.openURL(batch.whatsapp_group_link);
-                                    }
+                                    // Batch detail - navigation removed (WhatsApp group removed for Apple compliance)
                                 }}
                             />
                         ))

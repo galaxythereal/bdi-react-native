@@ -23,6 +23,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
@@ -51,6 +52,7 @@ export default function LeaderboardScreen() {
     const [error, setError] = useState<string | null>(null);
     
     const { colors, isDark } = useTheme();
+    const { formatNumber } = useLocalization();
     const { session } = useAuth();
     const user = session?.user;
     const router = useRouter();
@@ -255,7 +257,7 @@ export default function LeaderboardScreen() {
                 {/* Score & Rank Change */}
                 <View style={styles.scoreContainer}>
                     <Text style={[styles.scoreText, { color: colors.primary }]}>
-                        {item.total_score.toLocaleString()}
+                        {formatNumber(item.total_score)}
                     </Text>
                     <Text style={[styles.scoreLabel, { color: colors.textTertiary }]}>pts</Text>
                     {getRankChange(item)}
@@ -383,7 +385,7 @@ export default function LeaderboardScreen() {
                                     <View style={styles.userStatsContainer}>
                                         <View style={styles.userStat}>
                                             <Text style={styles.userStatValue}>
-                                                {currentLeaderboard.userPosition.total_score.toLocaleString()}
+                                                {formatNumber(currentLeaderboard.userPosition.total_score)}
                                             </Text>
                                             <Text style={styles.userStatLabel}>Points</Text>
                                         </View>

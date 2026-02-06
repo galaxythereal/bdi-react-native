@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "478540859840",
+    "project_id": "isenotifications-b92d7",
+    "storage_bucket": "isenotifications-b92d7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:478540859840:android:23f2ee7b8377dde3f6a025",
+        "android_client_info": {
+          "package_name": "com.ise.lms"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsNC62zIlfuD3QYr3XPTCiTTc1DE4cM-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
