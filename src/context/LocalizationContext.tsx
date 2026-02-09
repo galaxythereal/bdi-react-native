@@ -65,6 +65,31 @@ interface Translations {
     viewAllCourses: string;
     noCourses: string;
     startLearning: string;
+    startYourJourney: string;
+    browsePrograms: string;
+    browseAvailablePrograms: string;
+    contactInstructor: string;
+    getEnrolled: string;
+    course: string;
+    untitledDiploma: string;
+    continueLabel: string;
+    startLabel: string;
+    failedLoadCourses: string;
+    diplomasLabel: string;
+    overallProgress: string;
+    yourDiploma: string;
+    yourDiplomas: string;
+    courseLabel: string;
+    contactForPricing: string;
+    letsGetStarted: string;
+    doingGreat: string;
+    almostThere: string;
+    beginLearningJourney: string;
+    keepMomentum: string;
+    finishStrong: string;
+    aboutProgram: string;
+    courseCurriculum: string;
+    enrollmentRequiredMessage: string;
     
     // Course
     startCourse: string;
@@ -82,6 +107,19 @@ interface Translations {
     instructor: string;
     enrolled: string;
     notEnrolled: string;
+    locked: string;
+    inProgress: string;
+    notStarted: string;
+    enrollIn: string;
+    allCoursesStarted: string;
+    noCourses: string;
+    noCompletedCourses: string;
+    noCoursesInProgress: string;
+    enrollInCourses: string;
+    tryDifferentFilter: string;
+    loadingCourses: string;
+    myCourses: string;
+    all: string;
     courseDetails: string;
     courseContent: string;
     aboutCourse: string;
@@ -123,6 +161,19 @@ interface Translations {
     noRankYet: string;
     rankUp: string;
     rankDown: string;
+    loadingLeaderboards: string;
+    failedLoadLeaderboards: string;
+    noRankingsYet: string;
+    leaderboardEmptySubtitle: string;
+    noRankingsForCourse: string;
+    points: string;
+    pointsShort: string;
+    quizzes: string;
+    average: string;
+    anonymous: string;
+    youLabel: string;
+    batchLabel: string;
+    diplomaLabel: string;
     
     // Profile
     editProfile: string;
@@ -185,7 +236,26 @@ interface Translations {
     ticketResolved: string;
     ticketClosed: string;
     noTickets: string;
+    noTicketsSubtitle: string;
     ticketSubmitted: string;
+    loadingTickets: string;
+    openTicketsCount: string;
+    needHelpCreateTicket: string;
+    createTicket: string;
+    newTicketTitle: string;
+    createAction: string;
+    ticketSubjectPlaceholder: string;
+    ticketMessagePlaceholder: string;
+    originalMessageLabel: string;
+    loadingMessages: string;
+    typeMessagePlaceholder: string;
+    sendMessage: string;
+    noRepliesYet: string;
+    failedLoadTickets: string;
+    failedCreateTicket: string;
+    failedSendMessage: string;
+    validationError: string;
+    fillAllFields: string;
     
     // Notifications
     notificationSettings: string;
@@ -194,6 +264,9 @@ interface Translations {
     markAllRead: string;
     noNotifications: string;
     newNotification: string;
+    loadingNotifications: string;
+    markRead: string;
+    notificationsCaughtUp: string;
     
     // Downloads
     downloadedContent: string;
@@ -204,6 +277,21 @@ interface Translations {
     noDownloads: string;
     offlineAvailable: string;
     downloadedOn: string;
+    deleteCourseTitle: string;
+    deleteLessonTitle: string;
+    clearAllDownloadsTitle: string;
+    removeCourseMessage: string;
+    removeLessonMessage: string;
+    clearAllDownloadsMessage: string;
+    clearAllAction: string;
+    browseCourses: string;
+    noDownloadsYet: string;
+    downloadOfflineHint: string;
+    goToCourseDownload: string;
+    failedDeleteCourse: string;
+    failedDeleteLesson: string;
+    failedClearDownloads: string;
+    failedLoadOfflineData: string;
     
     // Certificates
     myCertificates: string;
@@ -220,6 +308,9 @@ interface Translations {
     upcomingSession: string;
     joinSession: string;
     joinNow: string;
+    join: string;
+    joinQuestion: string;
+    viewAll: string;
     started: string;
     startingNow: string;
     in: string;
@@ -229,6 +320,45 @@ interface Translations {
     sessionEnded: string;
     sessionStartsIn: string;
     noSessions: string;
+    noSessionsSubtitle: string;
+    noBatches: string;
+    noBatchesSubtitle: string;
+    loadingSessions: string;
+    noMeetingLink: string;
+    sessionsTab: string;
+    myBatches: string;
+    upcoming: string;
+
+    // Catalog & Enrollment
+    diplomaCatalog: string;
+    explorePrograms: string;
+    searchDiplomas: string;
+    noDiplomasFound: string;
+    tryDifferentSearch: string;
+    checkBackLater: string;
+    diplomaOutline: string;
+    courseOutline: string;
+    enrollmentRequired: string;
+    continueLearning: string;
+    contactAdminEnrollment: string;
+    enrollmentInquiry: string;
+    inquirySubtitle: string;
+    inquirySubtitleWithTitle: string;
+    fullNameLabel: string;
+    emailLabel: string;
+    phoneNumberLabel: string;
+    whatsappNumberLabel: string;
+    messageOptionalLabel: string;
+    enterFullName: string;
+    enterEmail: string;
+    enterPhoneNumber: string;
+    enterWhatsappNumber: string;
+    messagePlaceholder: string;
+    fillRequiredFields: string;
+    inquirySuccess: string;
+    submitInquiryFailed: string;
+    submitInquiry: string;
+    loadingDiplomas: string;
     
     // Status
     active: string;
@@ -241,6 +371,9 @@ interface Translations {
     // Time
     today: string;
     yesterday: string;
+    thisWeek: string;
+    older: string;
+    justNow: string;
     tomorrow: string;
     minutes: string;
     hours: string;
@@ -317,6 +450,31 @@ const en: Translations = {
     viewAllCourses: 'View All Courses',
     noCourses: 'No courses yet',
     startLearning: 'Start Learning',
+    startYourJourney: 'Start Your Learning Journey',
+    browsePrograms: 'Browse Programs',
+    browseAvailablePrograms: 'Browse All Programs',
+    contactInstructor: 'Browse our diploma programs below and contact your instructor to get enrolled.',
+    getEnrolled: 'Get Enrolled',
+    course: 'course',
+    untitledDiploma: 'Untitled Diploma',
+    continueLabel: 'Continue',
+    startLabel: 'Start',
+    failedLoadCourses: 'Failed to load courses.',
+    diplomasLabel: 'Diplomas',
+    overallProgress: 'Overall Progress',
+    yourDiploma: 'Your Diploma',
+    yourDiplomas: 'Your Diplomas',
+    courseLabel: 'Course',
+    contactForPricing: 'Contact for pricing',
+    letsGetStarted: "Let's get started!",
+    doingGreat: "You're doing great!",
+    almostThere: 'Almost there!',
+    beginLearningJourney: 'Begin your learning journey today',
+    keepMomentum: 'Keep up the momentum',
+    finishStrong: 'Finish strong and earn your certificates',
+    aboutProgram: 'About This Program',
+    courseCurriculum: 'Course Curriculum',
+    enrollmentRequiredMessage: 'Please enroll in this diploma program to access courses.',
     
     // Course
     startCourse: 'Start Course',
@@ -334,6 +492,19 @@ const en: Translations = {
     instructor: 'Instructor',
     enrolled: 'Enrolled',
     notEnrolled: 'Not Enrolled',
+    locked: 'Locked',
+    inProgress: 'In Progress',
+    notStarted: 'Not Started',
+    enrollIn: 'Enroll In',
+    allCoursesStarted: 'All courses started!',
+    noCourses: 'No courses yet',
+    noCompletedCourses: 'No completed courses',
+    noCoursesInProgress: 'No courses in progress',
+    enrollInCourses: 'Enroll in courses to start learning',
+    tryDifferentFilter: 'Try selecting a different filter',
+    loadingCourses: 'Loading courses...',
+    myCourses: 'My Courses',
+    all: 'All',
     courseDetails: 'Course Details',
     courseContent: 'Course Content',
     aboutCourse: 'About This Course',
@@ -375,6 +546,19 @@ const en: Translations = {
     noRankYet: 'Complete quizzes to get ranked',
     rankUp: 'Moved up',
     rankDown: 'Moved down',
+    loadingLeaderboards: 'Loading leaderboards...',
+    failedLoadLeaderboards: 'Failed to load leaderboards',
+    noRankingsYet: 'No Rankings Yet',
+    leaderboardEmptySubtitle: 'Complete quizzes in your batches to appear on the leaderboard!',
+    noRankingsForCourse: 'No rankings available for this course yet.',
+    points: 'Points',
+    pointsShort: 'pts',
+    quizzes: 'Quizzes',
+    average: 'Average',
+    anonymous: 'Anonymous',
+    youLabel: 'You',
+    batchLabel: 'Batch',
+    diplomaLabel: 'Diploma',
     
     // Profile
     editProfile: 'Edit Profile',
@@ -437,7 +621,26 @@ const en: Translations = {
     ticketResolved: 'Resolved',
     ticketClosed: 'Closed',
     noTickets: 'No support tickets',
+    noTicketsSubtitle: 'Having issues or questions? Create a support ticket and we will help you out.',
     ticketSubmitted: 'Ticket submitted successfully',
+    loadingTickets: 'Loading tickets...',
+    openTicketsCount: '{count} open ticket{plural}',
+    needHelpCreateTicket: 'Need help? Create a ticket',
+    createTicket: 'Create Ticket',
+    newTicketTitle: 'New Ticket',
+    createAction: 'Create',
+    ticketSubjectPlaceholder: 'Enter ticket subject',
+    ticketMessagePlaceholder: 'Describe your issue',
+    originalMessageLabel: 'Original Message',
+    loadingMessages: 'Loading messages...',
+    typeMessagePlaceholder: 'Type your message...',
+    sendMessage: 'Send',
+    noRepliesYet: 'No replies yet',
+    failedLoadTickets: 'Failed to load tickets.',
+    failedCreateTicket: 'Failed to create ticket.',
+    failedSendMessage: 'Failed to send message.',
+    validationError: 'Validation Error',
+    fillAllFields: 'Please fill in all fields.',
     
     // Notifications
     notificationSettings: 'Notification Settings',
@@ -446,6 +649,9 @@ const en: Translations = {
     markAllRead: 'Mark All as Read',
     noNotifications: 'No notifications',
     newNotification: 'New Notification',
+    loadingNotifications: 'Loading notifications...',
+    markRead: 'Read',
+    notificationsCaughtUp: "You're all caught up! We'll notify you when something new happens.",
     
     // Downloads
     downloadedContent: 'Downloaded Content',
@@ -456,6 +662,21 @@ const en: Translations = {
     noDownloads: 'No downloaded content',
     offlineAvailable: 'Available Offline',
     downloadedOn: 'Downloaded',
+    deleteCourseTitle: 'Delete Course',
+    deleteLessonTitle: 'Delete Lesson',
+    clearAllDownloadsTitle: 'Clear All Downloads',
+    removeCourseMessage: 'Remove "{title}" and all its downloaded content? This will free up {size}.',
+    removeLessonMessage: 'Remove this lesson\'s downloaded content?',
+    clearAllDownloadsMessage: 'This will delete all {count} downloaded courses and free up {size}. This cannot be undone.',
+    clearAllAction: 'Clear All',
+    browseCourses: 'Browse Courses',
+    noDownloadsYet: 'No Downloads Yet',
+    downloadOfflineHint: 'Download courses to watch them offline.',
+    goToCourseDownload: 'Go to a course and tap the download button.',
+    failedDeleteCourse: 'Failed to delete course',
+    failedDeleteLesson: 'Failed to delete lesson',
+    failedClearDownloads: 'Failed to clear downloads',
+    failedLoadOfflineData: 'Failed to load offline data',
     
     // Certificates
     myCertificates: 'My Certificates',
@@ -472,6 +693,9 @@ const en: Translations = {
     upcomingSession: 'Upcoming Session',
     joinSession: 'Join Session',
     joinNow: 'Join Now',
+    join: 'Join',
+    joinQuestion: 'Join',
+    viewAll: 'View All',
     started: 'Started',
     startingNow: 'Starting now',
     in: 'In',
@@ -481,6 +705,45 @@ const en: Translations = {
     sessionEnded: 'Session Ended',
     sessionStartsIn: 'Starts in',
     noSessions: 'No upcoming sessions',
+    noSessionsSubtitle: "When live sessions are scheduled, they'll appear here",
+    noBatches: 'No Batches',
+    noBatchesSubtitle: "You're not enrolled in any batch programs",
+    loadingSessions: 'Loading sessions...',
+    noMeetingLink: 'The meeting link is not yet available.',
+    sessionsTab: 'Sessions',
+    myBatches: 'My Batches',
+    upcoming: 'upcoming',
+
+    // Catalog & Enrollment
+    diplomaCatalog: 'Diploma Catalog',
+    explorePrograms: 'Explore our programs',
+    searchDiplomas: 'Search diplomas...',
+    noDiplomasFound: 'No diplomas found',
+    tryDifferentSearch: 'Try a different search term',
+    checkBackLater: 'Check back later for new programs',
+    diplomaOutline: 'Diploma Outline',
+    courseOutline: 'Course Outline',
+    enrollmentRequired: 'Enrollment required',
+    continueLearning: 'Continue Learning',
+    contactAdminEnrollment: 'Contact your administrator for enrollment',
+    enrollmentInquiry: 'Enrollment Inquiry',
+    inquirySubtitle: 'Fill out the form below and we will contact you via WhatsApp.',
+    inquirySubtitleWithTitle: 'Interested in "{title}"? Fill out the form below and we will contact you via WhatsApp.',
+    fullNameLabel: 'Full Name',
+    emailLabel: 'Email',
+    phoneNumberLabel: 'Phone Number',
+    whatsappNumberLabel: 'WhatsApp Number',
+    messageOptionalLabel: 'Message (Optional)',
+    enterFullName: 'Enter your full name',
+    enterEmail: 'Enter your email',
+    enterPhoneNumber: 'Enter your phone number',
+    enterWhatsappNumber: 'Enter your WhatsApp number',
+    messagePlaceholder: 'Any questions or comments?',
+    fillRequiredFields: 'Please fill in all required fields',
+    inquirySuccess: 'Your inquiry has been submitted. Our team will contact you on WhatsApp shortly.',
+    submitInquiryFailed: 'Failed to submit inquiry. Please try again.',
+    submitInquiry: 'Submit Inquiry',
+    loadingDiplomas: 'Loading diplomas...',
     
     // Status
     active: 'Active',
@@ -493,6 +756,9 @@ const en: Translations = {
     // Time
     today: 'Today',
     yesterday: 'Yesterday',
+    thisWeek: 'This Week',
+    older: 'Older',
+    justNow: 'Just now',
     tomorrow: 'Tomorrow',
     minutes: 'minutes',
     hours: 'hours',
@@ -569,6 +835,31 @@ const ar: Translations = {
     viewAllCourses: 'عرض جميع الدورات',
     noCourses: 'لا توجد دورات بعد',
     startLearning: 'ابدأ التعلم',
+    startYourJourney: 'ابدأ رحلة التعلم الخاصة بك',
+    browsePrograms: 'استعرض البرامج',
+    browseAvailablePrograms: 'استعرض جميع البرامج',
+    contactInstructor: 'استعرض برامج الدبلومات الخاصة بنا وتواصل مع مدربك للتسجيل.',
+    getEnrolled: 'التسجيل',
+    course: 'دورة',
+    untitledDiploma: 'دبلوم بدون عنوان',
+    continueLabel: 'تابع',
+    startLabel: 'ابدأ',
+    failedLoadCourses: 'فشل تحميل الدورات.',
+    diplomasLabel: 'الدبلومات',
+    overallProgress: 'التقدم الإجمالي',
+    yourDiploma: 'دبلومك',
+    yourDiplomas: 'دبلوماتك',
+    courseLabel: 'دورة',
+    contactForPricing: 'تواصل لمعرفة السعر',
+    letsGetStarted: 'لنبدأ!',
+    doingGreat: 'أنت تقوم بعمل رائع!',
+    almostThere: 'أوشكت على الانتهاء!',
+    beginLearningJourney: 'ابدأ رحلة التعلم اليوم',
+    keepMomentum: 'حافظ على الزخم',
+    finishStrong: 'أنهِ بقوة واحصل على شهاداتك',
+    aboutProgram: 'حول هذا البرنامج',
+    courseCurriculum: 'منهج الدورات',
+    enrollmentRequiredMessage: 'يرجى التسجيل في هذا البرنامج للوصول إلى الدورات.',
     
     // Course
     startCourse: 'بدء الدورة',
@@ -586,6 +877,19 @@ const ar: Translations = {
     instructor: 'المدرب',
     enrolled: 'مسجل',
     notEnrolled: 'غير مسجل',
+    locked: 'مغلق',
+    inProgress: 'قيد التقدم',
+    notStarted: 'لم يبدأ',
+    enrollIn: 'التسجيل في',
+    allCoursesStarted: 'تم بدء جميع الدورات!',
+    noCourses: 'لا توجد دورات بعد',
+    noCompletedCourses: 'لا توجد دورات مكتملة',
+    noCoursesInProgress: 'لا توجد دورات قيد التقدم',
+    enrollInCourses: 'سجل في الدورات لبدء التعلم',
+    tryDifferentFilter: 'جرب تحديد مرشح مختلف',
+    loadingCourses: 'جاري تحميل الدورات...',
+    myCourses: 'دوراتي',
+    all: 'الكل',
     courseDetails: 'تفاصيل الدورة',
     courseContent: 'محتوى الدورة',
     aboutCourse: 'عن هذه الدورة',
@@ -627,6 +931,19 @@ const ar: Translations = {
     noRankYet: 'أكمل الاختبارات للحصول على ترتيب',
     rankUp: 'ارتفع',
     rankDown: 'انخفض',
+    loadingLeaderboards: 'جاري تحميل لوحة المتصدرين...',
+    failedLoadLeaderboards: 'فشل تحميل لوحة المتصدرين',
+    noRankingsYet: 'لا توجد تصنيفات بعد',
+    leaderboardEmptySubtitle: 'أكمل الاختبارات ضمن دفعاتك للظهور في لوحة المتصدرين!',
+    noRankingsForCourse: 'لا توجد تصنيفات متاحة لهذه الدورة بعد.',
+    points: 'نقاط',
+    pointsShort: 'ن',
+    quizzes: 'اختبارات',
+    average: 'المتوسط',
+    anonymous: 'مجهول',
+    youLabel: 'أنت',
+    batchLabel: 'دفعة',
+    diplomaLabel: 'دبلوم',
     
     // Profile
     editProfile: 'تعديل الملف الشخصي',
@@ -689,7 +1006,26 @@ const ar: Translations = {
     ticketResolved: 'تم الحل',
     ticketClosed: 'مغلقة',
     noTickets: 'لا توجد تذاكر دعم',
+    noTicketsSubtitle: 'هل لديك مشكلة أو سؤال؟ أنشئ تذكرة دعم وسنساعدك.',
     ticketSubmitted: 'تم إرسال التذكرة بنجاح',
+    loadingTickets: 'جارٍ تحميل التذاكر...',
+    openTicketsCount: '{count} تذكرة مفتوحة',
+    needHelpCreateTicket: 'تحتاج مساعدة؟ أنشئ تذكرة',
+    createTicket: 'إنشاء تذكرة',
+    newTicketTitle: 'تذكرة جديدة',
+    createAction: 'إنشاء',
+    ticketSubjectPlaceholder: 'أدخل موضوع التذكرة',
+    ticketMessagePlaceholder: 'اشرح مشكلتك',
+    originalMessageLabel: 'الرسالة الأصلية',
+    loadingMessages: 'جارٍ تحميل الرسائل...',
+    typeMessagePlaceholder: 'اكتب رسالتك...',
+    sendMessage: 'إرسال',
+    noRepliesYet: 'لا توجد ردود بعد',
+    failedLoadTickets: 'فشل تحميل التذاكر.',
+    failedCreateTicket: 'فشل إنشاء التذكرة.',
+    failedSendMessage: 'فشل إرسال الرسالة.',
+    validationError: 'خطأ في التحقق',
+    fillAllFields: 'يرجى تعبئة جميع الحقول.',
     
     // Notifications
     notificationSettings: 'إعدادات الإشعارات',
@@ -698,6 +1034,9 @@ const ar: Translations = {
     markAllRead: 'تعليم الكل كمقروء',
     noNotifications: 'لا توجد إشعارات',
     newNotification: 'إشعار جديد',
+    loadingNotifications: 'جاري تحميل الإشعارات...',
+    markRead: 'تمت القراءة',
+    notificationsCaughtUp: 'أنت على اطلاع بكل شيء! سنخطرك عندما يحدث شيء جديد.',
     
     // Downloads
     downloadedContent: 'المحتوى المحمل',
@@ -708,6 +1047,21 @@ const ar: Translations = {
     noDownloads: 'لا يوجد محتوى محمل',
     offlineAvailable: 'متاح بدون اتصال',
     downloadedOn: 'تم التنزيل',
+    deleteCourseTitle: 'حذف الدورة',
+    deleteLessonTitle: 'حذف الدرس',
+    clearAllDownloadsTitle: 'حذف جميع التنزيلات',
+    removeCourseMessage: 'هل تريد إزالة "{title}" وجميع محتواه المحمّل؟ سيؤدي ذلك إلى تحرير {size}.',
+    removeLessonMessage: 'هل تريد إزالة محتوى هذا الدرس المحمّل؟',
+    clearAllDownloadsMessage: 'سيتم حذف جميع الدورات المحمّلة وعددها {count} وتحرير {size}. لا يمكن التراجع عن هذا الإجراء.',
+    clearAllAction: 'حذف الكل',
+    browseCourses: 'تصفح الدورات',
+    noDownloadsYet: 'لا توجد تنزيلات بعد',
+    downloadOfflineHint: 'حمّل الدورات لمشاهدتها بدون اتصال.',
+    goToCourseDownload: 'اذهب إلى الدورة واضغط زر التنزيل.',
+    failedDeleteCourse: 'فشل حذف الدورة',
+    failedDeleteLesson: 'فشل حذف الدرس',
+    failedClearDownloads: 'فشل حذف التنزيلات',
+    failedLoadOfflineData: 'فشل تحميل بيانات عدم الاتصال',
     
     // Certificates
     myCertificates: 'شهاداتي',
@@ -724,6 +1078,9 @@ const ar: Translations = {
     upcomingSession: 'جلسة قادمة',
     joinSession: 'انضم للجلسة',
     joinNow: 'انضم الآن',
+    join: 'انضم',
+    joinQuestion: 'انضم',
+    viewAll: 'عرض الكل',
     started: 'بدأت',
     startingNow: 'تبدأ الآن',
     in: 'بعد',
@@ -733,6 +1090,45 @@ const ar: Translations = {
     sessionEnded: 'انتهت الجلسة',
     sessionStartsIn: 'تبدأ خلال',
     noSessions: 'لا توجد جلسات قادمة',
+    noSessionsSubtitle: 'عند جدولة الجلسات المباشرة ستظهر هنا',
+    noBatches: 'لا توجد دفعات',
+    noBatchesSubtitle: 'أنت غير مسجل في أي برامج دفعية',
+    loadingSessions: 'جاري تحميل الجلسات...',
+    noMeetingLink: 'رابط الاجتماع غير متاح بعد.',
+    sessionsTab: 'الجلسات',
+    myBatches: 'دفعاتي',
+    upcoming: 'قادمة',
+
+    // Catalog & Enrollment
+    diplomaCatalog: 'كتالوج الدبلومات',
+    explorePrograms: 'استكشف برامجنا',
+    searchDiplomas: 'ابحث عن الدبلومات...',
+    noDiplomasFound: 'لم يتم العثور على دبلومات',
+    tryDifferentSearch: 'جرّب مصطلح بحث مختلف',
+    checkBackLater: 'تحقق لاحقاً من البرامج الجديدة',
+    diplomaOutline: 'مخطط الدبلوم',
+    courseOutline: 'مخطط الدورات',
+    enrollmentRequired: 'يتطلب التسجيل',
+    continueLearning: 'تابع التعلم',
+    contactAdminEnrollment: 'تواصل مع الإدارة للتسجيل',
+    enrollmentInquiry: 'استفسار التسجيل',
+    inquirySubtitle: 'املأ النموذج أدناه وسنتواصل معك عبر واتساب.',
+    inquirySubtitleWithTitle: 'مهتم بـ "{title}"؟ املأ النموذج أدناه وسنتواصل معك عبر واتساب.',
+    fullNameLabel: 'الاسم الكامل',
+    emailLabel: 'البريد الإلكتروني',
+    phoneNumberLabel: 'رقم الهاتف',
+    whatsappNumberLabel: 'رقم واتساب',
+    messageOptionalLabel: 'رسالة (اختياري)',
+    enterFullName: 'أدخل اسمك الكامل',
+    enterEmail: 'أدخل بريدك الإلكتروني',
+    enterPhoneNumber: 'أدخل رقم هاتفك',
+    enterWhatsappNumber: 'أدخل رقم واتساب',
+    messagePlaceholder: 'أي أسئلة أو ملاحظات؟',
+    fillRequiredFields: 'يرجى تعبئة جميع الحقول المطلوبة',
+    inquirySuccess: 'تم إرسال استفسارك. سيتواصل فريقنا معك عبر واتساب قريباً.',
+    submitInquiryFailed: 'فشل إرسال الاستفسار. يرجى المحاولة مرة أخرى.',
+    submitInquiry: 'إرسال الاستفسار',
+    loadingDiplomas: 'جارٍ تحميل الدبلومات...',
     
     // Status
     active: 'نشط',
@@ -745,6 +1141,9 @@ const ar: Translations = {
     // Time
     today: 'اليوم',
     yesterday: 'أمس',
+    thisWeek: 'هذا الأسبوع',
+    older: 'أقدم',
+    justNow: 'الآن',
     tomorrow: 'غداً',
     minutes: 'دقائق',
     hours: 'ساعات',
@@ -772,6 +1171,8 @@ interface LocalizationContextType {
     formatTime: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
     formatDateTime: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
+    formatRelativeTime: (date: Date | string | number) => string;
+    getLocalizedText: (value?: string | null, valueAr?: string | null) => string;
     setLanguage: (lang: Language) => Promise<void>;
 }
 
@@ -853,6 +1254,40 @@ export function LocalizationProvider({ children }: LocalizationProviderProps) {
     const formatNumber = (value: number, options?: Intl.NumberFormatOptions) =>
         new Intl.NumberFormat(locale, options).format(value);
 
+    const formatRelativeTime = (date: Date | string | number) => {
+        const target = new Date(date);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now.getTime() - target.getTime()) / 1000);
+
+        if (diffInSeconds < 60) {
+            return translations[language].justNow;
+        }
+
+        if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${formatNumber(minutes)} ${translations[language].minutes} ${translations[language].ago}`;
+        }
+
+        if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${formatNumber(hours)} ${translations[language].hours} ${translations[language].ago}`;
+        }
+
+        if (diffInSeconds < 604800) {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${formatNumber(days)} ${translations[language].days} ${translations[language].ago}`;
+        }
+
+        return formatDate(target, { month: 'short', day: 'numeric' });
+    };
+
+    const getLocalizedText = (value?: string | null, valueAr?: string | null) => {
+        if (language === 'ar' && valueAr) {
+            return valueAr;
+        }
+        return value || '';
+    };
+
     const value: LocalizationContextType = {
         language,
         isRTL: language === 'ar',
@@ -862,6 +1297,8 @@ export function LocalizationProvider({ children }: LocalizationProviderProps) {
         formatTime,
         formatDateTime,
         formatNumber,
+        formatRelativeTime,
+        getLocalizedText,
         setLanguage,
     };
 

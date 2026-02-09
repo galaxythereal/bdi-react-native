@@ -53,6 +53,7 @@ interface CourseCardProps {
 
 const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
   const { colors, isDark } = useTheme();
+  const { t } = useLocalization();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const cardAnim = useRef(new Animated.Value(0)).current;
   const progress = Math.round(item.progress || 0);
@@ -127,7 +128,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
         {/* Info */}
         <View style={styles.cardInfo}>
           <Text style={styles.cardTitle} numberOfLines={2}>
-            {diploma?.title || "Untitled Diploma"}
+            {diploma?.title || t.untitledDiploma}
           </Text>
 
           {/* Progress bar */}
@@ -147,7 +148,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
 
           {/* Action text */}
           <Text style={[styles.actionText, { color: colors.primary }]}>
-            {progress > 0 ? "Continue" : "Start"} →
+            {progress > 0 ? t.resumeCourse : t.startCourse} →
           </Text>
         </View>
       </TouchableOpacity>
@@ -208,7 +209,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const { colors, isDark } = useTheme();
-  const { t, formatDate, formatTime } = useLocalization();
+  const { t, formatDate, formatTime, getLocalizedText } = useLocalization();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const loadData = async () => {
@@ -228,8 +229,8 @@ export default function DashboardScreen() {
         useNativeDriver: true,
       }).start();
     } catch (error: any) {
-      console.error("Error loading enrollments:", error);
-      Alert.alert("Error", error.message || "Failed to load courses.");
+      console.error(t.failedLoadCourses, error);
+      Alert.alert(t.error, error.message || t.failedLoadCourses);
       setEnrollments([]);
     } finally {
       setLoading(false);
@@ -351,19 +352,19 @@ export default function DashboardScreen() {
                 <StatCard
                   icon="book"
                   value={totalCourses}
-                  label="Diplomas"
+                  label={t.diplomasLabel}
                   color={Theme.colors.light.primary}
                 />
                 <StatCard
                   icon="trending-up"
                   value={`${avgProgress}%`}
-                  label="Progress"
+                  label={t.progress}
                   color={Theme.colors.light.info}
                 />
                 <StatCard
                   icon="checkmark-circle"
                   value={completedCourses}
-                  label="Completed"
+                  label={t.completed}
                   color={Theme.colors.light.success}
                 />
               </View>
@@ -430,13 +431,19 @@ export default function DashboardScreen() {
                             style={styles.continueDiplomaName}
                             numberOfLines={1}
                           >
-                            {recentCourse.diploma?.title || "Your Diploma"}
+                            {getLocalizedText(
+                              recentCourse.diploma?.title,
+                              recentCourse.diploma?.title_ar,
+                            ) || t.yourDiploma}
                           </Text>
                           <Text
                             style={styles.continueCourseName}
                             numberOfLines={2}
                           >
-                            {courseInProgress.title}
+                            {getLocalizedText(
+                              courseInProgress.title,
+                              courseInProgress.title_ar,
+                            )}
                           </Text>
                           <View style={styles.continueProgressContainer}>
                             <View style={styles.continueProgressBar}>
@@ -454,7 +461,7 @@ export default function DashboardScreen() {
                         </View>
                       </View>
                       <View style={styles.continueButton}>
-                        <Text style={styles.continueButtonText}>Continue</Text>
+                        <Text style={styles.continueButtonText}>{t.continueLabel}</Text>
                         <Ionicons name="arrow-forward" size={20} color="#fff" />
                       </View>
                     </LinearGradient>
@@ -469,12 +476,12 @@ export default function DashboardScreen() {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <View style={styles.liveDot} />
-                  <Text style={styles.sectionTitle}>Live Sessions</Text>
+                  <Text style={styles.sectionTitle}>{t.liveSessions}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => router.push("/(student)/live-sessions")}
                 >
-                  <Text style={styles.seeAllText}>View All</Text>
+                  <Text style={styles.seeAllText}>{t.viewAll}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -495,12 +502,12 @@ export default function DashboardScreen() {
                     onPress={() => {
                       if (session.meeting_url) {
                         Alert.alert(
-                          "Join Session",
-                          `Join "${session.title}"?`,
+                          t.joinSession,
+                          `${t.joinQuestion} "${session.title}"?`,
                           [
-                            { text: "Cancel", style: "cancel" },
+                            { text: t.cancel, style: "cancel" },
                             {
-                              text: "Join",
+                              text: t.join,
                               onPress: () =>
                                 Linking.openURL(session.meeting_url!),
                             },
@@ -618,7 +625,7 @@ export default function DashboardScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>
-                  {enrollments.length === 1 ? "Your Diploma" : "Your Diplomas"}
+                  {enrollments.length === 1 ? t.yourDiploma : t.yourDiplomas}
                 </Text>
               </View>
 
@@ -670,18 +677,18 @@ export default function DashboardScreen() {
                             color={Theme.colors.light.success}
                           />
                           <Text style={styles.enrolledDiplomaBadgeText}>
-                            Enrolled
+                            {t.enrolled}
                           </Text>
                         </View>
                         <Text
                           style={styles.enrolledDiplomaTitle}
                           numberOfLines={2}
                         >
-                          {diploma?.title || "Your Diploma"}
+                          {getLocalizedText(diploma?.title, diploma?.title_ar) || t.untitledDiploma}
                         </Text>
                         <Text style={styles.enrolledDiplomaCourseCount}>
                           {courses.length}{" "}
-                          {courses.length === 1 ? "Course" : "Courses"}
+                          {courses.length === 1 ? t.courseLabel : t.courses}
                         </Text>
                       </LinearGradient>
                     </View>
@@ -690,7 +697,7 @@ export default function DashboardScreen() {
                     <View style={styles.enrolledDiplomaProgress}>
                       <View style={styles.progressHeader}>
                         <Text style={styles.progressLabel}>
-                          Overall Progress
+                          {t.overallProgress}
                         </Text>
                         <Text style={styles.progressPercentage}>
                           {overallProgress}%
@@ -715,7 +722,7 @@ export default function DashboardScreen() {
                     {/* Course Preview Cards */}
                     {courses.length > 0 && (
                       <View style={styles.coursePreviewSection}>
-                        <Text style={styles.coursePreviewTitle}>Courses</Text>
+                        <Text style={styles.coursePreviewTitle}>{t.courses}</Text>
                         <View style={styles.coursePreviewGrid}>
                           {courses.slice(0, 3).map((course, index) => (
                             <TouchableOpacity
@@ -735,7 +742,7 @@ export default function DashboardScreen() {
                                 style={styles.coursePreviewName}
                                 numberOfLines={2}
                               >
-                                {course.title}
+                                {getLocalizedText(course.title, course.title_ar)}
                               </Text>
                               <Ionicons
                                 name="chevron-forward"
@@ -789,18 +796,17 @@ export default function DashboardScreen() {
                     />
                   </View>
                   <Text style={styles.emptyStateTitle}>
-                    Start Your Learning Journey
+                    {t.startYourJourney}
                   </Text>
                   <Text style={styles.emptyStateText}>
-                    Browse our diploma programs below and contact your
-                    instructor to get enrolled.
+                    {t.contactInstructor}
                   </Text>
                   <TouchableOpacity
                     style={styles.emptyStateButton}
                     onPress={() => router.push("/(student)/catalog")}
                   >
                     <Text style={styles.emptyStateButtonText}>
-                      Browse Programs
+                      {t.browsePrograms}
                     </Text>
                     <Ionicons name="arrow-forward" size={16} color="#fff" />
                   </TouchableOpacity>
@@ -813,11 +819,11 @@ export default function DashboardScreen() {
           {allDiplomas.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Browse All Programs</Text>
+                <Text style={styles.sectionTitle}>{t.browseAvailablePrograms}</Text>
                 <TouchableOpacity
                   onPress={() => router.push("/(student)/catalog")}
                 >
-                  <Text style={styles.seeAllText}>View All</Text>
+                  <Text style={styles.seeAllText}>{t.viewAll}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -908,10 +914,10 @@ export default function DashboardScreen() {
                           ]}
                           numberOfLines={2}
                         >
-                          {diploma.title}
+                          {getLocalizedText(diploma.title, diploma.title_ar)}
                         </Text>
                         <Text style={styles.diplomaCourseCount}>
-                          {diploma.courses?.length || 0} courses
+                          {diploma.courses?.length || 0} {diploma.courses?.length === 1 ? t.course : t.courses}
                         </Text>
                         {isEnrolled ? (
                           <View style={styles.enrolledBadge}>
@@ -920,13 +926,13 @@ export default function DashboardScreen() {
                               size={12}
                               color={Theme.colors.light.success}
                             />
-                            <Text style={styles.enrolledText}>Enrolled</Text>
+                            <Text style={styles.enrolledText}>{t.enrolled}</Text>
                           </View>
                         ) : (
                           <Text style={styles.diplomaPrice}>
                             {diploma.price && diploma.price > 0
                               ? `${diploma.currency || "USD"} ${diploma.price}`
-                              : "Contact for pricing"}
+                              : t.contactForPricing}
                           </Text>
                         )}
                       </View>
@@ -951,17 +957,17 @@ export default function DashboardScreen() {
                 <View style={styles.motivationContent}>
                   <Text style={styles.motivationTitle}>
                     {avgProgress < 30
-                      ? "Let's get started!"
+                      ? t.letsGetStarted
                       : avgProgress < 70
-                        ? "You're doing great!"
-                        : "Almost there!"}
+                        ? t.doingGreat
+                        : t.almostThere}
                   </Text>
                   <Text style={styles.motivationText}>
                     {avgProgress < 30
-                      ? "Begin your learning journey today"
+                      ? t.beginLearningJourney
                       : avgProgress < 70
-                        ? "Keep up the momentum"
-                        : "Finish strong and earn your certificates"}
+                        ? t.keepMomentum
+                        : t.finishStrong}
                   </Text>
                 </View>
               </View>

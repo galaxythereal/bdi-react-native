@@ -43,7 +43,7 @@ interface TicketCardProps {
 }
 
 const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles }) => {
-    const { formatDateTime } = useLocalization();
+    const { t, formatDateTime } = useLocalization();
     const cardAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -60,6 +60,20 @@ const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles 
         inputRange: [0, 1],
         outputRange: [0.9, 1],
     });
+
+    const statusLabel = {
+        open: t.ticketOpen,
+        in_progress: t.ticketInProgress,
+        resolved: t.ticketResolved,
+        closed: t.ticketClosed,
+    }[ticket.status] || ticket.status.replace('_', ' ').toUpperCase();
+
+    const priorityLabel = {
+        low: t.priorityLow,
+        medium: t.priorityNormal,
+        high: t.priorityHigh,
+        urgent: t.priorityUrgent,
+    }[ticket.priority] || ticket.priority.toUpperCase();
 
     const statusColor = getTicketStatusColor(ticket.status);
     const priorityColor = getPriorityColor(ticket.priority);
@@ -103,12 +117,12 @@ const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles 
                 <View style={styles.cardFooter}>
                     <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
                         <Text style={[styles.statusText, { color: statusColor }]}>
-                            {ticket.status.replace('_', ' ').toUpperCase()}
+                            {statusLabel}
                         </Text>
                     </View>
                     <View style={[styles.priorityBadge, { backgroundColor: priorityColor + '15' }]}>
                         <Text style={[styles.priorityText, { color: priorityColor }]}>
-                            {ticket.priority.toUpperCase()}
+                            {priorityLabel}
                         </Text>
                     </View>
                 </View>
@@ -143,8 +157,18 @@ export default function SupportScreen() {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const messagesScrollRef = useRef<ScrollView>(null);
     const { colors, isDark } = useTheme();
-    const { formatDateTime, formatTime } = useLocalization();
+    const { t, formatDateTime, formatTime } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
+    const getStatusLabel = (status: string) => {
+        const map: Record<string, string> = {
+            open: t.ticketOpen,
+            in_progress: t.ticketInProgress,
+            resolved: t.ticketResolved,
+            closed: t.ticketClosed,
+        };
+        return map[status] || status.replace('_', ' ').toUpperCase();
+    };
 
     const loadData = async () => {
         try {
@@ -157,8 +181,8 @@ export default function SupportScreen() {
                 useNativeDriver: true,
             }).start();
         } catch (error: any) {
-            console.error('Error loading tickets:', error);
-            Alert.alert('Error', error.message || 'Failed to load tickets.');
+            console.error(t.failedLoadTickets, error);
+            Alert.alert(t.error, error.message || t.failedLoadTickets);
             setTickets([]);
         } finally {
             setLoading(false);
@@ -202,7 +226,7 @@ export default function SupportScreen() {
 
     const handleCreateTicket = async () => {
         if (!newTicket.subject.trim() || !newTicket.description.trim()) {
-            Alert.alert('Validation Error', 'Please fill in all fields.');
+            Alert.alert(t.validationError, t.fillAllFields);
             return;
         }
 
@@ -211,10 +235,10 @@ export default function SupportScreen() {
             await createTicket(newTicket.subject, newTicket.description, newTicket.priority);
             setShowCreateModal(false);
             setNewTicket({ subject: '', description: '', priority: 'medium' });
-            Alert.alert('Success', 'Your support ticket has been created. We will respond soon.');
+            Alert.alert(t.success, t.ticketSubmitted);
             loadData();
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to create ticket.');
+            Alert.alert(t.error, error.message || t.failedCreateTicket);
         } finally {
             setCreatingTicket(false);
         }
@@ -235,7 +259,7 @@ export default function SupportScreen() {
                 messagesScrollRef.current?.scrollToEnd({ animated: true });
             }, 100);
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to send message.');
+            Alert.alert(t.error, error.message || t.failedSendMessage);
         } finally {
             setSendingMessage(false);
         }
@@ -246,7 +270,7 @@ export default function SupportScreen() {
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading tickets...</Text>
+                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t.loadingTickets}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -257,11 +281,18 @@ export default function SupportScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>Support</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>{t.support}</Text>
                     <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                        {tickets.length > 0
-                            ? `${tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length} open ticket${tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length !== 1 ? 's' : ''}`
-                            : 'Need help? Create a ticket'}
+                        {(() => {
+                            const openCount = tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length;
+                            if (openCount > 0) {
+                                const plural = openCount !== 1 ? 's' : '';
+                                return t.openTicketsCount
+                                    .replace('{count}', String(openCount))
+                                    .replace('{plural}', plural);
+                            }
+                            return t.needHelpCreateTicket;
+                        })()}
                     </Text>
                 </View>
                 <TouchableOpacity
@@ -296,16 +327,16 @@ export default function SupportScreen() {
                         <View style={[styles.emptyIcon, { backgroundColor: colors.backgroundSecondary }]}>
                             <Ionicons name="chatbubbles-outline" size={64} color={colors.textTertiary} />
                         </View>
-                        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Support Tickets</Text>
+                        <Text style={[styles.emptyTitle, { color: colors.text }]}>{t.noTickets}</Text>
                         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                            Having issues or questions? Create a support ticket and we'll help you out.
+                            {t.noTicketsSubtitle}
                         </Text>
                         <TouchableOpacity
                             style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                             onPress={() => setShowCreateModal(true)}
                         >
                             <Ionicons name="add" size={18} color="#fff" />
-                            <Text style={styles.emptyButtonText}>Create Ticket</Text>
+                            <Text style={styles.emptyButtonText}>{t.createTicket}</Text>
                         </TouchableOpacity>
                     </Animated.View>
                 ) : (
@@ -333,14 +364,14 @@ export default function SupportScreen() {
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
                         <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-                            <Text style={styles.modalCancel}>Cancel</Text>
+                            <Text style={styles.modalCancel}>{t.cancel}</Text>
                         </TouchableOpacity>
-                        <Text style={styles.modalTitle}>New Ticket</Text>
+                        <Text style={styles.modalTitle}>{t.newTicketTitle}</Text>
                         <TouchableOpacity onPress={handleCreateTicket} disabled={creatingTicket}>
                             {creatingTicket ? (
                                 <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
-                                <Text style={styles.modalSubmit}>Create</Text>
+                                <Text style={styles.modalSubmit}>{t.createAction}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -353,10 +384,10 @@ export default function SupportScreen() {
                         alwaysBounceVertical={true}
                     >
                         <View style={styles.formGroup}>
-                            <Text style={styles.formLabel}>Subject *</Text>
+                            <Text style={styles.formLabel}>{t.ticketSubject} *</Text>
                             <TextInput
                                 style={styles.formInput}
-                                placeholder="Brief summary of your issue"
+                                placeholder={t.ticketSubjectPlaceholder}
                                 placeholderTextColor={colors.textTertiary}
                                 value={newTicket.subject}
                                 onChangeText={(text) => setNewTicket(prev => ({ ...prev, subject: text }))}
@@ -364,7 +395,7 @@ export default function SupportScreen() {
                         </View>
 
                         <View style={styles.formGroup}>
-                            <Text style={styles.formLabel}>Priority</Text>
+                            <Text style={styles.formLabel}>{t.ticketPriority}</Text>
                             <View style={styles.priorityOptions}>
                                 {(['low', 'medium', 'high', 'urgent'] as const).map((priority) => (
                                     <TouchableOpacity
@@ -380,7 +411,12 @@ export default function SupportScreen() {
                                             styles.priorityOptionText,
                                             newTicket.priority === priority && { color: getPriorityColor(priority) },
                                         ]}>
-                                            {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                                            {(
+                                                priority === 'low' ? t.priorityLow :
+                                                priority === 'medium' ? t.priorityNormal :
+                                                priority === 'high' ? t.priorityHigh :
+                                                t.priorityUrgent
+                                            )}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
@@ -388,10 +424,10 @@ export default function SupportScreen() {
                         </View>
 
                         <View style={styles.formGroup}>
-                            <Text style={styles.formLabel}>Description *</Text>
+                            <Text style={styles.formLabel}>{t.ticketMessage} *</Text>
                             <TextInput
                                 style={[styles.formInput, styles.formTextArea]}
-                                placeholder="Please describe your issue in detail..."
+                                placeholder={t.ticketMessagePlaceholder}
                                 placeholderTextColor={colors.textTertiary}
                                 value={newTicket.description}
                                 onChangeText={(text) => setNewTicket(prev => ({ ...prev, description: text }))}
@@ -432,7 +468,7 @@ export default function SupportScreen() {
                                         styles.detailBadgeText,
                                         { color: getTicketStatusColor(selectedTicket?.status || 'open') }
                                     ]}>
-                                        {(selectedTicket?.status || 'open').replace('_', ' ').toUpperCase()}
+                                        {getStatusLabel(selectedTicket?.status || 'open')}
                                     </Text>
                                 </View>
                             </View>
@@ -441,7 +477,7 @@ export default function SupportScreen() {
 
                     {/* Original message */}
                     <View style={styles.originalMessage}>
-                        <Text style={styles.originalLabel}>Original Message</Text>
+                        <Text style={styles.originalLabel}>{t.originalMessageLabel}</Text>
                         <Text style={styles.originalText}>{selectedTicket?.description}</Text>
                         <Text style={styles.originalDate}>
                             {selectedTicket && formatDateTime(selectedTicket.created_at)}
@@ -466,11 +502,11 @@ export default function SupportScreen() {
                             {loadingMessages ? (
                                 <View style={styles.messagesLoading}>
                                     <ActivityIndicator size="small" color={colors.primary} />
-                                    <Text style={styles.messagesLoadingText}>Loading messages...</Text>
+                                    <Text style={styles.messagesLoadingText}>{t.loadingMessages}</Text>
                                 </View>
                             ) : ticketMessages.length === 0 ? (
                                 <View style={styles.noMessages}>
-                                    <Text style={styles.noMessagesText}>No replies yet</Text>
+                                    <Text style={styles.noMessagesText}>{t.noRepliesYet}</Text>
                                 </View>
                             ) : (
                                 ticketMessages.map((msg) => {
@@ -485,7 +521,7 @@ export default function SupportScreen() {
                                         >
                                             {!isMe && (
                                                 <Text style={styles.messageAuthor}>
-                                                    {msg.profile?.full_name || 'Support'}
+                                                    {msg.profile?.full_name || t.support}
                                                 </Text>
                                             )}
                                             <Text style={[
@@ -513,7 +549,7 @@ export default function SupportScreen() {
                         <View style={[styles.messageInputContainer, { paddingBottom: insets.bottom || Theme.spacing.md }]}>
                             <TextInput
                                 style={styles.messageInput}
-                                placeholder="Type a message..."
+                                placeholder={t.typeMessagePlaceholder}
                                 placeholderTextColor={colors.textTertiary}
                                 value={newMessage}
                                 onChangeText={setNewMessage}

@@ -7,7 +7,9 @@
 export interface Diploma {
   id: string;
   title: string;
+  title_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
   thumbnail_url: string | null;
   slug: string;
   status: "draft" | "published" | "archived";
@@ -27,7 +29,9 @@ export interface Course {
   id: string;
   diploma_id: string | null;
   title: string;
+  title_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
   thumbnail_url: string | null;
   slug: string;
   status: "draft" | "published" | "archived";
@@ -44,7 +48,9 @@ export interface Chapter {
   id: string;
   course_id: string;
   title: string;
+  title_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
   order_index: number;
   is_locked: boolean;
   unlock_date: string | null;
@@ -58,6 +64,7 @@ export interface Lesson {
   id: string;
   chapter_id: string;
   title: string;
+  title_ar?: string | null;
   slug: string;
   content_type: "video" | "text" | "quiz" | "image" | "file" | "audio" | "pdf";
   video_url: string | null;
@@ -69,6 +76,7 @@ export interface Lesson {
   is_preview: boolean;
   order_index: number;
   description?: string | null;
+  description_ar?: string | null;
   quiz_data?: any;
   blocks?: any[];
   created_at?: string;
@@ -93,6 +101,7 @@ export interface Enrollment {
   courses?: {
     id: string;
     title: string;
+    title_ar?: string | null;
     thumbnail_url?: string | null;
     order_index?: number;
   }[];
@@ -103,7 +112,9 @@ export interface Batch {
   id: string;
   diploma_id: string;
   name: string;
+  name_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
   start_date: string;
   end_date: string | null;
   max_students: number | null;
@@ -122,7 +133,9 @@ export interface LiveSession {
   batch_id: string;
   course_id: string | null;
   title: string;
+  title_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
   scheduled_at: string;
   duration_minutes: number;
   meeting_url: string | null;
@@ -207,7 +220,10 @@ export interface Notification {
   id: string;
   user_id: string;
   title: string;
+  title_ar?: string | null;
   body: string;
+  body_ar?: string | null;
+  message_ar?: string | null;
   type:
     | "general"
     | "course"
@@ -246,7 +262,9 @@ export interface Module {
 export interface CourseDetail {
   id: string;
   title: string;
+  title_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
   thumbnail_url: string | null;
   slug: string;
   diploma_id?: string | null;
@@ -268,12 +286,15 @@ export interface CatalogDiploma extends Diploma {
   courses: {
     id: string;
     title: string;
+    title_ar?: string | null;
     description: string | null;
+    description_ar?: string | null;
     thumbnail_url: string | null;
     order_index: number;
     chapters: {
       id: string;
       title: string;
+      title_ar?: string | null;
       lessons_count: number;
     }[];
   }[];

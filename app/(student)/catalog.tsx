@@ -45,7 +45,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
     onInquire,
 }) => {
     const { colors, isDark } = useTheme();
-    const { t, formatNumber } = useLocalization();
+    const { t, formatNumber, getLocalizedText } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const totalCourses = diploma.courses?.length || 0;
@@ -97,7 +97,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                     ) : (
                         <View style={[styles.statusBadge, styles.lockedBadge]}>
                             <Ionicons name="lock-closed" size={14} color="#fff" />
-                            <Text style={styles.statusBadgeText}>{t.notEnrolled}</Text>
+                            <Text style={styles.statusBadgeText}>{t.locked}</Text>
                         </View>
                     )}
 
@@ -114,12 +114,12 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                 {/* Content */}
                 <View style={styles.cardContent}>
                     <Text style={styles.diplomaTitle} numberOfLines={2}>
-                        {diploma.title}
+                        {getLocalizedText(diploma.title, diploma.title_ar) || t.untitledDiploma}
                     </Text>
 
-                    {diploma.description && (
+                    {getLocalizedText(diploma.description, diploma.description_ar) && (
                         <Text style={styles.diplomaDescription} numberOfLines={2}>
-                            {diploma.description}
+                            {getLocalizedText(diploma.description, diploma.description_ar)}
                         </Text>
                     )}
 
@@ -127,16 +127,16 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                     <View style={styles.statsRow}>
                         <View style={styles.statItem}>
                             <Ionicons name="book-outline" size={16} color={colors.textSecondary} />
-                            <Text style={styles.statText}>{totalCourses} Courses</Text>
+                            <Text style={styles.statText}>{totalCourses} {t.courses}</Text>
                         </View>
                         <View style={styles.statItem}>
                             <Ionicons name="list-outline" size={16} color={colors.textSecondary} />
-                            <Text style={styles.statText}>{totalChapters} Chapters</Text>
+                            <Text style={styles.statText}>{totalChapters} {t.chapters}</Text>
                         </View>
                         {diploma.duration_weeks && (
                             <View style={styles.statItem}>
                                 <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-                                <Text style={styles.statText}>{diploma.duration_weeks} Weeks</Text>
+                                <Text style={styles.statText}>{diploma.duration_weeks} {t.weeks}</Text>
                             </View>
                         )}
                     </View>
@@ -145,7 +145,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                     {isEnrolled && enrollmentProgress !== undefined ? (
                         <View style={styles.progressSection}>
                             <View style={styles.progressHeader}>
-                                <Text style={styles.progressLabel}>Progress</Text>
+                                <Text style={styles.progressLabel}>{t.progress}</Text>
                                 <Text style={styles.progressValue}>{enrollmentProgress}%</Text>
                             </View>
                             <View style={styles.progressBar}>
@@ -165,7 +165,7 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
                     ) : (
                         <View style={styles.lockedInfoContainer}>
                             <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
-                            <Text style={styles.lockedInfoText}>Enrollment required</Text>
+                            <Text style={styles.lockedInfoText}>{t.enrollmentRequired}</Text>
                         </View>
                     )}
                 </View>
@@ -193,6 +193,7 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
     onContinue,
 }) => {
     const { colors, isDark } = useTheme();
+    const { t, getLocalizedText } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
 
@@ -223,7 +224,7 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                         <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.modalTitle}>Diploma Outline</Text>
+                    <Text style={styles.modalTitle}>{t.diplomaOutline}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -241,10 +242,14 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                             />
                         )}
 
-                        <Text style={styles.modalDiplomaTitle}>{diploma.title}</Text>
+                        <Text style={styles.modalDiplomaTitle}>
+                            {getLocalizedText(diploma.title, diploma.title_ar) || t.untitledDiploma}
+                        </Text>
 
-                        {diploma.description && (
-                            <Text style={styles.modalDescription}>{diploma.description}</Text>
+                        {getLocalizedText(diploma.description, diploma.description_ar) && (
+                            <Text style={styles.modalDescription}>
+                                {getLocalizedText(diploma.description, diploma.description_ar)}
+                            </Text>
                         )}
 
                         {/* Quick Stats */}
@@ -253,28 +258,28 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                                 <Text style={styles.quickStatValue}>
                                     {diploma.courses?.length || 0}
                                 </Text>
-                                <Text style={styles.quickStatLabel}>Courses</Text>
+                                <Text style={styles.quickStatLabel}>{t.courses}</Text>
                             </View>
                             <View style={styles.quickStatDivider} />
                             <View style={styles.quickStatItem}>
                                 <Text style={styles.quickStatValue}>
                                     {diploma.courses?.reduce((sum, c) => sum + (c.chapters?.length || 0), 0) || 0}
                                 </Text>
-                                <Text style={styles.quickStatLabel}>Chapters</Text>
+                                <Text style={styles.quickStatLabel}>{t.chapters}</Text>
                             </View>
                             <View style={styles.quickStatDivider} />
                             <View style={styles.quickStatItem}>
                                 <Text style={styles.quickStatValue}>
                                     {diploma.duration_weeks || '-'}
                                 </Text>
-                                <Text style={styles.quickStatLabel}>Weeks</Text>
+                                <Text style={styles.quickStatLabel}>{t.weeks}</Text>
                             </View>
                         </View>
                     </View>
 
                     {/* Course Outline */}
                     <View style={styles.outlineSection}>
-                        <Text style={styles.outlineTitle}>Course Outline</Text>
+                        <Text style={styles.outlineTitle}>{t.courseOutline}</Text>
 
                         {diploma.courses?.map((course, courseIndex) => (
                             <View key={course.id} style={styles.courseItem}>
@@ -287,9 +292,11 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                                         <Text style={styles.courseNumberText}>{courseIndex + 1}</Text>
                                     </View>
                                     <View style={styles.courseInfo}>
-                                        <Text style={styles.courseTitle}>{course.title}</Text>
+                                        <Text style={styles.courseTitle}>
+                                            {getLocalizedText(course.title, course.title_ar)}
+                                        </Text>
                                         <Text style={styles.courseChapters}>
-                                            {course.chapters?.length || 0} chapters
+                                            {course.chapters?.length || 0} {t.chapters}
                                         </Text>
                                     </View>
                                     <Ionicons
@@ -315,7 +322,7 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                                                     styles.chapterTitle,
                                                     !isEnrolled && styles.chapterTitleLocked
                                                 ]}>
-                                                    {chapter.title}
+                                                    {getLocalizedText(chapter.title, chapter.title_ar)}
                                                 </Text>
                                             </View>
                                         ))}
@@ -336,14 +343,14 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                             onPress={onContinue}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.continueButtonText}>Continue Learning</Text>
+                            <Text style={styles.continueButtonText}>{t.continueLearning}</Text>
                             <Ionicons name="arrow-forward" size={20} color="#fff" />
                         </TouchableOpacity>
                     ) : (
                         <View style={styles.enrollmentRequiredInfo}>
                             <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
                             <Text style={styles.enrollmentRequiredText}>
-                                Contact your administrator for enrollment
+                                {t.contactAdminEnrollment}
                             </Text>
                         </View>
                     )}
@@ -363,6 +370,7 @@ interface InquiryModalProps {
 
 const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, onSubmit }) => {
     const { colors, isDark } = useTheme();
+    const { t } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const { session } = useAuth();
     const [formData, setFormData] = useState({
@@ -376,7 +384,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
 
     const handleSubmit = async () => {
         if (!formData.name || !formData.email || !formData.whatsapp_number) {
-            Alert.alert('Error', 'Please fill in all required fields');
+            Alert.alert(t.error, t.fillRequiredFields);
             return;
         }
 
@@ -384,12 +392,12 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
         try {
             await onSubmit(formData);
             Alert.alert(
-                'Success!',
-                'Your inquiry has been submitted. Our team will contact you on WhatsApp shortly.',
-                [{ text: 'OK', onPress: onClose }]
+                t.success,
+                t.inquirySuccess,
+                [{ text: t.ok, onPress: onClose }]
             );
         } catch (error) {
-            Alert.alert('Error', 'Failed to submit inquiry. Please try again.');
+            Alert.alert(t.error, t.submitInquiryFailed);
         } finally {
             setLoading(false);
         }
@@ -407,33 +415,33 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                         <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.modalTitle}>Enrollment Inquiry</Text>
+                    <Text style={styles.modalTitle}>{t.enrollmentInquiry}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
                 <ScrollView style={styles.formContent} showsVerticalScrollIndicator={false}>
                     <Text style={styles.formSubtitle}>
-                        Interested in "{diploma?.title}"? Fill out the form below and we'll contact you via WhatsApp.
+                        {t.inquirySubtitleWithTitle.replace('{title}', diploma?.title || '')}
                     </Text>
 
                     <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Full Name *</Text>
+                        <Text style={styles.formLabel}>{t.fullNameLabel} *</Text>
                         <TextInput
                             style={styles.formInput}
                             value={formData.name}
                             onChangeText={(text) => setFormData({ ...formData, name: text })}
-                            placeholder="Enter your full name"
+                            placeholder={t.enterFullName}
                             placeholderTextColor={colors.textTertiary}
                         />
                     </View>
 
                     <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Email *</Text>
+                        <Text style={styles.formLabel}>{t.emailLabel} *</Text>
                         <TextInput
                             style={styles.formInput}
                             value={formData.email}
                             onChangeText={(text) => setFormData({ ...formData, email: text })}
-                            placeholder="Enter your email"
+                            placeholder={t.enterEmail}
                             placeholderTextColor={colors.textTertiary}
                             keyboardType="email-address"
                             autoCapitalize="none"
@@ -441,36 +449,36 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                     </View>
 
                     <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Phone Number</Text>
+                        <Text style={styles.formLabel}>{t.phoneNumberLabel}</Text>
                         <TextInput
                             style={styles.formInput}
                             value={formData.phone}
                             onChangeText={(text) => setFormData({ ...formData, phone: text })}
-                            placeholder="Enter your phone number"
+                            placeholder={t.enterPhoneNumber}
                             placeholderTextColor={colors.textTertiary}
                             keyboardType="phone-pad"
                         />
                     </View>
 
                     <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>WhatsApp Number *</Text>
+                        <Text style={styles.formLabel}>{t.whatsappNumberLabel} *</Text>
                         <TextInput
                             style={styles.formInput}
                             value={formData.whatsapp_number}
                             onChangeText={(text) => setFormData({ ...formData, whatsapp_number: text })}
-                            placeholder="Enter your WhatsApp number"
+                            placeholder={t.enterWhatsappNumber}
                             placeholderTextColor={colors.textTertiary}
                             keyboardType="phone-pad"
                         />
                     </View>
 
                     <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Message (Optional)</Text>
+                        <Text style={styles.formLabel}>{t.messageOptionalLabel}</Text>
                         <TextInput
                             style={[styles.formInput, styles.formTextarea]}
                             value={formData.message}
                             onChangeText={(text) => setFormData({ ...formData, message: text })}
-                            placeholder="Any questions or comments?"
+                            placeholder={t.messagePlaceholder}
                             placeholderTextColor={colors.textTertiary}
                             multiline
                             numberOfLines={4}
@@ -489,7 +497,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, 
                         ) : (
                             <>
                                 <Ionicons name="send" size={18} color="#fff" />
-                                <Text style={styles.submitButtonText}>Submit Inquiry</Text>
+                                <Text style={styles.submitButtonText}>{t.submitInquiry}</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -512,7 +520,7 @@ export default function DiplomaCatalogScreen() {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showInquiryModal, setShowInquiryModal] = useState(false);
     const { colors, isDark } = useTheme();
-    const { formatNumber } = useLocalization();
+    const { formatNumber, t } = useLocalization();
     const router = useRouter();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
@@ -568,7 +576,7 @@ export default function DiplomaCatalogScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>Loading diplomas...</Text>
+                <Text style={styles.loadingText}>{t.loadingDiplomas}</Text>
             </View>
         );
     }
@@ -578,10 +586,8 @@ export default function DiplomaCatalogScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>Diploma Catalog</Text>
-                    <Text style={styles.headerSubtitle}>
-                        Explore our programs
-                    </Text>
+                    <Text style={styles.headerTitle}>{t.diplomaCatalog}</Text>
+                    <Text style={styles.headerSubtitle}>{t.explorePrograms}</Text>
                 </View>
             </View>
 
@@ -590,7 +596,7 @@ export default function DiplomaCatalogScreen() {
                 <Ionicons name="search" size={20} color={colors.textSecondary} />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Search diplomas..."
+                    placeholder={t.searchDiplomas}
                     placeholderTextColor={colors.textTertiary}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -639,9 +645,9 @@ export default function DiplomaCatalogScreen() {
                 ) : (
                     <View style={styles.emptyState}>
                         <Ionicons name="school-outline" size={64} color={colors.textTertiary} />
-                        <Text style={styles.emptyTitle}>No diplomas found</Text>
+                        <Text style={styles.emptyTitle}>{t.noDiplomasFound}</Text>
                         <Text style={styles.emptySubtitle}>
-                            {searchQuery ? 'Try a different search term' : 'Check back later for new programs'}
+                            {searchQuery ? t.tryDifferentSearch : t.checkBackLater}
                         </Text>
                     </View>
                 )}

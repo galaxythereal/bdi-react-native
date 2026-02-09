@@ -9,11 +9,11 @@ import {
     View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useLocalization } from '../../context/LocalizationContext';
 import { useTheme } from '../../context/ThemeContext';
 import { BORDER_RADIUS, FONT_SIZE, SPACING } from '../../lib/constants';
 import {
     Notification,
-    formatNotificationTime,
     getNotificationColor,
     getNotificationIcon
 } from './notificationService';
@@ -36,6 +36,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     index = 0,
 }) => {
     const { colors, isDark } = useTheme();
+    const { t, isRTL, getLocalizedText, formatRelativeTime } = useLocalization();
     const swipeableRef = useRef<Swipeable>(null);
     const animatedValue = useRef(new Animated.Value(0)).current;
 
@@ -52,7 +53,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
     const iconName = getNotificationIcon(notification.type) as keyof typeof Ionicons.glyphMap;
     const iconColor = getNotificationColor(notification.type);
-    const timeAgo = formatNotificationTime(notification.created_at);
+    const timeAgo = formatRelativeTime(notification.created_at);
 
     const handlePress = useCallback(() => {
         if (!notification.read) {
@@ -61,13 +62,13 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         onPress(notification);
     }, [notification, onPress, onMarkAsRead]);
 
-    const renderRightActions = (
+    const renderActions = (
         progress: Animated.AnimatedInterpolation<number>,
         dragX: Animated.AnimatedInterpolation<number>
     ) => {
         const translateX = dragX.interpolate({
-            inputRange: [-160, 0],
-            outputRange: [0, 160],
+            inputRange: isRTL ? [0, 160] : [-160, 0],
+            outputRange: isRTL ? [160, 0] : [0, 160],
             extrapolate: 'clamp',
         });
 
@@ -92,7 +93,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                         }}
                     >
                         <Ionicons name="checkmark" size={22} color="#FFF" />
-                        <Text style={styles.actionText}>Read</Text>
+                        <Text style={styles.actionText}>{t.markRead}</Text>
                     </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -103,7 +104,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                     }}
                 >
                     <Ionicons name="trash-outline" size={22} color="#FFF" />
-                    <Text style={styles.actionText}>Delete</Text>
+                    <Text style={styles.actionText}>{t.delete}</Text>
                 </TouchableOpacity>
             </Animated.View>
         );
@@ -128,7 +129,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         >
             <Swipeable
                 ref={swipeableRef}
-                renderRightActions={renderRightActions}
+                renderRightActions={!isRTL ? renderActions : undefined}
+                renderLeftActions={isRTL ? renderActions : undefined}
                 friction={2}
                 rightThreshold={40}
                 overshootRight={false}
@@ -138,6 +140,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                     onPress={handlePress}
                     style={[
                         styles.container,
+                        { flexDirection: isRTL ? 'row-reverse' : 'row' },
                         {
                             backgroundColor: notification.read
                                 ? 'transparent'
@@ -159,20 +162,22 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
                     {/* Content */}
                     <View style={styles.content}>
-                        <View style={styles.header}>
+                        <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+                        >
                             <Text
                                 style={[
                                     styles.title,
                                     {
                                         color: colors.text,
                                         fontWeight: notification.read ? '500' : '700',
+                                        textAlign: isRTL ? 'right' : 'left',
                                     }
                                 ]}
                                 numberOfLines={1}
                             >
-                                {notification.title}
+                                {getLocalizedText(notification.title, notification.title_ar)}
                             </Text>
-                            <Text style={[styles.time, { color: colors.textTertiary }]}>
+                            <Text style={[styles.time, { color: colors.textTertiary, textAlign: isRTL ? 'left' : 'right' }]}> 
                                 {timeAgo}
                             </Text>
                         </View>
@@ -180,12 +185,13 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                             style={[
                                 styles.message,
                                 {
-                                    color: notification.read ? colors.textTertiary : colors.textSecondary
+                                    color: notification.read ? colors.textTertiary : colors.textSecondary,
+                                    textAlign: isRTL ? 'right' : 'left',
                                 }
                             ]}
                             numberOfLines={2}
                         >
-                            {notification.message}
+                            {getLocalizedText(notification.message, notification.message_ar)}
                         </Text>
                     </View>
 
@@ -304,10 +310,14 @@ interface EmptyNotificationsProps {
 }
 
 export const EmptyNotifications: React.FC<EmptyNotificationsProps> = ({
-    title = 'No notifications',
-    message = "You're all caught up! We'll notify you when something new happens.",
+    title,
+    message,
 }) => {
     const { colors, isDark } = useTheme();
+    const { t } = useLocalization();
+
+    const resolvedTitle = title || t.noNotifications;
+    const resolvedMessage = message || t.notificationsCaughtUp;
 
     return (
         <View style={styles.emptyContainer}>
@@ -318,8 +328,8 @@ export const EmptyNotifications: React.FC<EmptyNotificationsProps> = ({
                     color={colors.textTertiary}
                 />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
-            <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>{message}</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{resolvedTitle}</Text>
+            <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>{resolvedMessage}</Text>
         </View>
     );
 };

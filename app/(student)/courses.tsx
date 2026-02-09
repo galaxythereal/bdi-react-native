@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { fetchMyEnrollments } from '../../src/features/courses/courseService';
 import { Enrollment } from '../../src/types';
@@ -38,6 +39,7 @@ interface CourseCardProps {
 
 const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
     const { colors, isDark } = useTheme();
+    const { t, getLocalizedText } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const progress = Math.round(item.progress || 0);
@@ -71,9 +73,9 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
     };
 
     const getStatusLabel = () => {
-        if (progress >= 100) return 'Completed';
-        if (progress > 0) return 'In Progress';
-        return 'Not Started';
+        if (progress >= 100) return t.completed;
+        if (progress > 0) return t.inProgress;
+        return t.notStarted;
     };
 
     return (
@@ -119,7 +121,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
                 {/* Info */}
                 <View style={styles.cardInfo}>
                     <Text style={styles.cardTitle} numberOfLines={2}>
-                        {diploma?.title || 'Untitled Diploma'}
+                        {getLocalizedText(diploma?.title, diploma?.title_ar) || t.untitledDiploma}
                     </Text>
 
                     {/* Status */}
@@ -157,6 +159,7 @@ interface FilterChipProps {
 
 const FilterChip: React.FC<FilterChipProps> = ({ label, count, active, onPress }) => {
     const { colors, isDark } = useTheme();
+    const { t } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     return (
@@ -187,6 +190,7 @@ export default function CoursesScreen() {
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const { colors, isDark } = useTheme();
+    const { t } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = async () => {
@@ -201,7 +205,7 @@ export default function CoursesScreen() {
             }).start();
         } catch (error: any) {
             console.error('Error loading enrollments:', error);
-            Alert.alert('Error', error.message || 'Failed to load courses.');
+            Alert.alert(t.error, error.message || t.failedLoadCourses);
             setEnrollments([]);
         } finally {
             setLoading(false);
@@ -248,7 +252,7 @@ export default function CoursesScreen() {
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading courses...</Text>
+                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t.loadingCourses}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -258,9 +262,9 @@ export default function CoursesScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
             <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>My Courses</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{t.myCourses}</Text>
                 <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                    {enrollments.length} {enrollments.length === 1 ? 'course' : 'courses'} enrolled
+                    {enrollments.length} {enrollments.length === 1 ? t.course : t.courses} {t.enrolled}
                 </Text>
             </Animated.View>
 
@@ -274,25 +278,25 @@ export default function CoursesScreen() {
                         bounces={false}
                     >
                         <FilterChip
-                            label="All"
+                            label={t.all}
                             count={counts.all}
                             active={filter === 'all'}
                             onPress={() => setFilter('all')}
                         />
                         <FilterChip
-                            label="In Progress"
+                            label={t.inProgress}
                             count={counts.in_progress}
                             active={filter === 'in_progress'}
                             onPress={() => setFilter('in_progress')}
                         />
                         <FilterChip
-                            label="Completed"
+                            label={t.completed}
                             count={counts.completed}
                             active={filter === 'completed'}
                             onPress={() => setFilter('completed')}
                         />
                         <FilterChip
-                            label="Not Started"
+                            label={t.notStarted}
                             count={counts.not_started}
                             active={filter === 'not_started'}
                             onPress={() => setFilter('not_started')}
@@ -349,15 +353,15 @@ export default function CoursesScreen() {
                             />
                         </View>
                         <Text style={styles.emptyTitle}>
-                            {filter === 'all' ? 'No courses yet' :
-                                filter === 'completed' ? 'No completed courses' :
-                                    filter === 'in_progress' ? 'No courses in progress' :
-                                        'All courses started!'}
+                            {filter === 'all' ? t.noCourses :
+                                filter === 'completed' ? t.noCompletedCourses :
+                                    filter === 'in_progress' ? t.noCoursesInProgress :
+                                        t.allCoursesStarted}
                         </Text>
                         <Text style={styles.emptyText}>
                             {filter === 'all'
-                                ? 'Enroll in courses to start learning'
-                                : 'Try selecting a different filter'}
+                                ? t.enrollInCourses
+                                : t.tryDifferentFilter}
                         </Text>
                     </View>
                 )}

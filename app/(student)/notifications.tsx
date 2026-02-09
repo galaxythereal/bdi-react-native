@@ -13,12 +13,13 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useNotifications } from '../../src/context/NotificationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { EmptyNotifications, NotificationItem } from '../../src/features/notifications/NotificationComponents';
 
 // Helper to group notifications
-const groupNotificationsByDate = (notifications: any[]) => {
+const groupNotificationsByDate = (notifications: any[], labels: { today: string; yesterday: string; thisWeek: string; older: string }) => {
     if (!notifications) return [];
 
     const today: any[] = [];
@@ -40,10 +41,10 @@ const groupNotificationsByDate = (notifications: any[]) => {
     });
 
     const sections = [];
-    if (today.length > 0) sections.push({ title: 'Today', data: today });
-    if (yesterday.length > 0) sections.push({ title: 'Yesterday', data: yesterday });
-    if (thisWeek.length > 0) sections.push({ title: 'This Week', data: thisWeek });
-    if (older.length > 0) sections.push({ title: 'Older', data: older });
+    if (today.length > 0) sections.push({ title: labels.today, data: today });
+    if (yesterday.length > 0) sections.push({ title: labels.yesterday, data: yesterday });
+    if (thisWeek.length > 0) sections.push({ title: labels.thisWeek, data: thisWeek });
+    if (older.length > 0) sections.push({ title: labels.older, data: older });
 
     return sections;
 };
@@ -52,6 +53,7 @@ export default function NotificationsScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+    const { t, isRTL } = useLocalization();
     const {
         notifications,
         unreadCount,
@@ -113,17 +115,22 @@ export default function NotificationsScreen() {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }, Theme.shadows[isDark ? 'dark' : 'light'].sm]}>
+            <View style={[
+                styles.header,
+                { backgroundColor: colors.surface, borderBottomColor: colors.border },
+                Theme.shadows[isDark ? 'dark' : 'light'].sm,
+                isRTL && { flexDirection: 'row-reverse' },
+            ]}>
                 <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => router.back()}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                    <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    <Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.text} />
                 </TouchableOpacity>
 
-                <View style={styles.headerCenter}>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
+                <View style={[styles.headerCenter, isRTL && { flexDirection: 'row-reverse' }] }>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>{t.notifications}</Text>
                     {unreadCount > 0 && (
                         <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
                             <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
@@ -149,17 +156,22 @@ export default function NotificationsScreen() {
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                     <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                        Loading notifications...
+                        {t.loadingNotifications}
                     </Text>
                 </View>
             ) : (
                 <SectionList
-                    sections={groupNotificationsByDate(notifications)}
+                    sections={groupNotificationsByDate(notifications, {
+                        today: t.today,
+                        yesterday: t.yesterday,
+                        thisWeek: t.thisWeek,
+                        older: t.older,
+                    })}
                     renderItem={renderNotification}
                     renderSectionHeader={({ section: { title, data } }) => (
                         data.length > 0 ? (
                             <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
-                                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{title}</Text>
+                                <Text style={[styles.sectionTitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{title}</Text>
                             </View>
                         ) : null
                     )}

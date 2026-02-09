@@ -14,6 +14,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalization } from "../../src/context/LocalizationContext";
 import { useTheme } from "../../src/context/ThemeContext";
 import { fetchMyEnrollments } from "../../src/features/courses/courseService";
 import { fetchDiplomaById } from "../../src/features/diplomas/diplomaService";
@@ -23,6 +24,7 @@ export default function DiplomaDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t, getLocalizedText } = useLocalization();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
@@ -225,19 +227,21 @@ export default function DiplomaDetailsScreen() {
             colors={["transparent", "rgba(0,0,0,0.8)"]}
             style={styles.heroOverlay}
           >
-            <Text style={styles.heroTitle}>{diploma.title}</Text>
+            <Text style={styles.heroTitle}>
+              {getLocalizedText(diploma.title, diploma.title_ar) || t.untitledDiploma}
+              {getLocalizedText(diploma.title, diploma.title_ar) || t.untitledDiploma}
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="book-outline" size={16} color="#fff" />
                 <Text style={styles.metaText}>
-                  {diploma.courses?.length || 0} Courses
+                    {diploma.courses?.length || 0} {t.courses}
                 </Text>
               </View>
               {diploma.duration_weeks && (
                 <View style={styles.metaItem}>
                   <Ionicons name="time-outline" size={16} color="#fff" />
                   <Text style={styles.metaText}>
-                    {diploma.duration_weeks} Weeks
+                    {diploma.duration_weeks} {t.weeks}
                   </Text>
                 </View>
               )}
@@ -247,15 +251,15 @@ export default function DiplomaDetailsScreen() {
 
         <View style={styles.content}>
           {/* Description */}
-          {diploma.description && (
+          {getLocalizedText(diploma.description, diploma.description_ar) && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                About This Program
+                {t.aboutProgram}
               </Text>
               <Text
                 style={[styles.description, { color: colors.textSecondary }]}
               >
-                {diploma.description}
+                {getLocalizedText(diploma.description, diploma.description_ar)}
               </Text>
             </View>
           )}
@@ -263,7 +267,7 @@ export default function DiplomaDetailsScreen() {
           {/* Courses List */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Course Curriculum ({diploma.courses?.length || 0})
+              {t.courseCurriculum} ({diploma.courses?.length || 0})
             </Text>
 
             {diploma.courses?.map((course, index) => (
@@ -279,10 +283,10 @@ export default function DiplomaDetailsScreen() {
                     router.replace(`/course/${course.id}`);
                   } else {
                     Alert.alert(
-                      "Enrollment Required",
-                      "Please enroll in this diploma program to access courses.",
-                      [{ text: "OK" }],
-                    );
+                        t.enrollmentRequired,
+                        t.enrollmentRequiredMessage,
+                        [{ text: t.ok }],
+                      );
                   }
                 }}
                 activeOpacity={0.8}
@@ -304,7 +308,7 @@ export default function DiplomaDetailsScreen() {
                     ]}
                     numberOfLines={2}
                   >
-                    {course.title}
+                    {getLocalizedText(course.title, course.title_ar)}
                   </Text>
                   <Text
                     style={[
@@ -312,7 +316,7 @@ export default function DiplomaDetailsScreen() {
                       { color: colors.textTertiary },
                     ]}
                   >
-                    {course.chapters?.length || 0} Chapters
+                    {course.chapters?.length || 0} {t.chapters}
                   </Text>
                 </View>
                 {isEnrolled ? (

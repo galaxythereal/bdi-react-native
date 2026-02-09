@@ -52,7 +52,7 @@ export default function LeaderboardScreen() {
     const [error, setError] = useState<string | null>(null);
     
     const { colors, isDark } = useTheme();
-    const { formatNumber } = useLocalization();
+    const { formatNumber, t, isRTL, getLocalizedText } = useLocalization();
     const { session } = useAuth();
     const user = session?.user;
     const router = useRouter();
@@ -80,8 +80,8 @@ export default function LeaderboardScreen() {
                 if (enrollment.batch_id && enrollment.batch) {
                     batchesMap.set(enrollment.batch_id, {
                         id: enrollment.batch_id,
-                        name: enrollment.batch.name || 'Batch',
-                        diplomaTitle: enrollment.diploma?.title || 'Diploma',
+                        name: getLocalizedText(enrollment.batch?.name, enrollment.batch?.name_ar) || t.batchLabel,
+                        diplomaTitle: getLocalizedText(enrollment.diploma?.title, enrollment.diploma?.title_ar) || t.diplomaLabel,
                     });
                 }
             }
@@ -119,7 +119,7 @@ export default function LeaderboardScreen() {
             }).start();
         } catch (err: any) {
             console.error('Error loading leaderboards:', err);
-            setError(err.message || 'Failed to load leaderboards');
+            setError(err.message || t.failedLoadLeaderboards);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -158,14 +158,14 @@ export default function LeaderboardScreen() {
             return (
                 <View style={styles.rankChange}>
                     <TrendingUp size={12} color="#22C55E" />
-                    <Text style={[styles.rankChangeText, { color: '#22C55E' }]}>+{change}</Text>
+                    <Text style={[styles.rankChangeText, { color: '#22C55E' }, isRTL && { marginLeft: 0, marginRight: 2 }]}>+{change}</Text>
                 </View>
             );
         } else if (change < 0) {
             return (
                 <View style={styles.rankChange}>
                     <TrendingDown size={12} color="#EF4444" />
-                    <Text style={[styles.rankChangeText, { color: '#EF4444' }]}>{change}</Text>
+                    <Text style={[styles.rankChangeText, { color: '#EF4444' }, isRTL && { marginLeft: 0, marginRight: 2 }]}>{change}</Text>
                 </View>
             );
         }
@@ -184,6 +184,7 @@ export default function LeaderboardScreen() {
             <Animated.View
                 style={[
                     styles.entryContainer,
+                    { flexDirection: isRTL ? 'row-reverse' : 'row' },
                     {
                         backgroundColor: isCurrentUser
                             ? isDark ? colors.primaryLight + '20' : colors.primary + '10'
@@ -212,7 +213,7 @@ export default function LeaderboardScreen() {
                 </View>
 
                 {/* Avatar */}
-                <View style={styles.avatarContainer}>
+                <View style={[styles.avatarContainer, isRTL && { marginLeft: 0, marginRight: Theme.spacing.sm }]}>
                     {item.avatar_url ? (
                         <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
                     ) : (
@@ -221,14 +222,14 @@ export default function LeaderboardScreen() {
                             style={styles.avatarPlaceholder}
                         >
                             <Text style={styles.avatarInitial}>
-                                {(item.full_name || 'U')[0].toUpperCase()}
+                                {(item.full_name || t.anonymous)[0].toUpperCase()}
                             </Text>
                         </LinearGradient>
                     )}
                 </View>
 
                 {/* Name & Stats */}
-                <View style={styles.entryInfo}>
+                <View style={[styles.entryInfo, isRTL && { marginLeft: 0, marginRight: Theme.spacing.md }]}>
                     <Text
                         style={[
                             styles.entryName,
@@ -237,12 +238,12 @@ export default function LeaderboardScreen() {
                         ]}
                         numberOfLines={1}
                     >
-                        {item.full_name || 'Anonymous'}
-                        {isCurrentUser && ' (You)'}
+                        {item.full_name || t.anonymous}
+                        {isCurrentUser && ` (${t.youLabel})`}
                     </Text>
                     <View style={styles.statsRow}>
                         <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                            {item.quizzes_completed} quizzes
+                            {item.quizzes_completed} {t.quizzes}
                         </Text>
                         {item.total_perfect_scores > 0 && (
                             <View style={styles.perfectBadge}>
@@ -255,11 +256,12 @@ export default function LeaderboardScreen() {
                 </View>
 
                 {/* Score & Rank Change */}
-                <View style={styles.scoreContainer}>
+                <View style={[styles.scoreContainer, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}
+                >
                     <Text style={[styles.scoreText, { color: colors.primary }]}>
                         {formatNumber(item.total_score)}
                     </Text>
-                    <Text style={[styles.scoreLabel, { color: colors.textTertiary }]}>pts</Text>
+                    <Text style={[styles.scoreLabel, { color: colors.textTertiary }]}>{t.pointsShort}</Text>
                     {getRankChange(item)}
                 </View>
             </Animated.View>
@@ -274,7 +276,7 @@ export default function LeaderboardScreen() {
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                     <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                        Loading leaderboards...
+                        {t.loadingLeaderboards}
                     </Text>
                 </View>
             </SafeAreaView>
@@ -284,9 +286,11 @@ export default function LeaderboardScreen() {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View style={[styles.header, { borderBottomColor: colors.border }, isRTL && { flexDirection: 'row-reverse' }]}>
                 <Trophy size={28} color={colors.primary} />
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Leaderboard</Text>
+                <Text style={[styles.headerTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+                    {t.leaderboard}
+                </Text>
                 <TouchableOpacity onPress={onRefresh} disabled={refreshing}>
                     <RefreshCw
                         size={24}
@@ -304,23 +308,23 @@ export default function LeaderboardScreen() {
                         style={[styles.retryButton, { backgroundColor: colors.primary }]}
                         onPress={onRefresh}
                     >
-                        <Text style={styles.retryText}>Try Again</Text>
+                        <Text style={styles.retryText}>{t.tryAgain}</Text>
                     </TouchableOpacity>
                 </View>
             ) : leaderboards.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <Trophy size={64} color={colors.textTertiary} />
                     <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                        No Rankings Yet
+                        {t.noRankingsYet}
                     </Text>
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                        Complete quizzes in your batches to appear on the leaderboard!
+                        {t.leaderboardEmptySubtitle}
                     </Text>
                     <TouchableOpacity
                         style={[styles.startButton, { backgroundColor: colors.primary }]}
                         onPress={() => router.push('/courses')}
                     >
-                        <Text style={styles.startButtonText}>Start Learning</Text>
+                        <Text style={styles.startButtonText}>{t.startLearning}</Text>
                         <ChevronRight size={20} color="#FFF" />
                     </TouchableOpacity>
                 </View>
@@ -380,28 +384,28 @@ export default function LeaderboardScreen() {
                                         <Text style={styles.userRankNumber}>
                                             #{currentLeaderboard.userPosition.rank}
                                         </Text>
-                                        <Text style={styles.userRankLabel}>Your Rank</Text>
+                                        <Text style={styles.userRankLabel}>{t.yourRank}</Text>
                                     </View>
                                     <View style={styles.userStatsContainer}>
                                         <View style={styles.userStat}>
                                             <Text style={styles.userStatValue}>
                                                 {formatNumber(currentLeaderboard.userPosition.total_score)}
                                             </Text>
-                                            <Text style={styles.userStatLabel}>Points</Text>
+                                            <Text style={styles.userStatLabel}>{t.points}</Text>
                                         </View>
                                         <View style={styles.userStatDivider} />
                                         <View style={styles.userStat}>
                                             <Text style={styles.userStatValue}>
                                                 {currentLeaderboard.userPosition.quizzes_completed}
                                             </Text>
-                                            <Text style={styles.userStatLabel}>Quizzes</Text>
+                                            <Text style={styles.userStatLabel}>{t.quizzes}</Text>
                                         </View>
                                         <View style={styles.userStatDivider} />
                                         <View style={styles.userStat}>
                                             <Text style={styles.userStatValue}>
                                                 {Math.round(currentLeaderboard.userPosition.average_score)}%
                                             </Text>
-                                            <Text style={styles.userStatLabel}>Average</Text>
+                                            <Text style={styles.userStatLabel}>{t.average}</Text>
                                         </View>
                                     </View>
                                 </View>
@@ -430,7 +434,7 @@ export default function LeaderboardScreen() {
                         ListEmptyComponent={
                             <View style={styles.noEntriesContainer}>
                                 <Text style={[styles.noEntriesText, { color: colors.textSecondary }]}>
-                                    No rankings available for this course yet.
+                                    {t.noRankingsForCourse}
                                 </Text>
                             </View>
                         }

@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform, Text, TextInput, View } from 'react-native';
+import { I18nManager, Platform, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ImpersonationProvider } from '../src/context/ImpersonationContext';
@@ -21,6 +21,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutContent() {
   const { colors, isDark } = useTheme();
+  const { isRTL } = useLocalization();
 
   return (
     <>
@@ -33,7 +34,7 @@ function RootLayoutContent() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
-          animation: 'slide_from_right',
+          animation: isRTL ? 'slide_from_left' : 'slide_from_right',
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -60,6 +61,11 @@ function GlobalTextDirection() {
 
     TextInput.defaultProps = TextInput.defaultProps || {};
     TextInput.defaultProps.style = baseStyle;
+
+    if (I18nManager.isRTL !== rtl) {
+      I18nManager.allowRTL(rtl);
+      I18nManager.forceRTL(rtl);
+    }
   }, [rtl]);
 
   return null;

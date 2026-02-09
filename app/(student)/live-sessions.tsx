@@ -24,7 +24,7 @@ import { Batch, LiveSession } from '../../src/types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Helper to format date/time and relative labels
-const getTimeUntil = (dateString: string, t: any): string => {
+const getTimeUntil = (dateString: string, t: any, formatNumber?: (value: number) => string): string => {
     const now = new Date();
     const sessionDate = new Date(dateString);
     const diff = sessionDate.getTime() - now.getTime();
@@ -35,9 +35,11 @@ const getTimeUntil = (dateString: string, t: any): string => {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `${t?.in || 'In'} ${days} ${t?.days || 'days'}`;
-    if (hours > 0) return `${t?.in || 'In'} ${hours} ${t?.hours || 'hours'}`;
-    if (minutes > 0) return `${t?.in || 'In'} ${minutes} ${t?.minutes || 'minutes'}`;
+    const formatValue = (value: number) => (formatNumber ? formatNumber(value) : value.toString());
+
+    if (days > 0) return `${t?.in || 'In'} ${formatValue(days)} ${t?.days || 'days'}`;
+    if (hours > 0) return `${t?.in || 'In'} ${formatValue(hours)} ${t?.hours || 'hours'}`;
+    if (minutes > 0) return `${t?.in || 'In'} ${formatValue(minutes)} ${t?.minutes || 'minutes'}`;
     return t?.startingNow || 'Starting now';
 };
 
@@ -50,7 +52,7 @@ interface SessionCardProps {
 
 const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => {
     const { colors, isDark } = useTheme();
-    const { t, formatDate, formatTime } = useLocalization();
+    const { t, formatDate, formatTime, getLocalizedText, formatNumber } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const sessionDate = new Date(session.scheduled_at);
@@ -108,7 +110,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                 {isLive && (
                     <View style={styles.liveIndicator}>
                         <View style={styles.liveDot} />
-                        <Text style={styles.liveText}>LIVE NOW</Text>
+                        <Text style={styles.liveText}>{t.liveNow}</Text>
                     </View>
                 )}
 
@@ -116,24 +118,26 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                 <View style={styles.dateTimeSection}>
                     <View style={styles.dateBox}>
                         <Text style={styles.dayText}>
-                            {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : date}
+                            {isToday ? t.today : isTomorrow ? t.tomorrow : date}
                         </Text>
                         <Text style={styles.timeText}>{time}</Text>
                     </View>
                     <View style={[styles.timeUntilBadge, isLive && styles.timeUntilBadgeLive]}>
                         <Text style={[styles.timeUntilText, isLive && styles.timeUntilTextLive]}>
-                            {isLive ? (t?.joinSession || 'Join Now') : getTimeUntil(session.scheduled_at, t)}
+                            {isLive ? t.joinNow : getTimeUntil(session.scheduled_at, t, formatNumber)}
                         </Text>
                     </View>
                 </View>
 
                 {/* Session Info */}
                 <View style={styles.sessionInfo}>
-                    <Text style={styles.sessionTitle} numberOfLines={2}>{session.title}</Text>
+                    <Text style={styles.sessionTitle} numberOfLines={2}>
+                        {getLocalizedText(session.title, session.title_ar)}
+                    </Text>
 
-                    {session.description && (
+                    {getLocalizedText(session.description, session.description_ar) && (
                         <Text style={styles.sessionDescription} numberOfLines={2}>
-                            {session.description}
+                            {getLocalizedText(session.description, session.description_ar)}
                         </Text>
                     )}
 
@@ -141,7 +145,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                     <View style={styles.metaRow}>
                         <View style={styles.metaItem}>
                             <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                            <Text style={styles.metaText}>{session.duration_minutes} min</Text>
+                            <Text style={styles.metaText}>{session.duration_minutes} {t.minutes}</Text>
                         </View>
 
                         <View style={styles.metaItem}>
@@ -160,7 +164,9 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                     {session.batch && (
                         <View style={styles.batchTag}>
                             <Ionicons name="people-outline" size={12} color={colors.primary} />
-                            <Text style={styles.batchTagText}>{session.batch.name}</Text>
+                            <Text style={styles.batchTagText}>
+                                {getLocalizedText(session.batch.name, session.batch.name_ar)}
+                            </Text>
                         </View>
                     )}
                 </View>
@@ -173,7 +179,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => 
                         activeOpacity={0.8}
                     >
                         <Ionicons name="videocam" size={18} color="#fff" />
-                        <Text style={styles.joinButtonText}>{isLive ? 'Join Now' : 'Join Session'}</Text>
+                        <Text style={styles.joinButtonText}>{isLive ? t.joinNow : t.joinSession}</Text>
                     </TouchableOpacity>
                 )}
             </TouchableOpacity>
@@ -190,6 +196,7 @@ interface BatchCardProps {
 
 const BatchCard: React.FC<BatchCardProps> = ({ batch, index, onPress }) => {
     const { colors, isDark } = useTheme();
+    const { t, getLocalizedText, formatDate } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
     const cardAnim = useRef(new Animated.Value(0)).current;
 
@@ -223,21 +230,25 @@ const BatchCard: React.FC<BatchCardProps> = ({ batch, index, onPress }) => {
                 <View style={styles.batchHeader}>
                     <View style={[styles.statusDot, { backgroundColor: getStatusColor(batch.status) }]} />
                     <Text style={styles.batchStatus}>
-                        {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
+                        {t[batch.status as keyof typeof t] || batch.status}
                     </Text>
                 </View>
 
-                <Text style={styles.batchName}>{batch.name}</Text>
+                <Text style={styles.batchName}>
+                    {getLocalizedText(batch.name, batch.name_ar)}
+                </Text>
 
                 {batch.diploma && (
-                    <Text style={styles.batchDiploma}>{batch.diploma.title}</Text>
+                    <Text style={styles.batchDiploma}>
+                        {getLocalizedText(batch.diploma.title, batch.diploma.title_ar)}
+                    </Text>
                 )}
 
                 <View style={styles.batchMeta}>
                     <View style={styles.batchMetaItem}>
                         <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
                         <Text style={styles.batchMetaText}>
-                            {new Date(batch.start_date).toLocaleDateString()}
+                            {formatDate(new Date(batch.start_date))}
                         </Text>
                     </View>
                 </View>
@@ -255,6 +266,7 @@ export default function LiveSessionsScreen() {
     const [activeTab, setActiveTab] = useState<'sessions' | 'batches'>('sessions');
     const router = useRouter();
     const { colors, isDark } = useTheme();
+    const { t, getLocalizedText } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const loadData = useCallback(async () => {
@@ -284,17 +296,17 @@ export default function LiveSessionsScreen() {
 
     const handleJoinSession = (session: LiveSession) => {
         if (!session.meeting_url) {
-            Alert.alert('No Meeting Link', 'The meeting link is not yet available.');
+            Alert.alert(t.error, t.noMeetingLink);
             return;
         }
 
         Alert.alert(
-            'Join Session',
-            `You're about to join "${session.title}". This will open your browser.`,
+            t.joinSession,
+            `${t.joinQuestion} "${getLocalizedText(session.title, session.title_ar)}"?`,
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t.cancel, style: 'cancel' },
                 {
-                    text: 'Join',
+                    text: t.join,
                     onPress: () => Linking.openURL(session.meeting_url!)
                 },
             ]
@@ -305,7 +317,7 @@ export default function LiveSessionsScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>Loading sessions...</Text>
+                <Text style={styles.loadingText}>{t.loadingSessions}</Text>
             </View>
         );
     }
@@ -314,11 +326,11 @@ export default function LiveSessionsScreen() {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Live Sessions</Text>
+                <Text style={styles.headerTitle}>{t.liveSessions}</Text>
                 <Text style={styles.headerSubtitle}>
                     {sessions.filter(s => s.status === 'live').length > 0
-                        ? `${sessions.filter(s => s.status === 'live').length} live now`
-                        : `${sessions.length} upcoming`
+                        ? `${sessions.filter(s => s.status === 'live').length} ${t.liveNow.toLowerCase()}`
+                        : `${sessions.length} ${t.upcoming}`
                     }
                 </Text>
             </View>
@@ -335,7 +347,7 @@ export default function LiveSessionsScreen() {
                         color={activeTab === 'sessions' ? colors.primary : colors.textSecondary}
                     />
                     <Text style={[styles.tabText, activeTab === 'sessions' && styles.tabTextActive]}>
-                        Sessions
+                        {t.sessionsTab}
                     </Text>
                 </TouchableOpacity>
 
@@ -349,7 +361,7 @@ export default function LiveSessionsScreen() {
                         color={activeTab === 'batches' ? colors.primary : colors.textSecondary}
                     />
                     <Text style={[styles.tabText, activeTab === 'batches' && styles.tabTextActive]}>
-                        My Batches
+                        {t.myBatches}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -384,10 +396,8 @@ export default function LiveSessionsScreen() {
                     ) : (
                         <View style={styles.emptyState}>
                             <Ionicons name="videocam-off-outline" size={64} color={colors.textTertiary} />
-                            <Text style={styles.emptyTitle}>No Upcoming Sessions</Text>
-                            <Text style={styles.emptySubtitle}>
-                                When live sessions are scheduled, they'll appear here
-                            </Text>
+                            <Text style={styles.emptyTitle}>{t.noSessions}</Text>
+                            <Text style={styles.emptySubtitle}>{t.noSessionsSubtitle}</Text>
                         </View>
                     )
                 ) : (
@@ -405,10 +415,8 @@ export default function LiveSessionsScreen() {
                     ) : (
                         <View style={styles.emptyState}>
                             <Ionicons name="people-outline" size={64} color={colors.textTertiary} />
-                            <Text style={styles.emptyTitle}>No Batches</Text>
-                            <Text style={styles.emptySubtitle}>
-                                You're not enrolled in any batch programs
-                            </Text>
+                            <Text style={styles.emptyTitle}>{t.noBatches}</Text>
+                            <Text style={styles.emptySubtitle}>{t.noBatchesSubtitle}</Text>
                         </View>
                     )
                 )}

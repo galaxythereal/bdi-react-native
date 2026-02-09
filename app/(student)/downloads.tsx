@@ -164,7 +164,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
     styles
 }) => {
     const router = useRouter();
-    const { t, isRTL, formatDate } = useLocalization();
+    const { t, isRTL, formatDate, getLocalizedText } = useLocalization();
     const rotateAnim = useRef(new Animated.Value(expanded ? 1 : 0)).current;
 
     useEffect(() => {
@@ -190,7 +190,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
             <TouchableOpacity style={styles.courseHeader} onPress={onPress}>
                 <View style={styles.courseInfo}>
                     <Text style={[styles.courseTitle, { color: colors.text }]} numberOfLines={2}>
-                        {course.title}
+                        {getLocalizedText(course.title, course.title_ar)}
                     </Text>
                     <View style={styles.courseMeta}>
                         <View style={styles.metaItem}>
@@ -265,6 +265,7 @@ export default function DownloadsScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
+    const { t } = useLocalization();
     const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const [courses, setCourses] = useState<OfflineCourse[]>([]);
@@ -305,7 +306,7 @@ export default function DownloadsScreen() {
             setCourses(coursesData);
             setStats(statsData);
         } catch (error) {
-            console.error('Failed to load offline data:', error);
+            console.error(t.failedLoadOfflineData, error);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -319,19 +320,21 @@ export default function DownloadsScreen() {
 
     const handleDeleteCourse = (course: OfflineCourse) => {
         Alert.alert(
-            'Delete Course',
-            `Remove "${course.title}" and all its downloaded content? This will free up ${formatBytes(course.totalSize)}.`,
+            t.deleteCourseTitle,
+            t.removeCourseMessage
+                .replace('{title}', getLocalizedText(course.title, course.title_ar))
+                .replace('{size}', formatBytes(course.totalSize)),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t.cancel, style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: t.delete,
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await removeCourseOffline(course.id);
                             loadData();
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to delete course');
+                            Alert.alert(t.error, t.failedDeleteCourse);
                         }
                     },
                 },
@@ -341,19 +344,19 @@ export default function DownloadsScreen() {
 
     const handleDeleteLesson = (courseId: string, lessonId: string) => {
         Alert.alert(
-            'Delete Lesson',
-            'Remove this lesson\'s downloaded content?',
+            t.deleteLessonTitle,
+            t.removeLessonMessage,
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t.cancel, style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: t.delete,
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await deleteLessonDownload(courseId, lessonId);
                             loadData();
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to delete lesson');
+                            Alert.alert(t.error, t.failedDeleteLesson);
                         }
                     },
                 },
@@ -365,19 +368,21 @@ export default function DownloadsScreen() {
         if (courses.length === 0) return;
 
         Alert.alert(
-            'Clear All Downloads',
-            `This will delete all ${courses.length} downloaded courses and free up ${formatBytes(stats?.totalSize || 0)}. This cannot be undone.`,
+            t.clearAllDownloadsTitle,
+            t.clearAllDownloadsMessage
+                .replace('{count}', String(courses.length))
+                .replace('{size}', formatBytes(stats?.totalSize || 0)),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t.cancel, style: 'cancel' },
                 {
-                    text: 'Clear All',
+                    text: t.clearAllAction,
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await clearAllOfflineData();
                             loadData();
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to clear downloads');
+                            Alert.alert(t.error, t.failedClearDownloads);
                         }
                     },
                 },
@@ -395,17 +400,17 @@ export default function DownloadsScreen() {
                 <Ionicons name="cloud-download-outline" size={48} color={colors.primary} />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                No Downloads Yet
+                {t.noDownloadsYet}
             </Text>
             <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                Download courses to watch them offline.{'\n'}
-                Go to a course and tap the download button.
+                {t.downloadOfflineHint}{'\n'}
+                {t.goToCourseDownload}
             </Text>
             <TouchableOpacity
                 style={[styles.browseButton, { backgroundColor: colors.primary }]}
                 onPress={() => router.push('/(student)/courses')}
             >
-                <Text style={styles.browseButtonText}>Browse Courses</Text>
+                <Text style={styles.browseButtonText}>{t.browseCourses}</Text>
             </TouchableOpacity>
         </View>
     );

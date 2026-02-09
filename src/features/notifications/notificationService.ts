@@ -16,7 +16,9 @@ export interface Notification {
     user_id: string;
     type: NotificationType;
     title: string;
+    title_ar?: string | null;
     message: string;
+    message_ar?: string | null;
     data?: Record<string, any>;
     action_url?: string;
     read: boolean;
@@ -175,26 +177,4 @@ export const getNotificationColor = (type: NotificationType): string => {
 /**
  * Format notification timestamp
  */
-export const formatNotificationTime = (timestamp: string): string => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) {
-        return 'Just now';
-    } else if (diffInSeconds < 3600) {
-        const minutes = Math.floor(diffInSeconds / 60);
-        return `${minutes}m ago`;
-    } else if (diffInSeconds < 86400) {
-        const hours = Math.floor(diffInSeconds / 3600);
-        return `${hours}h ago`;
-    } else if (diffInSeconds < 604800) {
-        const days = Math.floor(diffInSeconds / 86400);
-        return `${days}d ago`;
-    } else {
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric' 
-        });
-    }
-};
+// Time formatting moved to LocalizationContext (formatRelativeTime)

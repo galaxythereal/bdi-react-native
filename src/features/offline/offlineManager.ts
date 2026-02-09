@@ -30,7 +30,9 @@ const NETWORK_STATUS_KEY = '@network_status';
 export interface OfflineCourse {
     id: string;
     title: string;
+    title_ar?: string | null;
     description: string;
+    description_ar?: string | null;
     thumbnail_url: string | null;
     thumbnail_local?: string | null;
     slug: string;
@@ -44,6 +46,7 @@ export interface OfflineCourse {
 export interface OfflineModule {
     id: string;
     title: string;
+    title_ar?: string | null;
     order_index: number;
     lessons: OfflineLesson[];
 }
@@ -51,6 +54,7 @@ export interface OfflineModule {
 export interface OfflineLesson {
     id: string;
     title: string;
+    title_ar?: string | null;
     slug: string;
     content_type: 'video' | 'text' | 'quiz' | 'image' | 'file' | 'audio';
     order_index: number;
@@ -66,6 +70,7 @@ export interface OfflineLesson {
     quiz_data?: any;
 
     description?: string | null;
+    description_ar?: string | null;
     duration?: number | null;
 
     // Blocks for complex lessons

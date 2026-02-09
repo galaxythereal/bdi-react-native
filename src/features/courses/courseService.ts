@@ -228,7 +228,9 @@ function transformOfflineCourse(offlineCourse: any): CourseDetail {
   return {
     id: offlineCourse.id,
     title: offlineCourse.title,
+    title_ar: offlineCourse.title_ar,
     description: offlineCourse.description,
+    description_ar: offlineCourse.description_ar,
     thumbnail_url: offlineCourse.thumbnail_local || offlineCourse.thumbnail_url,
     slug: offlineCourse.slug,
     created_at: offlineCourse.created_at,
@@ -236,9 +238,12 @@ function transformOfflineCourse(offlineCourse: any): CourseDetail {
       id: ch.id,
       course_id: offlineCourse.id,
       title: ch.title,
+      title_ar: ch.title_ar,
       order_index: ch.order_index,
       lessons: (ch.lessons || []).map((lesson: any) => ({
         ...lesson,
+        title_ar: lesson.title_ar,
+        description_ar: lesson.description_ar,
         video_url: lesson.video_local || lesson.video_url,
         video_provider: (lesson.video_local ? 'direct' : lesson.video_provider) as 'youtube' | 'vimeo' | 'wistia' | 'direct',
       })),
@@ -360,7 +365,13 @@ export const fetchMyEnrollments = async (): Promise<any[]> => {
           title,
           title_ar,
           description,
+          description_ar,
           thumbnail_url
+        ),
+        batch:batches (
+          id,
+          name,
+          name_ar
         )
       `)
       .eq('user_id', user.id)
@@ -382,6 +393,8 @@ export const fetchMyEnrollments = async (): Promise<any[]> => {
             course:courses(
               id,
               title,
+              title_ar,
+              description_ar,
               thumbnail_url,
               order_index
             )
@@ -395,7 +408,7 @@ export const fetchMyEnrollments = async (): Promise<any[]> => {
         if (courses.length === 0) {
           const { data: directCourses } = await supabase
             .from('courses')
-            .select('id, title, thumbnail_url, order_index')
+            .select('id, title, title_ar, description_ar, thumbnail_url, order_index')
             .eq('diploma_id', enrollment.diploma_id)
             .order('order_index');
           

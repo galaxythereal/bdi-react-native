@@ -42,6 +42,7 @@ import {
   QuizData,
   QuizResult,
 } from "../../src/components/QuizComponent";
+import { useLocalization } from "../../src/context/LocalizationContext";
 import { useTheme } from "../../src/context/ThemeContext";
 import {
   fetchCourseContentWithOfflineSupport,
@@ -71,6 +72,7 @@ interface FlattenedLesson extends Lesson {
   moduleIndex: number;
   lessonIndex: number;
   moduleTitle: string;
+  moduleTitleAr?: string | null;
   totalInModule: number;
   description?: string | null;
   quiz_data?: any;
@@ -848,6 +850,7 @@ export default function CoursePlayerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { t, getLocalizedText, formatNumber } = useLocalization();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const htmlStyles = useMemo(() => createHtmlStyles(colors), [colors]);
 

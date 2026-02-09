@@ -283,6 +283,7 @@ export const fetchMyEnrollments = async (): Promise<Enrollment[]> => {
                     title,
                     title_ar,
                     description,
+                    description_ar,
                     thumbnail_url,
                     slug,
                     duration_weeks,
