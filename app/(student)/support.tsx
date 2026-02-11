@@ -157,8 +157,8 @@ export default function SupportScreen() {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const messagesScrollRef = useRef<ScrollView>(null);
     const { colors, isDark } = useTheme();
-    const { t, formatDateTime, formatTime } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, formatDateTime, formatTime, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     const getStatusLabel = (status: string) => {
         const map: Record<string, string> = {
@@ -447,7 +447,7 @@ export default function SupportScreen() {
                 presentationStyle="fullScreen"
                 onRequestClose={() => setShowTicketDetail(false)}
             >
-                <SafeAreaView style={styles.detailContainer}>
+                <SafeAreaView style={styles.detailContainer} edges={['top', 'left', 'right']}>
                     <View style={styles.detailHeader}>
                         <TouchableOpacity
                             style={styles.detailCloseButton}
@@ -577,7 +577,7 @@ export default function SupportScreen() {
     );
 }
 
-function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean) {
     return StyleSheet.create({
         container: {
             flex: 1,
@@ -594,7 +594,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             color: colors.textSecondary,
         },
         header: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: Theme.spacing.lg,
@@ -604,11 +604,13 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize['3xl'],
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         headerSubtitle: {
             fontSize: Theme.fontSize.sm,
             color: colors.textSecondary,
             marginTop: 4,
+            textAlign: isRTL ? 'right' : 'left',
         },
         createButton: {
             width: 48,
@@ -636,7 +638,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             ...Theme.shadows[isDark ? 'dark' : 'light'].md,
         },
         cardHeader: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'flex-start',
             marginBottom: Theme.spacing.sm,
         },
@@ -646,7 +648,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             borderRadius: 10,
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: Theme.spacing.md,
+            marginRight: isRTL ? 0 : Theme.spacing.md,
+            marginLeft: isRTL ? Theme.spacing.md : 0,
         },
         cardHeaderText: {
             flex: 1,
@@ -656,6 +659,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.semibold,
             color: colors.text,
             marginBottom: 4,
+            textAlign: isRTL ? 'right' : 'left',
         },
         cardDate: {
             fontSize: Theme.fontSize.xs,
@@ -666,9 +670,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             color: colors.textSecondary,
             marginBottom: Theme.spacing.md,
             lineHeight: 20,
+            textAlign: isRTL ? 'right' : 'left',
         },
         cardFooter: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             gap: Theme.spacing.sm,
         },
         statusBadge: {
@@ -707,6 +712,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
             marginBottom: Theme.spacing.sm,
+            textAlign: isRTL ? 'right' : 'left',
         },
         emptyText: {
             fontSize: Theme.fontSize.base,
@@ -716,7 +722,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             marginBottom: Theme.spacing.lg,
         },
         emptyButton: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             paddingVertical: Theme.spacing.sm,
             paddingHorizontal: Theme.spacing.lg,
@@ -735,7 +741,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             backgroundColor: colors.background,
         },
         modalHeader: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: Theme.spacing.md,
@@ -750,6 +756,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.lg,
             fontWeight: Theme.fontWeight.semibold,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         modalSubmit: {
             fontSize: Theme.fontSize.base,
@@ -768,6 +775,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.medium,
             color: colors.text,
             marginBottom: Theme.spacing.sm,
+            textAlign: isRTL ? 'right' : 'left',
         },
         formInput: {
             backgroundColor: colors.surface,
@@ -777,13 +785,14 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             color: colors.text,
             borderWidth: 1,
             borderColor: colors.border,
+            textAlign: isRTL ? 'right' : 'left',
         },
         formTextArea: {
             height: 150,
             textAlignVertical: 'top',
         },
         priorityOptions: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             gap: Theme.spacing.sm,
         },
         priorityOption: {
@@ -811,16 +820,21 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         detailHeader: {
             flexDirection: 'row',
             alignItems: 'center',
-            padding: Theme.spacing.md,
+            paddingHorizontal: Theme.spacing.md,
+            paddingVertical: Theme.spacing.sm,
+            paddingTop: Platform.OS === 'ios' ? Theme.spacing.sm : Theme.spacing.sm,
             backgroundColor: colors.surface,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
+            minHeight: 52,
         },
         detailCloseButton: {
             padding: Theme.spacing.sm,
+            marginRight: 4,
+            hitSlop: { top: 12, bottom: 12, left: 12, right: 12 },
         },
         detailHeaderContent: {
-            flex: 1,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             marginLeft: Theme.spacing.sm,
         },
         detailTitle: {
@@ -829,17 +843,21 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             color: colors.text,
         },
         detailBadges: {
-            flexDirection: 'row',
+            marginLeft: isRTL ? 0 : Theme.spacing.sm,
+            marginRight: isRTL ? Theme.spacing.sm : 0,
             marginTop: 4,
         },
         detailBadge: {
             paddingHorizontal: Theme.spacing.sm,
             paddingVertical: 2,
+            textAlign: isRTL ? 'right' : 'left',
             borderRadius: Theme.borderRadius.sm,
         },
         detailBadgeText: {
             fontSize: Theme.fontSize.xs,
             fontWeight: Theme.fontWeight.bold,
+            color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         originalMessage: {
             padding: Theme.spacing.lg,
@@ -853,11 +871,13 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             marginBottom: Theme.spacing.xs,
             textTransform: 'uppercase',
             fontWeight: Theme.fontWeight.bold,
+            textAlign: isRTL ? 'right' : 'left',
         },
         originalText: {
             fontSize: Theme.fontSize.base,
             color: colors.text,
             lineHeight: 22,
+            textAlign: isRTL ? 'right' : 'left',
         },
         originalDate: {
             fontSize: Theme.fontSize.xs,
@@ -897,12 +917,12 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             marginBottom: Theme.spacing.sm,
         },
         messageBubbleMe: {
-            alignSelf: 'flex-end',
+            alignSelf: isRTL ? 'flex-start' : 'flex-end',
             backgroundColor: colors.primary,
             borderBottomRightRadius: 4,
         },
         messageBubbleOther: {
-            alignSelf: 'flex-start',
+            alignSelf: isRTL ? 'flex-end' : 'flex-start',
             backgroundColor: colors.surface,
             borderBottomLeftRadius: 4,
         },
@@ -911,11 +931,13 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             color: colors.primary,
             fontWeight: Theme.fontWeight.semibold,
             marginBottom: 4,
+            textAlign: isRTL ? 'right' : 'left',
         },
         messageText: {
             fontSize: Theme.fontSize.base,
             color: colors.text,
             lineHeight: 20,
+            textAlign: isRTL ? 'right' : 'left',
         },
         messageTextMe: {
             color: '#fff',
@@ -924,13 +946,13 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.xs,
             color: colors.textTertiary,
             marginTop: 4,
-            alignSelf: 'flex-end',
+            alignSelf: isRTL ? 'flex-start' : 'flex-end',
         },
         messageTimeMe: {
             color: 'rgba(255,255,255,0.7)',
         },
         messageInputContainer: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'flex-end',
             padding: Theme.spacing.md,
             backgroundColor: colors.surface,
@@ -947,6 +969,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.base,
             color: colors.text,
             maxHeight: 100,
+            textAlign: isRTL ? 'right' : 'left',
         },
         sendButton: {
             width: 44,

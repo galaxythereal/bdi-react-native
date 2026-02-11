@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useImpersonation } from '../../src/context/ImpersonationContext';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { supabase } from '../../src/lib/supabase';
 
@@ -27,6 +28,7 @@ interface Student {
 
 export default function StudentsScreen() {
     const { colors } = useTheme();
+    const { t, isRTL } = useLocalization();
     const { startImpersonation } = useImpersonation();
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
@@ -63,25 +65,25 @@ export default function StudentsScreen() {
 
     const handleImpersonate = async (student: Student) => {
         Alert.alert(
-            'View as Student',
-            `You will now see the app exactly as ${student.full_name || student.email} sees it.\n\nThis is for support purposes only.`,
+            t.viewAsStudentTitle,
+            t.viewAsStudentMessage.replace('{name}', student.full_name || student.email),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t.cancel, style: 'cancel' },
                 {
-                    text: 'Continue',
+                    text: t.continueLabel,
                     onPress: async () => {
                         try {
                             await startImpersonation({
                                 id: student.id,
                                 email: student.email,
-                                fullName: student.full_name || 'Unknown',
+                                fullName: student.full_name || t.noData,
                                 avatarUrl: student.avatar_url || undefined,
                             });
                             // Navigate to student dashboard
                             router.replace('/(student)/dashboard');
                         } catch (error) {
                             console.error('Error impersonating:', error);
-                            Alert.alert('Error', 'Failed to start impersonation');
+                            Alert.alert(t.error, t.validationError);
                         }
                     },
                 },
@@ -102,18 +104,20 @@ export default function StudentsScreen() {
             fontSize: Theme.fontSize['3xl'],
             fontWeight: Theme.fontWeight.bold,
             color: Theme.colors.light.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         subtitle: {
             fontSize: Theme.fontSize.base,
             color: Theme.colors.light.textSecondary,
             marginTop: Theme.spacing.sm,
+            textAlign: isRTL ? 'right' : 'left',
         },
         searchContainer: {
             paddingHorizontal: Theme.spacing.lg,
             marginBottom: Theme.spacing.base,
         },
         searchInputContainer: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             backgroundColor: Theme.colors.light.surface,
             borderRadius: Theme.borderRadius.md,
@@ -124,9 +128,11 @@ export default function StudentsScreen() {
         searchInput: {
             flex: 1,
             paddingVertical: Theme.spacing.base,
-            paddingLeft: Theme.spacing.md,
+            paddingLeft: isRTL ? 0 : Theme.spacing.md,
+            paddingRight: isRTL ? Theme.spacing.md : 0,
             fontSize: Theme.fontSize.base,
             color: Theme.colors.light.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         content: {
             flex: 1,
@@ -157,7 +163,7 @@ export default function StudentsScreen() {
             marginBottom: Theme.spacing.md,
             borderWidth: 1,
             borderColor: Theme.colors.light.border,
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
         },
         avatar: {
@@ -170,17 +176,20 @@ export default function StudentsScreen() {
         },
         studentInfo: {
             flex: 1,
-            marginLeft: Theme.spacing.base,
+            marginLeft: isRTL ? 0 : Theme.spacing.base,
+            marginRight: isRTL ? Theme.spacing.base : 0,
         },
         studentName: {
             fontSize: Theme.fontSize.lg, // Changed from 17 to lg (18)
             fontWeight: Theme.fontWeight.semibold,
             color: Theme.colors.light.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         studentEmail: {
             fontSize: Theme.fontSize.sm,
             color: Theme.colors.light.textSecondary,
             marginTop: 2,
+            textAlign: isRTL ? 'right' : 'left',
         },
         statusBadge: {
             marginTop: 6,
@@ -198,13 +207,14 @@ export default function StudentsScreen() {
             paddingHorizontal: Theme.spacing.base,
             paddingVertical: Theme.spacing.sm, // Approx 10
             borderRadius: Theme.borderRadius.sm, // Approx 8-10
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
         },
         viewButtonText: {
             color: Theme.colors.light.primary,
             fontWeight: Theme.fontWeight.semibold,
-            marginLeft: 6,
+            marginLeft: isRTL ? 0 : 6,
+            marginRight: isRTL ? 6 : 0,
         },
         infoBox: {
             backgroundColor: Theme.colors.light.primarySubtle,
@@ -220,11 +230,13 @@ export default function StudentsScreen() {
             fontWeight: Theme.fontWeight.semibold,
             color: Theme.colors.light.primary,
             marginBottom: 6,
+            textAlign: isRTL ? 'right' : 'left',
         },
         infoText: {
             fontSize: Theme.fontSize.sm,
             color: Theme.colors.light.text,
             lineHeight: 20,
+            textAlign: isRTL ? 'right' : 'left',
         },
     });
 
@@ -234,7 +246,7 @@ export default function StudentsScreen() {
                 <User color={Theme.colors.light.primary} size={24} />
             </View>
             <View style={styles.studentInfo}>
-                <Text style={styles.studentName}>{item.full_name || 'No name'}</Text>
+                <Text style={styles.studentName}>{item.full_name || t.noData}</Text>
                 <Text style={styles.studentEmail}>{item.email}</Text>
                 <View
                     style={[
@@ -251,13 +263,13 @@ export default function StudentsScreen() {
                             { color: item.status === 'active' ? '#22c55e' : '#6b7280' },
                         ]}
                     >
-                        {item.status}
+                        {item.status === 'active' ? t.active : item.status === 'pending' ? t.pending : item.status}
                     </Text>
                 </View>
             </View>
             <TouchableOpacity style={styles.viewButton} onPress={() => handleImpersonate(item)}>
                 <Eye color={colors.primary} size={18} />
-                <Text style={styles.viewButtonText}>View as</Text>
+                <Text style={styles.viewButtonText}>{t.viewAsLabel}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -266,17 +278,14 @@ export default function StudentsScreen() {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>Student Impersonation</Text>
-                <Text style={styles.subtitle}>Search and view app as any student</Text>
+                <Text style={styles.title}>{t.studentImpersonationTitle}</Text>
+                <Text style={styles.subtitle}>{t.studentImpersonationSubtitle}</Text>
             </View>
 
             {/* Info Box */}
             <View style={styles.infoBox}>
-                <Text style={styles.infoTitle}>🔍 How to use</Text>
-                <Text style={styles.infoText}>
-                    Search for a student by name or email, then tap "View as" to see the app exactly as they see it.
-                    All data will be shown from their perspective.
-                </Text>
+                <Text style={styles.infoTitle}>🔍 {t.studentImpersonationInfoTitle}</Text>
+                <Text style={styles.infoText}>{t.studentImpersonationInfoText}</Text>
             </View>
 
             {/* Search */}
@@ -285,7 +294,7 @@ export default function StudentsScreen() {
                     <Search color={colors.textSecondary} size={22} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by email or name..."
+                        placeholder={t.searchPlaceholder}
                         placeholderTextColor={colors.textSecondary}
                         value={searchTerm}
                         onChangeText={(text) => {
@@ -315,14 +324,14 @@ export default function StudentsScreen() {
                 ) : searched ? (
                     <View style={styles.emptyState}>
                         <User color={colors.textSecondary} size={48} />
-                        <Text style={styles.emptyText}>No students found</Text>
-                        <Text style={styles.emptyHint}>Try a different search term</Text>
+                        <Text style={styles.emptyText}>{t.noStudentsFound}</Text>
+                        <Text style={styles.emptyHint}>{t.tryDifferentFilter}</Text>
                     </View>
                 ) : (
                     <View style={styles.emptyState}>
                         <GraduationCap color={colors.textSecondary} size={48} />
-                        <Text style={styles.emptyText}>Search for students</Text>
-                        <Text style={styles.emptyHint}>Enter at least 2 characters</Text>
+                        <Text style={styles.emptyText}>{t.searchForStudents}</Text>
+                        <Text style={styles.emptyHint}>{t.enterAtLeastChars}</Text>
                     </View>
                 )}
             </View>

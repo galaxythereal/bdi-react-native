@@ -39,8 +39,8 @@ interface CourseCardProps {
 
 const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
     const { colors, isDark } = useTheme();
-    const { t, getLocalizedText } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, getLocalizedText, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const progress = Math.round(item.progress || 0);
     const diploma = item.diploma;
@@ -159,8 +159,8 @@ interface FilterChipProps {
 
 const FilterChip: React.FC<FilterChipProps> = ({ label, count, active, onPress }) => {
     const { colors, isDark } = useTheme();
-    const { t } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     return (
         <TouchableOpacity
@@ -190,8 +190,8 @@ export default function CoursesScreen() {
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const { colors, isDark } = useTheme();
-    const { t } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     const loadData = async () => {
         try {
@@ -370,7 +370,7 @@ export default function CoursesScreen() {
     );
 }
 
-const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
@@ -400,10 +400,12 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
         marginBottom: 2,
+        textAlign: isRTL ? 'right' : 'left',
     },
     headerSubtitle: {
         fontSize: Theme.fontSize.sm,
         color: colors.textSecondary,
+        textAlign: isRTL ? 'right' : 'left',
     },
 
     // Filters
@@ -416,11 +418,11 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
     filtersContainer: {
         paddingHorizontal: Theme.spacing.lg,
         paddingVertical: Theme.spacing.md,
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
     },
     filterChip: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         backgroundColor: colors.surface,
         paddingHorizontal: Theme.spacing.md,
@@ -428,7 +430,8 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         borderRadius: Theme.borderRadius.round,
         borderWidth: 1,
         borderColor: colors.border,
-        marginRight: Theme.spacing.sm,
+        marginRight: isRTL ? 0 : Theme.spacing.sm,
+        marginLeft: isRTL ? Theme.spacing.sm : 0,
         minHeight: 36,
     },
     filterChipActive: {
@@ -439,7 +442,9 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontSize: Theme.fontSize.sm,
         color: colors.textSecondary,
         fontWeight: Theme.fontWeight.medium,
-        marginRight: Theme.spacing.xs,
+        marginRight: isRTL ? 0 : Theme.spacing.xs,
+        marginLeft: isRTL ? Theme.spacing.xs : 0,
+        textAlign: isRTL ? 'right' : 'left',
     },
     filterChipTextActive: {
         color: '#fff',
@@ -528,9 +533,10 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         marginBottom: Theme.spacing.xs,
         lineHeight: 18,
         minHeight: 36,
+        textAlign: isRTL ? 'right' : 'left',
     },
     statusRow: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: 4,
         marginBottom: Theme.spacing.xs,

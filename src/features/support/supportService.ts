@@ -39,7 +39,7 @@ export const fetchTicketMessages = async (ticketId: string): Promise<TicketMessa
       .from('ticket_messages')
       .select(`
         *,
-        profile:profiles!ticket_messages_user_id_fkey (
+        profile:profiles!ticket_messages_sender_id_fkey (
           id,
           full_name,
           email,

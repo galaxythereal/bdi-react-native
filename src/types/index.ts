@@ -76,7 +76,6 @@ export interface Lesson {
   is_preview: boolean;
   order_index: number;
   description?: string | null;
-  description_ar?: string | null;
   quiz_data?: any;
   blocks?: any[];
   created_at?: string;
@@ -220,10 +219,7 @@ export interface Notification {
   id: string;
   user_id: string;
   title: string;
-  title_ar?: string | null;
   body: string;
-  body_ar?: string | null;
-  message_ar?: string | null;
   type:
     | "general"
     | "course"

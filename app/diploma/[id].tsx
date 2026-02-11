@@ -24,9 +24,12 @@ export default function DiplomaDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { t, getLocalizedText } = useLocalization();
+  const { t, getLocalizedText, isRTL } = useLocalization();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const styles = useMemo(
+    () => createStyles(colors, isDark, isRTL),
+    [colors, isDark, isRTL],
+  );
 
   const [diploma, setDiploma] = useState<CatalogDiploma | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -50,7 +53,7 @@ export default function DiplomaDetailsScreen() {
       setEnrollments(enrollmentsData || []);
     } catch (error) {
       console.error("Error loading diploma details:", error);
-      Alert.alert("Error", "Failed to load diploma details.");
+      Alert.alert(t.error, t.failedLoadDiplomaDetails);
     } finally {
       setLoading(false);
     }
@@ -91,7 +94,7 @@ export default function DiplomaDetailsScreen() {
         </View>
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            Diploma not found.
+            {t.diplomaNotFound}
           </Text>
         </View>
       </View>
@@ -189,7 +192,7 @@ export default function DiplomaDetailsScreen() {
               },
             ]}
           >
-            {diploma.title}
+            {getLocalizedText(diploma.title, diploma.title_ar)}
           </Animated.Text>
         </View>
       </View>
@@ -229,7 +232,7 @@ export default function DiplomaDetailsScreen() {
           >
             <Text style={styles.heroTitle}>
               {getLocalizedText(diploma.title, diploma.title_ar) || t.untitledDiploma}
-              {getLocalizedText(diploma.title, diploma.title_ar) || t.untitledDiploma}
+            </Text>
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="book-outline" size={16} color="#fff" />
@@ -352,14 +355,11 @@ export default function DiplomaDetailsScreen() {
           <TouchableOpacity
             style={[styles.enrollButton, { backgroundColor: colors.primary }]}
             onPress={() => {
-              Alert.alert(
-                "Contact Instructor",
-                "Please contact your instructor or administrator to enroll in this diploma program.",
-              );
+              Alert.alert(t.contactInstructorTitle, t.contactInstructorMessage);
             }}
           >
-            <Text style={styles.enrollButtonText}>Request Enrollment</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
+            <Text style={styles.enrollButtonText}>{t.requestEnrollment}</Text>
+            <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       )}
@@ -367,7 +367,11 @@ export default function DiplomaDetailsScreen() {
   );
 }
 
-const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
+const createStyles = (
+  colors: typeof Theme.colors.light,
+  isDark: boolean,
+  isRTL: boolean,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -388,12 +392,12 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       zIndex: 50,
     },
     closeButton: {
-      alignSelf: "flex-start",
+      alignSelf: isRTL ? "flex-end" : "flex-start",
       padding: Theme.spacing.md,
     },
     headerContent: {
       flex: 1,
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: Theme.spacing.md,
@@ -454,14 +458,15 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       textShadowColor: "rgba(0,0,0,0.3)",
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 4,
+      textAlign: isRTL ? "right" : "left",
     },
     heroMeta: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       gap: Theme.spacing.lg,
     },
     metaItem: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       gap: Theme.spacing.xs,
     },
@@ -481,13 +486,15 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       fontSize: Theme.fontSize.lg,
       fontWeight: "bold",
       marginBottom: Theme.spacing.xs,
+      textAlign: isRTL ? "right" : "left",
     },
     description: {
       fontSize: Theme.fontSize.base,
       lineHeight: 24,
+      textAlign: isRTL ? "right" : "left",
     },
     courseItem: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       padding: Theme.spacing.md,
       borderRadius: Theme.borderRadius.xl,
@@ -517,6 +524,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       fontSize: Theme.fontSize.base,
       fontWeight: "600",
       marginBottom: 2,
+      textAlign: isRTL ? "right" : "left",
     },
     courseChapterCount: {
       fontSize: Theme.fontSize.xs,
@@ -529,7 +537,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       ...Theme.shadows[isDark ? "dark" : "light"].lg,
     },
     enrollButton: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       justifyContent: "center",
       padding: Theme.spacing.md,

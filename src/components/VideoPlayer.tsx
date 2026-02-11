@@ -38,6 +38,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { useLocalization } from "../context/LocalizationContext";
 import Theme from "../../constants/theme";
 import { useTheme } from "../context/ThemeContext";
 
@@ -262,31 +263,36 @@ interface ErrorViewProps {
 }
 
 const ErrorView = memo<ErrorViewProps>(
-  ({ message, onRetry, primaryColor, errorColor }) => (
-    <View style={errorViewStyles.container}>
-      <View
-        style={[
-          errorViewStyles.iconContainer,
-          { backgroundColor: `${errorColor}15` },
-        ]}
-      >
-        <Ionicons name="cloud-offline-outline" size={56} color={errorColor} />
+  ({ message, onRetry, primaryColor, errorColor }) => {
+    const { t, isRTL } = useLocalization();
+
+    return (
+      <View style={errorViewStyles.container}>
+        <View
+          style={[
+            errorViewStyles.iconContainer,
+            { backgroundColor: `${errorColor}15` },
+          ]}
+        >
+          <Ionicons name="cloud-offline-outline" size={56} color={errorColor} />
+        </View>
+        <Text style={[errorViewStyles.title, { textAlign: isRTL ? 'right' : 'left' }]}>
+          {t.videoUnavailableTitle}
+        </Text>
+        <Text style={[errorViewStyles.message, { textAlign: isRTL ? 'right' : 'left' }]}>
+          {message || t.videoLoadErrorMessage}
+        </Text>
+        <TouchableOpacity
+          style={[errorViewStyles.retryButton, { backgroundColor: primaryColor }]}
+          onPress={onRetry}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="refresh" size={20} color="#FFFFFF" />
+          <Text style={errorViewStyles.retryText}>{t.tryAgain}</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={errorViewStyles.title}>Video Unavailable</Text>
-      <Text style={errorViewStyles.message}>
-        {message ||
-          "Unable to load video. Please check your connection and try again."}
-      </Text>
-      <TouchableOpacity
-        style={[errorViewStyles.retryButton, { backgroundColor: primaryColor }]}
-        onPress={onRetry}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="refresh" size={20} color="#FFFFFF" />
-        <Text style={errorViewStyles.retryText}>Try Again</Text>
-      </TouchableOpacity>
-    </View>
-  ),
+    );
+  },
 );
 
 const errorViewStyles = StyleSheet.create({

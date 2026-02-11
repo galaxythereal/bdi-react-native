@@ -36,8 +36,8 @@ interface CertificateCardProps {
 
 const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, onPress }) => {
     const { colors, isDark } = useTheme();
-    const { t, formatDate } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, formatDate, isRTL, getLocalizedText } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const cardAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -64,7 +64,7 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
                     </View>
                     <View style={styles.cardHeaderText}>
                         <Text style={styles.cardTitle} numberOfLines={2}>
-                            {certificate.diploma?.title || t.myCertificates}
+                            {getLocalizedText(certificate.diploma?.title, certificate.diploma?.title_ar) || t.myCertificates}
                         </Text>
                         <Text style={styles.cardDate}>
                             {t.issuedOn} {formatDate(certificate.issued_at, {
@@ -95,8 +95,8 @@ const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, index, o
 
                 <View style={styles.cardFooter}>
                     <View style={styles.viewButton}>
-                        <Text style={styles.viewButtonText}>View Certificate</Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                        <Text style={styles.viewButtonText}>{t.viewCertificate}</Text>
+                        <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.primary} />
                     </View>
                 </View>
             </TouchableOpacity>
@@ -110,14 +110,15 @@ export default function CertificatesScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
     const [showViewer, setShowViewer] = useState(false);
-    const [userName, setUserName] = useState('Student');
+    const { t, isRTL } = useLocalization();
+    const [userName, setUserName] = useState(t.studentLabel);
     const [templateBase64, setTemplateBase64] = useState<string | undefined>(undefined);
     const { session } = useAuth();
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const { colors, isDark } = useTheme();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     // Load the certificate template on mount
     useEffect(() => {
@@ -154,7 +155,7 @@ export default function CertificatesScreen() {
             }).start();
         } catch (error: any) {
             console.error('Error loading certificates:', error);
-            Alert.alert('Error', error.message || 'Failed to load certificates.');
+            Alert.alert(t.error, error.message || t.failedLoadCertificates);
             setCertificates([]);
         } finally {
             setLoading(false);
@@ -195,14 +196,14 @@ export default function CertificatesScreen() {
             if (canShare) {
                 await Sharing.shareAsync(uri, {
                     mimeType: 'application/pdf',
-                    dialogTitle: `Share Certificate - ${selectedCertificate.diploma?.title}`,
+                    dialogTitle: `${t.shareCertificate} - ${selectedCertificate.diploma?.title}`,
                 });
             } else {
-                Alert.alert('Sharing not available', 'Unable to share on this device.');
+                Alert.alert(t.sharingNotAvailable, t.sharingNotAvailable);
             }
         } catch (error) {
             console.error('Error sharing certificate:', error);
-            Alert.alert('Error', 'Failed to share certificate.');
+            Alert.alert(t.error, t.failedShareCertificate);
         }
     };
 
@@ -228,12 +229,12 @@ export default function CertificatesScreen() {
             });
 
             Alert.alert(
-                'Certificate Saved',
-                `Certificate saved as ${fileName}`,
+                t.certificateSavedTitle,
+                t.certificateSavedMessage.replace('{fileName}', fileName),
                 [
-                    { text: 'OK' },
+                    { text: t.ok },
                     {
-                        text: 'Share',
+                        text: t.shareAction,
                         onPress: async () => {
                             const canShare = await Sharing.isAvailableAsync();
                             if (canShare) {
@@ -247,7 +248,7 @@ export default function CertificatesScreen() {
             );
         } catch (error) {
             console.error('Error downloading certificate:', error);
-            Alert.alert('Error', 'Failed to download certificate.');
+            Alert.alert(t.error, t.failedDownloadCertificate);
         }
     };
 
@@ -256,7 +257,7 @@ export default function CertificatesScreen() {
             <SafeAreaView style={styles.container} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.loadingText}>Loading certificates...</Text>
+                    <Text style={styles.loadingText}>{t.loadingCertificates}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -267,11 +268,11 @@ export default function CertificatesScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>Certificates</Text>
+                    <Text style={styles.headerTitle}>{t.certificates}</Text>
                     <Text style={styles.headerSubtitle}>
                         {certificates.length > 0
-                            ? `${certificates.length} certificate${certificates.length !== 1 ? 's' : ''} earned`
-                            : 'Complete courses to earn certificates'}
+                            ? t.certificatesEarned.replace('{count}', String(certificates.length))
+                            : t.completeCoursesToEarnCertificates}
                     </Text>
                 </View>
                 <View style={styles.headerIcon}>
@@ -303,16 +304,16 @@ export default function CertificatesScreen() {
                         <View style={styles.emptyIcon}>
                             <Ionicons name="trophy-outline" size={64} color={colors.textTertiary} />
                         </View>
-                        <Text style={styles.emptyTitle}>No Certificates Yet</Text>
+                        <Text style={styles.emptyTitle}>{t.noCertificatesYet}</Text>
                         <Text style={styles.emptyText}>
-                            Complete your courses to earn certificates of completion.
+                            {t.completeCoursesToEarnCertificates}
                         </Text>
                         <TouchableOpacity
                             style={styles.emptyButton}
                             onPress={() => router.push('/(student)/courses')}
                         >
-                            <Text style={styles.emptyButtonText}>View My Courses</Text>
-                            <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                            <Text style={styles.emptyButtonText}>{t.viewMyCourses}</Text>
+                            <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={16} color={colors.primary} />
                         </TouchableOpacity>
                     </Animated.View>
                 ) : (
@@ -345,7 +346,7 @@ export default function CertificatesScreen() {
                             <Ionicons name="close" size={24} color={colors.text} />
                         </TouchableOpacity>
                         <Text style={styles.viewerTitle} numberOfLines={1}>
-                            {selectedCertificate?.diploma?.title || 'Certificate'}
+                            {selectedCertificate?.diploma?.title || t.certificateTitle}
                         </Text>
                         <View style={styles.viewerActions}>
                             <TouchableOpacity
@@ -383,7 +384,7 @@ export default function CertificatesScreen() {
     );
 }
 
-function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean) {
     return StyleSheet.create({
         container: {
             flex: 1,
@@ -400,7 +401,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             color: colors.textSecondary,
         },
         header: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: Theme.spacing.lg,
@@ -410,11 +411,13 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize['3xl'],
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         headerSubtitle: {
             fontSize: Theme.fontSize.sm,
             color: colors.textSecondary,
             marginTop: 4,
+            textAlign: isRTL ? 'right' : 'left',
         },
         headerIcon: {
             width: 56,
@@ -441,7 +444,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             ...Theme.shadows[isDark ? 'dark' : 'light'].md,
         },
         cardHeader: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'flex-start',
         },
         awardIcon: {
@@ -451,7 +454,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             backgroundColor: colors.warning + '15',
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: Theme.spacing.md,
+            marginRight: isRTL ? 0 : Theme.spacing.md,
+            marginLeft: isRTL ? Theme.spacing.md : 0,
         },
         cardHeaderText: {
             flex: 1,
@@ -461,10 +465,12 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
             marginBottom: 4,
+            textAlign: isRTL ? 'right' : 'left',
         },
         cardDate: {
             fontSize: Theme.fontSize.sm,
             color: colors.textSecondary,
+            textAlign: isRTL ? 'right' : 'left',
         },
         cardDivider: {
             height: 1,
@@ -475,19 +481,21 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             gap: Theme.spacing.sm,
         },
         detailRow: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
         },
         detailLabel: {
             fontSize: Theme.fontSize.sm,
             color: colors.textSecondary,
+            textAlign: isRTL ? 'right' : 'left',
         },
         detailValue: {
             fontSize: Theme.fontSize.sm,
             color: colors.text,
             fontWeight: Theme.fontWeight.medium,
             maxWidth: '60%',
+            textAlign: isRTL ? 'left' : 'right',
         },
         verificationCode: {
             fontFamily: 'monospace',
@@ -500,7 +508,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             borderTopColor: colors.border,
         },
         viewButton: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
         },
@@ -508,7 +516,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.base,
             color: colors.primary,
             fontWeight: Theme.fontWeight.semibold,
-            marginRight: 4,
+            marginRight: isRTL ? 0 : 4,
+            marginLeft: isRTL ? 4 : 0,
         },
         emptyState: {
             alignItems: 'center',
@@ -528,6 +537,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
             marginBottom: Theme.spacing.sm,
+            textAlign: isRTL ? 'right' : 'left',
         },
         emptyText: {
             fontSize: Theme.fontSize.base,
@@ -537,7 +547,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             marginBottom: Theme.spacing.lg,
         },
         emptyButton: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             paddingVertical: Theme.spacing.sm,
             paddingHorizontal: Theme.spacing.lg,
@@ -551,7 +561,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.semibold,
         },
         viewerContainer: {
-            flex: 1,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             backgroundColor: colors.background,
         },
         viewerHeader: {
@@ -564,9 +574,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         },
         viewerCloseButton: {
             padding: Theme.spacing.sm,
+            textAlign: isRTL ? 'right' : 'left',
         },
         viewerTitle: {
-            flex: 1,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             fontSize: Theme.fontSize.lg,
             fontWeight: Theme.fontWeight.semibold,
             color: colors.text,

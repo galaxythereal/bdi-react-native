@@ -53,8 +53,11 @@ interface CourseCardProps {
 
 const CourseCard: React.FC<CourseCardProps> = ({ item, index, onPress }) => {
   const { colors, isDark } = useTheme();
-  const { t } = useLocalization();
-  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const { t, isRTL } = useLocalization();
+  const styles = useMemo(
+    () => createStyles(colors, isDark, isRTL),
+    [colors, isDark, isRTL],
+  );
   const cardAnim = useRef(new Animated.Value(0)).current;
   const progress = Math.round(item.progress || 0);
   const diploma = item.diploma;
@@ -166,7 +169,11 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ icon, value, label, color }) => {
   const { colors, isDark } = useTheme();
-  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const { isRTL } = useLocalization();
+  const styles = useMemo(
+    () => createStyles(colors, isDark, isRTL),
+    [colors, isDark, isRTL],
+  );
   return (
     <View
       style={[
@@ -209,8 +216,11 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const { colors, isDark } = useTheme();
-  const { t, formatDate, formatTime, getLocalizedText } = useLocalization();
-  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const { t, formatDate, formatTime, getLocalizedText, isRTL } = useLocalization();
+  const styles = useMemo(
+    () => createStyles(colors, isDark, isRTL),
+    [colors, isDark, isRTL],
+  );
 
   const loadData = async () => {
     try {
@@ -321,7 +331,7 @@ export default function DashboardScreen() {
                 <Text
                   style={[styles.greeting, { color: colors.textSecondary }]}
                 >
-                  Welcome back,
+                  {isRTL ? t.welcomeMessage : `${t.welcomeMessage},`}
                 </Text>
                 <Text style={[styles.userName, { color: colors.textPrimary }]}>
                   {getUserName()} 👋
@@ -407,7 +417,7 @@ export default function DashboardScreen() {
               return (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Continue Learning</Text>
+                    <Text style={styles.sectionTitle}>{t.continueLearning}</Text>
                   </View>
                   <TouchableOpacity
                     style={styles.continueCard}
@@ -979,7 +989,11 @@ export default function DashboardScreen() {
   );
 }
 
-const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
+const createStyles = (
+  colors: typeof Theme.colors.light,
+  isDark: boolean,
+  isRTL: boolean,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -1005,7 +1019,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       ...Theme.shadows[isDark ? "dark" : "light"].sm,
     },
     headerTop: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: Theme.spacing.lg,
@@ -1014,7 +1028,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       flex: 1,
     },
     headerActions: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       gap: Theme.spacing.sm,
     },
@@ -1022,11 +1036,13 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       fontSize: Theme.fontSize.base,
       fontWeight: "500",
       marginBottom: 2,
+      textAlign: isRTL ? "right" : "left",
     },
     userName: {
       fontSize: Theme.fontSize["2xl"],
       fontWeight: "800",
       letterSpacing: -0.5,
+      textAlign: isRTL ? "right" : "left",
     },
     avatar: {
       width: 48,
@@ -1083,7 +1099,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       marginTop: Theme.spacing.xl,
     },
     sectionHeader: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: Theme.spacing.md,
@@ -1092,6 +1108,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       fontSize: Theme.fontSize.lg,
       fontWeight: Theme.fontWeight.bold,
       color: colors.text,
+      textAlign: isRTL ? "right" : "left",
     },
     seeAllText: {
       fontSize: Theme.fontSize.sm,
@@ -1475,7 +1492,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       borderBottomColor: colors.borderLight,
     },
     progressHeader: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: Theme.spacing.sm,
@@ -1705,7 +1722,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       gap: Theme.spacing.md,
     },
     continueContent: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       gap: Theme.spacing.md,
       alignItems: "center",
     },
@@ -1735,7 +1752,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       lineHeight: 22,
     },
     continueProgressContainer: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       gap: Theme.spacing.sm,
       marginTop: Theme.spacing.xs,
@@ -1760,7 +1777,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) =>
       textAlign: "right",
     },
     continueButton: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       justifyContent: "center",
       gap: Theme.spacing.sm,

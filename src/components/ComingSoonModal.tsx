@@ -11,6 +11,7 @@ import {
     Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useLocalization } from '../context/LocalizationContext';
 import { useTheme } from '../context/ThemeContext';
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS, SPACING } from '../lib/constants';
 
@@ -28,12 +29,13 @@ interface ComingSoonModalProps {
 export const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
     visible,
     onClose,
-    title = 'Coming Soon',
-    description = "We're working hard to bring you this feature. Stay tuned for updates!",
+    title,
+    description,
     icon = 'rocket-outline',
     estimatedDate,
 }) => {
     const { colors, isDark } = useTheme();
+    const { t, isRTL } = useLocalization();
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
     const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -93,6 +95,8 @@ export const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
         ]).start(onClose);
     };
 
+    const textAlign: 'left' | 'right' = isRTL ? 'right' : 'left';
+
     const dynamicStyles = {
         overlay: {
             backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.6)',
@@ -106,9 +110,11 @@ export const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
         },
         title: {
             color: colors.text,
+            textAlign,
         },
         description: {
             color: colors.textSecondary,
+            textAlign,
         },
         dateContainer: {
             backgroundColor: colors.backgroundSecondary,
@@ -176,19 +182,19 @@ export const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
                             </View>
 
                             {/* Title */}
-                            <Text style={[styles.title, dynamicStyles.title]}>{title}</Text>
+                            <Text style={[styles.title, dynamicStyles.title]}>{title || t.comingSoonTitle}</Text>
 
                             {/* Description */}
                             <Text style={[styles.description, dynamicStyles.description]}>
-                                {description}
+                                {description || t.comingSoonDescription}
                             </Text>
 
                             {/* Estimated date */}
                             {estimatedDate && (
-                                <View style={[styles.dateContainer, dynamicStyles.dateContainer]}>
+                                <View style={[styles.dateContainer, dynamicStyles.dateContainer, isRTL && { flexDirection: 'row-reverse' }]}>
                                     <Ionicons name="calendar-outline" size={16} color={colors.textTertiary} />
                                     <Text style={[styles.dateText, dynamicStyles.dateText]}>
-                                        Expected: {estimatedDate}
+                                        {t.expectedLabel}: {estimatedDate}
                                     </Text>
                                 </View>
                             )}
@@ -197,12 +203,12 @@ export const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
                             <View style={styles.featuresList}>
                                 <FeatureItem
                                     icon="notifications-outline"
-                                    text="Get notified when it's ready"
+                                    text={t.getNotifiedWhenReady}
                                     colors={colors}
                                 />
                                 <FeatureItem
                                     icon="flash-outline"
-                                    text="Early access for active users"
+                                    text={t.earlyAccess}
                                     colors={colors}
                                 />
                             </View>
@@ -213,7 +219,7 @@ export const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
                                 onPress={handleClose}
                                 activeOpacity={0.8}
                             >
-                                <Text style={styles.buttonText}>Got it!</Text>
+                                <Text style={styles.buttonText}>{t.gotIt}</Text>
                             </TouchableOpacity>
                         </View>
                     </TouchableOpacity>

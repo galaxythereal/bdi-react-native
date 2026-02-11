@@ -45,8 +45,8 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({
     onInquire,
 }) => {
     const { colors, isDark } = useTheme();
-    const { t, formatNumber, getLocalizedText } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, formatNumber, getLocalizedText, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const totalCourses = diploma.courses?.length || 0;
     const totalChapters = diploma.courses?.reduce((sum, c) => sum + (c.chapters?.length || 0), 0) || 0;
@@ -193,23 +193,31 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
     onContinue,
 }) => {
     const { colors, isDark } = useTheme();
-    const { t, getLocalizedText } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, getLocalizedText, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
 
-    if (!diploma) return null;
+    useEffect(() => {
+        if (!visible) {
+            setExpandedCourses(new Set());
+        }
+    }, [visible]);
 
-    const toggleCourse = (courseId: string) => {
-        setExpandedCourses(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(courseId)) {
-                newSet.delete(courseId);
+    const toggleCourse = useCallback((courseId: string) => {
+        setExpandedCourses((prev) => {
+            const next = new Set(prev);
+            if (next.has(courseId)) {
+                next.delete(courseId);
             } else {
-                newSet.add(courseId);
+                next.add(courseId);
             }
-            return newSet;
+            return next;
         });
-    };
+    }, []);
+
+    if (!diploma) {
+        return null;
+    }
 
     return (
         <Modal
@@ -219,20 +227,15 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
             onRequestClose={onClose}
         >
             <SafeAreaView style={styles.modalContainer}>
-                {/* Header */}
                 <View style={styles.modalHeader}>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                         <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.modalTitle}>{t.diplomaOutline}</Text>
+                    <Text style={styles.modalTitle}>{t.diplomaCatalog}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
-                <ScrollView
-                    style={styles.modalContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    {/* Diploma Info */}
+                <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
                     <View style={styles.diplomaInfo}>
                         {diploma.thumbnail_url && (
                             <Image
@@ -309,7 +312,7 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                                 {/* Chapters List */}
                                 {expandedCourses.has(course.id) && (
                                     <View style={styles.chaptersList}>
-                                        {course.chapters?.map((chapter, chapterIndex) => (
+                                        {course.chapters?.map((chapter) => (
                                             <View key={chapter.id} style={styles.chapterItem}>
                                                 <View style={styles.chapterBullet}>
                                                     {isEnrolled ? (
@@ -318,10 +321,12 @@ const DiplomaDetailModal: React.FC<DiplomaDetailModalProps> = ({
                                                         <Ionicons name="lock-closed" size={14} color={colors.textTertiary} />
                                                     )}
                                                 </View>
-                                                <Text style={[
-                                                    styles.chapterTitle,
-                                                    !isEnrolled && styles.chapterTitleLocked
-                                                ]}>
+                                                <Text
+                                                    style={[
+                                                        styles.chapterTitle,
+                                                        !isEnrolled && styles.chapterTitleLocked,
+                                                    ]}
+                                                >
                                                     {getLocalizedText(chapter.title, chapter.title_ar)}
                                                 </Text>
                                             </View>
@@ -370,8 +375,8 @@ interface InquiryModalProps {
 
 const InquiryModal: React.FC<InquiryModalProps> = ({ diploma, visible, onClose, onSubmit }) => {
     const { colors, isDark } = useTheme();
-    const { t } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const { session } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
@@ -520,9 +525,9 @@ export default function DiplomaCatalogScreen() {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showInquiryModal, setShowInquiryModal] = useState(false);
     const { colors, isDark } = useTheme();
-    const { formatNumber, t } = useLocalization();
+    const { formatNumber, t, isRTL } = useLocalization();
     const router = useRouter();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     const loadData = useCallback(async () => {
         try {
@@ -670,7 +675,7 @@ export default function DiplomaCatalogScreen() {
     );
 }
 
-function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean) {
     return StyleSheet.create({
         container: {
             flex: 1,
@@ -695,14 +700,16 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize['2xl'],
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         headerSubtitle: {
             fontSize: Theme.fontSize.base,
             color: colors.textSecondary,
             marginTop: Theme.spacing.xs,
+            textAlign: isRTL ? 'right' : 'left',
         },
         searchContainer: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             backgroundColor: colors.surface,
             marginHorizontal: Theme.spacing.lg,
@@ -716,6 +723,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             paddingHorizontal: Theme.spacing.sm,
             fontSize: Theme.fontSize.base,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         scrollView: {
             flex: 1,
@@ -748,8 +756,9 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         statusBadge: {
             position: 'absolute',
             top: Theme.spacing.sm,
-            left: Theme.spacing.sm,
-            flexDirection: 'row',
+            left: isRTL ? undefined : Theme.spacing.sm,
+            right: isRTL ? Theme.spacing.sm : undefined,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             paddingHorizontal: Theme.spacing.sm,
             paddingVertical: Theme.spacing.xs,
@@ -770,7 +779,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         priceBadge: {
             position: 'absolute',
             top: Theme.spacing.sm,
-            right: Theme.spacing.sm,
+            right: isRTL ? undefined : Theme.spacing.sm,
+            left: isRTL ? Theme.spacing.sm : undefined,
             backgroundColor: colors.secondary,
             paddingHorizontal: Theme.spacing.sm,
             paddingVertical: Theme.spacing.xs,
@@ -787,6 +797,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         diplomaTitle: {
             fontSize: Theme.fontSize.lg,
             fontWeight: Theme.fontWeight.bold,
+            textAlign: isRTL ? 'right' : 'left',
             color: colors.text,
             marginBottom: Theme.spacing.xs,
         },
@@ -795,33 +806,37 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             color: colors.textSecondary,
             lineHeight: 20,
             marginBottom: Theme.spacing.sm,
+            textAlign: isRTL ? 'right' : 'left',
         },
         statsRow: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             flexWrap: 'wrap',
             gap: Theme.spacing.md,
             marginBottom: Theme.spacing.md,
         },
         statItem: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             gap: Theme.spacing.xs,
         },
         statText: {
             fontSize: Theme.fontSize.sm,
             color: colors.textSecondary,
+            textAlign: isRTL ? 'right' : 'left',
         },
         progressSection: {
             marginTop: Theme.spacing.xs,
         },
         progressHeader: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             justifyContent: 'space-between',
+            alignItems: 'center',
             marginBottom: Theme.spacing.xs,
         },
         progressLabel: {
             fontSize: Theme.fontSize.sm,
             color: colors.textSecondary,
+            textAlign: isRTL ? 'right' : 'left',
         },
         progressValue: {
             fontSize: Theme.fontSize.sm,
@@ -839,10 +854,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             borderRadius: Theme.borderRadius.full,
         },
         lockedInfoContainer: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: colors.surfaceVariant,
+            backgroundColor: colors.surfaceSubtle,
             paddingVertical: Theme.spacing.sm,
             borderRadius: Theme.borderRadius.md,
             gap: Theme.spacing.xs,
@@ -851,6 +866,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.sm,
             fontWeight: Theme.fontWeight.medium,
             color: colors.textSecondary,
+            textAlign: isRTL ? 'right' : 'left',
         },
         emptyState: {
             alignItems: 'center',
@@ -862,11 +878,13 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
             marginTop: Theme.spacing.md,
+            textAlign: isRTL ? 'right' : 'left',
         },
         emptySubtitle: {
             fontSize: Theme.fontSize.base,
             color: colors.textSecondary,
             marginTop: Theme.spacing.xs,
+            textAlign: isRTL ? 'right' : 'left',
         },
 
         // Modal Styles
@@ -875,7 +893,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             backgroundColor: colors.background,
         },
         modalHeader: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: Theme.spacing.md,
@@ -890,6 +908,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.lg,
             fontWeight: Theme.fontWeight.bold,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         modalContent: {
             flex: 1,
@@ -963,7 +982,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
         },
         courseHeader: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             padding: Theme.spacing.md,
         },
@@ -974,7 +993,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             backgroundColor: colors.primary,
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: Theme.spacing.sm,
+            marginRight: isRTL ? 0 : Theme.spacing.sm,
+            marginLeft: isRTL ? Theme.spacing.sm : 0,
         },
         courseNumberText: {
             fontSize: Theme.fontSize.base,
@@ -988,29 +1008,34 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.base,
             fontWeight: Theme.fontWeight.semibold,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         courseChapters: {
             fontSize: Theme.fontSize.sm,
             color: colors.textSecondary,
             marginTop: 2,
+            textAlign: isRTL ? 'right' : 'left',
         },
         chaptersList: {
             paddingHorizontal: Theme.spacing.md,
             paddingBottom: Theme.spacing.md,
-            paddingLeft: Theme.spacing.md + 32 + Theme.spacing.sm,
+            paddingLeft: isRTL ? Theme.spacing.md : Theme.spacing.md + 32 + Theme.spacing.sm,
+            paddingRight: isRTL ? Theme.spacing.md + 32 + Theme.spacing.sm : Theme.spacing.md,
         },
         chapterItem: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             paddingVertical: Theme.spacing.xs,
         },
         chapterBullet: {
-            marginRight: Theme.spacing.sm,
+            marginRight: isRTL ? 0 : Theme.spacing.sm,
+            marginLeft: isRTL ? Theme.spacing.sm : 0,
         },
         chapterTitle: {
             fontSize: Theme.fontSize.sm,
             color: colors.text,
             flex: 1,
+            textAlign: isRTL ? 'right' : 'left',
         },
         chapterTitleLocked: {
             color: colors.textTertiary,
@@ -1024,40 +1049,29 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             padding: Theme.spacing.lg,
             borderTopWidth: 1,
             borderTopColor: colors.border,
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             ...Theme.shadows[isDark ? 'dark' : 'light'].lg,
         },
-        priceInfo: {
-            marginRight: Theme.spacing.lg,
-        },
-        priceLabel: {
-            fontSize: Theme.fontSize.xs,
-            color: colors.textSecondary,
-        },
-        priceAmount: {
-            fontSize: Theme.fontSize.xl,
-            fontWeight: Theme.fontWeight.bold,
-            color: colors.text,
-        },
         enrollmentRequiredInfo: {
             flex: 1,
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: colors.surfaceVariant,
-            paddingVertical: Theme.spacing.md,
+            backgroundColor: colors.surfaceSubtle,
             borderRadius: Theme.borderRadius.md,
+            paddingVertical: Theme.spacing.sm,
             gap: Theme.spacing.sm,
         },
         enrollmentRequiredText: {
             fontSize: Theme.fontSize.sm,
             fontWeight: Theme.fontWeight.medium,
             color: colors.textSecondary,
+            textAlign: isRTL ? 'right' : 'left',
         },
         continueButton: {
             flex: 1,
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.primary,
@@ -1077,10 +1091,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             padding: Theme.spacing.lg,
         },
         formSubtitle: {
-            fontSize: Theme.fontSize.base,
             color: colors.textSecondary,
             marginBottom: Theme.spacing.lg,
             lineHeight: 22,
+            textAlign: isRTL ? 'right' : 'left',
         },
         formGroup: {
             marginBottom: Theme.spacing.md,
@@ -1090,6 +1104,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.medium,
             color: colors.text,
             marginBottom: Theme.spacing.xs,
+            textAlign: isRTL ? 'right' : 'left',
         },
         formInput: {
             backgroundColor: colors.surface,
@@ -1100,13 +1115,15 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             paddingVertical: Theme.spacing.sm,
             fontSize: Theme.fontSize.base,
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         formTextarea: {
             minHeight: 100,
             paddingTop: Theme.spacing.sm,
+            textAlignVertical: 'top',
         },
         submitButton: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.primary,

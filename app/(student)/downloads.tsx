@@ -164,7 +164,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
     styles
 }) => {
     const router = useRouter();
-    const { t, isRTL, formatDate, getLocalizedText } = useLocalization();
+    const { t, isRTL, getLocalizedText, formatDate } = useLocalization();
     const rotateAnim = useRef(new Animated.Value(expanded ? 1 : 0)).current;
 
     useEffect(() => {
@@ -265,8 +265,11 @@ export default function DownloadsScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors, isDark } = useTheme();
-    const { t } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL, formatDate, getLocalizedText } = useLocalization();
+    const styles = useMemo(
+        () => createStyles(colors, isDark, isRTL),
+        [colors, isDark, isRTL]
+    );
 
     const [courses, setCourses] = useState<OfflineCourse[]>([]);
     const [stats, setStats] = useState<OfflineStats | null>(null);
@@ -433,15 +436,15 @@ export default function DownloadsScreen() {
                     style={styles.backButton}
                     onPress={() => router.back()}
                 >
-                    <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    <Ionicons name={isRTL ? "arrow-forward" : "arrow-back"} size={24} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Downloads</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{t.downloads}</Text>
                 {courses.length > 0 && (
                     <TouchableOpacity
                         style={styles.clearButton}
                         onPress={handleClearAll}
                     >
-                        <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear All</Text>
+                        <Text style={[styles.clearButtonText, { color: colors.error }]}>{t.clearAllAction}</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -458,7 +461,7 @@ export default function DownloadsScreen() {
                             {stats.totalCourses}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                            Courses
+                            {t.courses}
                         </Text>
                     </View>
                     <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -467,7 +470,7 @@ export default function DownloadsScreen() {
                             {stats.totalLessons}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                            Lessons
+                            {t.lessons}
                         </Text>
                     </View>
                     <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -476,7 +479,7 @@ export default function DownloadsScreen() {
                             {formatBytes(stats.totalSize)}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                            Storage
+                            {t.storageLabel}
                         </Text>
                     </View>
                     <View style={[
@@ -532,7 +535,7 @@ export default function DownloadsScreen() {
 // STYLES
 // ============================================================================
 
-function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
+function createStyles(colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean) {
     return StyleSheet.create({
         container: {
             flex: 1,
@@ -543,7 +546,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             alignItems: 'center',
         },
         header: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: Theme.spacing.md,
@@ -567,7 +570,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontWeight: Theme.fontWeight.semibold,
         },
         statsBanner: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'space-around',
             marginHorizontal: Theme.spacing.md,
@@ -595,7 +598,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         onlineIndicator: {
             position: 'absolute',
             top: -6,
-            right: -6,
+            right: isRTL ? undefined : -6,
+            left: isRTL ? -6 : undefined,
             width: 24,
             height: 24,
             borderRadius: 12,
@@ -611,7 +615,7 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             overflow: 'hidden',
         },
         courseHeader: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             padding: Theme.spacing.md,
         },
         courseInfo: {
@@ -621,9 +625,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             fontSize: Theme.fontSize.base,
             fontWeight: Theme.fontWeight.semibold,
             marginBottom: Theme.spacing.xs,
+            textAlign: isRTL ? 'right' : 'left',
         },
         courseMeta: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             gap: Theme.spacing.md,
             marginBottom: Theme.spacing.xs,
         },
@@ -637,9 +642,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         },
         downloadDate: {
             fontSize: Theme.fontSize.xs,
+            textAlign: isRTL ? 'right' : 'left',
         },
         courseActions: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             gap: Theme.spacing.sm,
         },
@@ -665,9 +671,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             marginBottom: Theme.spacing.xs,
             textTransform: 'uppercase',
             letterSpacing: 0.5,
+            textAlign: isRTL ? 'right' : 'left',
         },
         lessonItem: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             padding: Theme.spacing.sm,
             borderRadius: Theme.borderRadius.md,
@@ -679,7 +686,8 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             borderRadius: 18,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: Theme.spacing.sm,
+            marginRight: isRTL ? 0 : Theme.spacing.sm,
+            marginLeft: isRTL ? Theme.spacing.sm : 0,
         },
         lessonInfo: {
             flex: 1,
@@ -687,9 +695,10 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         lessonTitle: {
             fontSize: Theme.fontSize.sm,
             fontWeight: Theme.fontWeight.medium,
+            textAlign: isRTL ? 'right' : 'left',
         },
         lessonMeta: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             marginTop: 2,
         },
@@ -697,10 +706,12 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
             width: 6,
             height: 6,
             borderRadius: 3,
-            marginRight: 6,
+            marginRight: isRTL ? 0 : 6,
+            marginLeft: isRTL ? 6 : 0,
         },
         lessonStatus: {
             fontSize: Theme.fontSize.xs,
+            textAlign: isRTL ? 'right' : 'left',
         },
         deleteButton: {
             padding: Theme.spacing.xs,

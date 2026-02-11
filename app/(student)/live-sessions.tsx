@@ -29,7 +29,7 @@ const getTimeUntil = (dateString: string, t: any, formatNumber?: (value: number)
     const sessionDate = new Date(dateString);
     const diff = sessionDate.getTime() - now.getTime();
 
-    if (diff < 0) return t?.started || 'Started';
+    if (diff < 0) return t.started;
 
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
@@ -37,10 +37,10 @@ const getTimeUntil = (dateString: string, t: any, formatNumber?: (value: number)
 
     const formatValue = (value: number) => (formatNumber ? formatNumber(value) : value.toString());
 
-    if (days > 0) return `${t?.in || 'In'} ${formatValue(days)} ${t?.days || 'days'}`;
-    if (hours > 0) return `${t?.in || 'In'} ${formatValue(hours)} ${t?.hours || 'hours'}`;
-    if (minutes > 0) return `${t?.in || 'In'} ${formatValue(minutes)} ${t?.minutes || 'minutes'}`;
-    return t?.startingNow || 'Starting now';
+    if (days > 0) return `${t.in} ${formatValue(days)} ${t.days}`;
+    if (hours > 0) return `${t.in} ${formatValue(hours)} ${t.hours}`;
+    if (minutes > 0) return `${t.in} ${formatValue(minutes)} ${t.minutes}`;
+    return t.startingNow;
 };
 
 // Session Card Component
@@ -52,8 +52,8 @@ interface SessionCardProps {
 
 const SessionCard: React.FC<SessionCardProps> = ({ session, index, onJoin }) => {
     const { colors, isDark } = useTheme();
-    const { t, formatDate, formatTime, getLocalizedText, formatNumber } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, formatDate, formatTime, getLocalizedText, formatNumber, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const cardAnim = useRef(new Animated.Value(0)).current;
     const sessionDate = new Date(session.scheduled_at);
     const date = formatDate(sessionDate, { weekday: 'short', month: 'short', day: 'numeric' });
@@ -196,8 +196,8 @@ interface BatchCardProps {
 
 const BatchCard: React.FC<BatchCardProps> = ({ batch, index, onPress }) => {
     const { colors, isDark } = useTheme();
-    const { t, getLocalizedText, formatDate } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, getLocalizedText, formatDate, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
     const cardAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -266,8 +266,8 @@ export default function LiveSessionsScreen() {
     const [activeTab, setActiveTab] = useState<'sessions' | 'batches'>('sessions');
     const router = useRouter();
     const { colors, isDark } = useTheme();
-    const { t, getLocalizedText } = useLocalization();
-    const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, getLocalizedText, isRTL } = useLocalization();
+    const styles = useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     const loadData = useCallback(async () => {
         try {
@@ -427,7 +427,7 @@ export default function LiveSessionsScreen() {
     );
 }
 
-const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
@@ -478,11 +478,13 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         backgroundColor: colors.backgroundSecondary,
     },
     tabText: {
+        textAlign: isRTL ? 'right' : 'left',
         fontSize: Theme.fontSize.base,
         fontWeight: Theme.fontWeight.medium,
         color: colors.textSecondary,
     },
     tabTextActive: {
+        textAlign: isRTL ? 'right' : 'left',
         color: colors.primary,
         fontWeight: Theme.fontWeight.semibold,
     },
@@ -492,8 +494,6 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
     scrollContent: {
         padding: Theme.spacing.lg,
     },
-
-    // Session Card Styles
     sessionCard: {
         backgroundColor: colors.surface,
         borderRadius: Theme.borderRadius.lg,
@@ -509,7 +509,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         padding: Theme.spacing.md,
     },
     liveIndicator: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         marginBottom: Theme.spacing.sm,
     },
@@ -518,7 +518,8 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         height: 8,
         borderRadius: 4,
         backgroundColor: colors.error,
-        marginRight: Theme.spacing.xs,
+        marginRight: isRTL ? 0 : Theme.spacing.xs,
+        marginLeft: isRTL ? Theme.spacing.xs : 0,
     },
     liveText: {
         fontSize: Theme.fontSize.xs,
@@ -527,13 +528,13 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         letterSpacing: 1,
     },
     dateTimeSection: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: Theme.spacing.sm,
     },
     dateBox: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: Theme.spacing.sm,
     },
@@ -541,10 +542,12 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontSize: Theme.fontSize.base,
         fontWeight: Theme.fontWeight.semibold,
         color: colors.text,
+        textAlign: isRTL ? 'right' : 'left',
     },
     timeText: {
         fontSize: Theme.fontSize.base,
         color: colors.textSecondary,
+        textAlign: isRTL ? 'right' : 'left',
     },
     timeUntilBadge: {
         backgroundColor: colors.backgroundSecondary,
@@ -571,19 +574,21 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
         marginBottom: Theme.spacing.xs,
+        textAlign: isRTL ? 'right' : 'left',
     },
     sessionDescription: {
         fontSize: Theme.fontSize.sm,
         color: colors.textSecondary,
         lineHeight: 20,
         marginBottom: Theme.spacing.sm,
+        textAlign: isRTL ? 'right' : 'left',
     },
     metaRow: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         gap: Theme.spacing.md,
     },
     metaItem: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: Theme.spacing.xs,
     },
@@ -592,7 +597,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         color: colors.textSecondary,
     },
     batchTag: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         backgroundColor: colors.primary + '10',
         paddingHorizontal: Theme.spacing.sm,
@@ -608,7 +613,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         color: colors.primary,
     },
     joinButton: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.primary,
@@ -634,7 +639,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         ...Theme.shadows[isDark ? 'dark' : 'light'].md,
     },
     batchHeader: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         marginBottom: Theme.spacing.sm,
     },
@@ -642,7 +647,8 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         width: 8,
         height: 8,
         borderRadius: 4,
-        marginRight: Theme.spacing.xs,
+        marginRight: isRTL ? 0 : Theme.spacing.xs,
+        marginLeft: isRTL ? Theme.spacing.xs : 0,
     },
     batchStatus: {
         fontSize: Theme.fontSize.xs,
@@ -656,19 +662,21 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
         marginBottom: Theme.spacing.xs,
+        textAlign: isRTL ? 'right' : 'left',
     },
     batchDiploma: {
         fontSize: Theme.fontSize.sm,
         color: colors.primary,
         marginBottom: Theme.spacing.sm,
+        textAlign: isRTL ? 'right' : 'left',
     },
     batchMeta: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     batchMetaItem: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: Theme.spacing.xs,
     },
@@ -677,7 +685,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         color: colors.textSecondary,
     },
     whatsappBadge: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         backgroundColor: '#25D36610',
         paddingHorizontal: Theme.spacing.sm,
@@ -702,6 +710,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
         marginTop: Theme.spacing.md,
+        textAlign: isRTL ? 'right' : 'left',
     },
     emptySubtitle: {
         fontSize: Theme.fontSize.base,

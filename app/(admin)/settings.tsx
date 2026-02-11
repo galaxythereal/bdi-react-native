@@ -18,18 +18,20 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalization } from "../../src/context/LocalizationContext";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useAuth } from "../../src/features/auth/AuthContext";
 
 export default function AdminSettings() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { signOut, userProfile } = useAuth();
+  const { t, isRTL } = useLocalization();
 
   const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.signOut, t.signOutConfirm, [
+      { text: t.cancel, style: "cancel" },
       {
-        text: "Sign Out",
+        text: t.signOut,
         style: "destructive",
         onPress: signOut,
       },
@@ -77,7 +79,7 @@ export default function AdminSettings() {
       overflow: "hidden",
     },
     row: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       padding: 16,
       borderBottomWidth: 1,
@@ -92,7 +94,8 @@ export default function AdminSettings() {
       borderRadius: 10,
       justifyContent: "center",
       alignItems: "center",
-      marginRight: 14,
+      marginRight: isRTL ? 0 : 14,
+      marginLeft: isRTL ? 14 : 0,
     },
     rowContent: {
       flex: 1,
@@ -101,17 +104,19 @@ export default function AdminSettings() {
       fontSize: 16,
       fontWeight: "500",
       color: colors.text,
+      textAlign: isRTL ? "right" : "left",
     },
     rowSubtitle: {
       fontSize: 14,
       color: colors.textSecondary,
       marginTop: 2,
+      textAlign: isRTL ? "right" : "left",
     },
     signOutButton: {
       backgroundColor: "#ef444420",
       borderRadius: 12,
       padding: 16,
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -119,7 +124,8 @@ export default function AdminSettings() {
       color: "#ef4444",
       fontSize: 16,
       fontWeight: "600",
-      marginLeft: 8,
+      marginLeft: isRTL ? 0 : 8,
+      marginRight: isRTL ? 8 : 0,
     },
     versionText: {
       textAlign: "center",
@@ -135,14 +141,14 @@ export default function AdminSettings() {
       <ScrollView>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Admin preferences</Text>
+          <Text style={styles.title}>{t.settingsTitle}</Text>
+          <Text style={styles.subtitle}>{t.adminPreferences}</Text>
         </View>
 
         <View style={styles.content}>
           {/* Account */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account</Text>
+            <Text style={styles.sectionTitle}>{t.accountSectionTitle}</Text>
             <View style={styles.card}>
               <View style={[styles.row, styles.lastRow]}>
                 <View
@@ -155,11 +161,11 @@ export default function AdminSettings() {
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowTitle}>
-                    {userProfile?.full_name || "Admin"}
+                    {userProfile?.full_name || t.adminLabel}
                   </Text>
                   <Text style={styles.rowSubtitle}>{userProfile?.email}</Text>
                   <Text style={[styles.rowSubtitle, { color: colors.primary }]}>
-                    Administrator
+                    {t.administratorLabel}
                   </Text>
                 </View>
               </View>
@@ -168,7 +174,7 @@ export default function AdminSettings() {
 
           {/* Preferences */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Preferences</Text>
+            <Text style={styles.sectionTitle}>{t.preferencesSectionTitle}</Text>
             <View style={styles.card}>
               <TouchableOpacity
                 style={[styles.row, styles.lastRow]}
@@ -191,9 +197,9 @@ export default function AdminSettings() {
                   )}
                 </View>
                 <View style={styles.rowContent}>
-                  <Text style={styles.rowTitle}>Appearance</Text>
+                  <Text style={styles.rowTitle}>{t.appearance}</Text>
                   <Text style={styles.rowSubtitle}>
-                    {isDark ? "Dark mode" : "Light mode"}
+                    {isDark ? t.darkMode : t.lightMode}
                   </Text>
                 </View>
                 <ChevronRight color={colors.textSecondary} size={20} />
@@ -203,7 +209,7 @@ export default function AdminSettings() {
 
           {/* About */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>{t.aboutSectionTitle}</Text>
             <View style={styles.card}>
               <View style={[styles.row, styles.lastRow]}>
                 <View
@@ -215,7 +221,7 @@ export default function AdminSettings() {
                   <Info color="#8b5cf6" size={20} />
                 </View>
                 <View style={styles.rowContent}>
-                  <Text style={styles.rowTitle}>ISE LMS Admin</Text>
+                  <Text style={styles.rowTitle}>{t.adminAppName}</Text>
                   <Text style={styles.rowSubtitle}>
                     Version {Constants.expoConfig?.version || "1.0.0"}
                   </Text>
@@ -230,11 +236,11 @@ export default function AdminSettings() {
             onPress={handleSignOut}
           >
             <LogOut color={Theme.colors.light.error} size={20} />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{t.signOut}</Text>
           </TouchableOpacity>
 
           <Text style={styles.versionText}>
-            Admin Mobile View • ISE Learning Management System
+            {t.adminMobileFooter}
           </Text>
         </View>
       </ScrollView>

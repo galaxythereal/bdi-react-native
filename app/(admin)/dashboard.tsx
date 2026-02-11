@@ -10,6 +10,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalization } from '../../src/context/LocalizationContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/features/auth/AuthContext';
 import { supabase } from '../../src/lib/supabase';
@@ -24,6 +25,7 @@ interface DashboardStats {
 export default function AdminDashboard() {
     const { colors } = useTheme();
     const { userProfile } = useAuth();
+    const { t, isRTL } = useLocalization();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -89,16 +91,19 @@ export default function AdminDashboard() {
             fontSize: 14,
             color: colors.textSecondary,
             marginBottom: 4,
+            textAlign: isRTL ? 'right' : 'left',
         },
         title: {
             fontSize: 28,
             fontWeight: '700',
             color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
         },
         subtitle: {
             fontSize: 15,
             color: colors.textSecondary,
             marginTop: 8,
+            textAlign: isRTL ? 'right' : 'left',
         },
         content: {
             paddingHorizontal: 20,
@@ -108,9 +113,10 @@ export default function AdminDashboard() {
             fontWeight: '600',
             color: colors.text,
             marginBottom: 16,
+            textAlign: isRTL ? 'right' : 'left',
         },
         statsGrid: {
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             flexWrap: 'wrap',
             marginHorizontal: -8,
         },
@@ -142,6 +148,7 @@ export default function AdminDashboard() {
         statLabel: {
             fontSize: 14,
             color: colors.textSecondary,
+            textAlign: isRTL ? 'right' : 'left',
         },
         loadingContainer: {
             flex: 1,
@@ -155,7 +162,7 @@ export default function AdminDashboard() {
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Loading dashboard...</Text>
+                    <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t.adminLoadingDashboard}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -170,14 +177,16 @@ export default function AdminDashboard() {
             >
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.greeting}>Welcome back,</Text>
-                    <Text style={styles.title}>{userProfile?.full_name || 'Admin'}</Text>
-                    <Text style={styles.subtitle}>Admin Dashboard • Mobile View</Text>
+                    <Text style={styles.greeting}>
+                        {isRTL ? t.welcomeMessage : `${t.welcomeMessage},`}
+                    </Text>
+                    <Text style={styles.title}>{userProfile?.full_name || t.adminLabel}</Text>
+                    <Text style={styles.subtitle}>{t.adminDashboardSubtitle}</Text>
                 </View>
 
                 {/* Stats Grid */}
                 <View style={styles.content}>
-                    <Text style={styles.sectionTitle}>Quick Stats</Text>
+                    <Text style={styles.sectionTitle}>{t.quickStatsTitle}</Text>
 
                     <View style={styles.statsGrid}>
                         <View style={styles.statCard}>
@@ -186,7 +195,7 @@ export default function AdminDashboard() {
                                     <Users color={colors.primary} size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.totalStudents || 0}</Text>
-                                <Text style={styles.statLabel}>Total Students</Text>
+                                <Text style={styles.statLabel}>{t.totalStudentsLabel}</Text>
                             </View>
                         </View>
 
@@ -196,7 +205,7 @@ export default function AdminDashboard() {
                                     <TrendingUp color="#22c55e" size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.activeEnrollments || 0}</Text>
-                                <Text style={styles.statLabel}>Active Enrollments</Text>
+                                <Text style={styles.statLabel}>{t.activeEnrollmentsLabel}</Text>
                             </View>
                         </View>
 
@@ -206,7 +215,7 @@ export default function AdminDashboard() {
                                     <BookOpen color="#3b82f6" size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.totalCourses || 0}</Text>
-                                <Text style={styles.statLabel}>Total Courses</Text>
+                                <Text style={styles.statLabel}>{t.totalCoursesLabel}</Text>
                             </View>
                         </View>
 
@@ -216,7 +225,7 @@ export default function AdminDashboard() {
                                     <Award color="#f59e0b" size={24} />
                                 </View>
                                 <Text style={styles.statValue}>{stats?.completedEnrollments || 0}</Text>
-                                <Text style={styles.statLabel}>Completed</Text>
+                                <Text style={styles.statLabel}>{t.completedEnrollmentsLabel}</Text>
                             </View>
                         </View>
                     </View>
@@ -226,11 +235,10 @@ export default function AdminDashboard() {
                 <View style={[styles.content, { marginTop: Theme.spacing.xl, paddingBottom: 40 }]}>
                     <View style={[styles.statCardInner, { backgroundColor: Theme.colors.light.primarySubtle }]}>
                         <Text style={[styles.sectionTitle, { marginBottom: Theme.spacing.xs, color: colors.primary }]}>
-                            Student Impersonation
+                            {t.studentImpersonationTitle}
                         </Text>
-                        <Text style={{ color: colors.text, lineHeight: 22 }}>
-                            Go to the "Students" tab to search and view the app as any student.
-                            This lets you see exactly what they see for support purposes.
+                        <Text style={{ color: colors.text, lineHeight: 22, textAlign: isRTL ? 'right' : 'left' }}>
+                            {t.studentImpersonationInfoText}
                         </Text>
                     </View>
                 </View>

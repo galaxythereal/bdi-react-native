@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../src/components/Button";
 import { Input } from "../../src/components/Input";
+import { useLocalization } from "../../src/context/LocalizationContext";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useAuth } from "../../src/features/auth/AuthContext";
 
@@ -26,54 +27,63 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { signInWithPassword, signUp, session, isLoading } = useAuth();
   const { colors, isDark } = useTheme();
+  const { t, isRTL } = useLocalization();
 
   // Auth navigation is handled by AuthContext — no Redirect here to avoid conflicts
 
   const handleSubmit = async () => {
+    console.log('[LOGIN] handleSubmit called, isSignUp:', isSignUp);
     if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password");
+      Alert.alert(t.error, t.enterEmailPassword);
       return;
     }
 
     if (isSignUp && !fullName.trim()) {
-      Alert.alert("Error", "Please enter your full name");
+      Alert.alert(t.error, t.enterFullName);
       return;
     }
 
+    console.log('[LOGIN] Setting loading=true');
     setLoading(true);
+    const startTime = Date.now();
     try {
       if (isSignUp) {
+        console.log('[LOGIN] Calling signUp...');
         await signUp(email, password, fullName.trim());
+        console.log('[LOGIN] signUp completed in', Date.now() - startTime, 'ms');
         Alert.alert(
-          "Account Created",
-          "Your account has been created! Please wait for admin approval before you can access courses.",
+          t.accountCreatedTitle,
+          t.accountCreatedMessage,
         );
         setIsSignUp(false);
         setEmail("");
         setPassword("");
         setFullName("");
       } else {
+        console.log('[LOGIN] Calling signInWithPassword...');
         await signInWithPassword(email, password);
+        console.log('[LOGIN] signInWithPassword returned in', Date.now() - startTime, 'ms');
+        console.log('[LOGIN] Waiting for auth state change to trigger navigation...');
         // Navigation will happen via useEffect when session is set
       }
     } catch (error: any) {
-      console.error("Auth error:", error);
-      let errorMessage = error.message || "An error occurred";
+      console.error('[LOGIN] Auth error after', Date.now() - startTime, 'ms:', error);
+      let errorMessage = error.message || t.error;
 
       if (
         errorMessage.includes("NetworkError") ||
         errorMessage.includes("Failed to fetch")
       ) {
-        errorMessage = "Network error: Please check your connection.";
+        errorMessage = t.networkErrorMessage;
       } else if (errorMessage.includes("Invalid login credentials")) {
-        errorMessage = "Invalid email or password. Please try again.";
+        errorMessage = t.invalidLoginMessage;
       } else if (errorMessage.includes("User already registered")) {
-        errorMessage =
-          "This email is already registered. Please sign in instead.";
+        errorMessage = t.userAlreadyRegisteredMessage;
       }
 
-      Alert.alert(isSignUp ? "Sign Up Failed" : "Login Failed", errorMessage);
+      Alert.alert(isSignUp ? t.signUpFailedTitle : t.loginFailedTitle, errorMessage);
     } finally {
+      console.log('[LOGIN] Setting loading=false, total time:', Date.now() - startTime, 'ms');
       setLoading(false);
     }
   };
@@ -110,43 +120,43 @@ export default function LoginScreen() {
                 </Text>
               </View>
               <Text style={[styles.title, { color: colors.text }]}>
-                {isSignUp ? "Create Account" : "Welcome Back"}
+                {isSignUp ? t.createAccount : t.welcomeBack}
               </Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 {isSignUp
-                  ? "Sign up to get started"
-                  : "Sign in to access your courses"}
+                  ? t.signUpToGetStarted
+                  : t.signInToAccessCourses}
               </Text>
             </View>
 
             <View style={styles.form}>
               {isSignUp && (
                 <Input
-                  label="Full Name"
+                  label={t.fullName}
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder="John Doe"
+                  placeholder={t.fullNamePlaceholder}
                   autoCapitalize="words"
                 />
               )}
 
               <Input
-                label="Email Address"
+                label={t.emailAddressLabel}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="you@example.com"
+                placeholder={t.emailPlaceholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
 
               <Input
-                label="Password"
+                label={t.password}
                 value={password}
                 onChangeText={setPassword}
                 placeholder={
                   isSignUp
-                    ? "Create a password (min. 6 characters)"
-                    : "Enter your password"
+                    ? t.createPasswordPlaceholder
+                    : t.passwordPlaceholder
                 }
                 secureTextEntry
               />
@@ -155,27 +165,32 @@ export default function LoginScreen() {
                 title={
                   loading
                     ? isSignUp
-                      ? "Creating Account..."
-                      : "Signing In..."
+                      ? t.creatingAccount
+                      : t.signingIn
                     : isSignUp
-                      ? "Create Account"
-                      : "Sign In"
+                      ? t.createAccount
+                      : t.signIn
                 }
                 onPress={handleSubmit}
                 disabled={loading}
                 style={styles.submitButton}
               />
 
-              <View style={styles.switchContainer}>
+              <View
+                style={[
+                  styles.switchContainer,
+                  isRTL && { flexDirection: "row-reverse" },
+                ]}
+              >
                 <Text
                   style={[styles.switchText, { color: colors.textSecondary }]}
                 >
                   {isSignUp
-                    ? "Already have an account? "
-                    : "Don't have an account? "}
+                    ? t.alreadyHaveAccount
+                    : t.dontHaveAccount}
                 </Text>
                 <Button
-                  title={isSignUp ? "Sign In" : "Sign Up"}
+                  title={isSignUp ? t.signIn : t.signUp}
                   onPress={() => {
                     setIsSignUp(!isSignUp);
                     setEmail("");

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Theme from '../../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useLocalization } from '../context/LocalizationContext';
 
 interface AudioPlayerProps {
     uri: string;
@@ -27,6 +28,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     onComplete,
 }) => {
     const { colors, isDark } = useTheme();
+    const { t } = useLocalization();
     const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -169,7 +171,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     <Ionicons name="alert-circle" size={32} color={colors.error} />
                     <Text style={styles.errorText}>{error}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={loadAudio}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
+                        <Text style={styles.retryButtonText}>{t.retry}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

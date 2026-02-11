@@ -6,7 +6,7 @@ import {
     Alert,
     Animated,
     Modal,
-    Platform,
+  Platform,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -532,7 +532,7 @@ export default function ProfileScreen() {
                 color={colors.primary}
               />
               <Text style={[styles.roleText, { color: colors.primary }]}>
-                Student
+                {t.studentLabel}
               </Text>
             </View>
           </View>
@@ -562,7 +562,7 @@ export default function ProfileScreen() {
                 {stats.courses}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                Courses
+                {t.courses}
               </Text>
             </View>
 
@@ -583,7 +583,7 @@ export default function ProfileScreen() {
                 {stats.progress}%
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                Progress
+                {t.progress}
               </Text>
             </View>
 
@@ -604,7 +604,7 @@ export default function ProfileScreen() {
                 {stats.certificates}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                Certificates
+                {t.certificates}
               </Text>
             </View>
           </Card>
@@ -699,7 +699,7 @@ export default function ProfileScreen() {
                       </View>
                     )}
                     <Ionicons
-                      name="chevron-forward"
+                      name={isRTL ? "chevron-back" : "chevron-forward"}
                       size={18}
                       color={colors.textTertiary}
                     />
@@ -733,7 +733,7 @@ export default function ProfileScreen() {
           >
             <Ionicons name="log-out-outline" size={22} color={colors.error} />
             <Text style={[styles.signOutText, { color: colors.error }]}>
-              Sign Out
+              {t.signOut}
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -767,7 +767,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Edit Profile
+                {t.editProfile}
               </Text>
               <TouchableOpacity onPress={() => setEditProfileVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
@@ -778,7 +778,7 @@ export default function ProfileScreen() {
               <Text
                 style={[styles.inputLabel, { color: colors.textSecondary }]}
               >
-                Full Name
+                {t.fullName}
               </Text>
               <TextInput
                 style={[
@@ -791,7 +791,7 @@ export default function ProfileScreen() {
                 ]}
                 value={fullName}
                 onChangeText={setFullName}
-                placeholder="Enter your full name"
+                placeholder={t.enterFullName}
                 placeholderTextColor={colors.textTertiary}
               />
             </View>
@@ -800,7 +800,7 @@ export default function ProfileScreen() {
               <Text
                 style={[styles.inputLabel, { color: colors.textSecondary }]}
               >
-                Email
+                {t.email}
               </Text>
               <TextInput
                 style={[
@@ -822,7 +822,7 @@ export default function ProfileScreen() {
               onPress={handleUpdateProfile}
             >
               <Text style={[styles.modalButtonText, { color: colors.surface }]}>
-                Save Changes
+                {t.saveChanges}
               </Text>
             </TouchableOpacity>
           </View>
@@ -847,7 +847,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Change Password
+                {t.changePassword}
               </Text>
               <TouchableOpacity onPress={() => setChangePasswordVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
@@ -858,7 +858,7 @@ export default function ProfileScreen() {
               <Text
                 style={[styles.inputLabel, { color: colors.textSecondary }]}
               >
-                New Password
+                {t.newPassword}
               </Text>
               <TextInput
                 style={[
@@ -871,7 +871,7 @@ export default function ProfileScreen() {
                 ]}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="Enter new password"
+                placeholder={t.newPassword}
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry
               />
@@ -881,7 +881,7 @@ export default function ProfileScreen() {
               <Text
                 style={[styles.inputLabel, { color: colors.textSecondary }]}
               >
-                Confirm Password
+                {t.confirmPassword}
               </Text>
               <TextInput
                 style={[
@@ -894,7 +894,7 @@ export default function ProfileScreen() {
                 ]}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Confirm new password"
+                placeholder={t.confirmPassword}
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry
               />
@@ -905,7 +905,7 @@ export default function ProfileScreen() {
               onPress={handleChangePassword}
             >
               <Text style={[styles.modalButtonText, { color: colors.surface }]}>
-                Update Password
+                {t.updatePassword}
               </Text>
             </TouchableOpacity>
           </View>
@@ -930,7 +930,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Appearance
+                {t.appearance}
               </Text>
               <TouchableOpacity onPress={() => setThemeModalVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
@@ -939,11 +939,11 @@ export default function ProfileScreen() {
 
             <View style={styles.themeOptions}>
               {[
-                { value: "light", label: "Light", icon: "sunny-outline" },
-                { value: "dark", label: "Dark", icon: "moon-outline" },
+                { value: "light", label: t.lightMode, icon: "sunny-outline" },
+                { value: "dark", label: t.darkMode, icon: "moon-outline" },
                 {
                   value: "system",
-                  label: "System",
+                  label: t.systemMode,
                   icon: "phone-portrait-outline",
                 },
               ].map((option) => (
@@ -1378,7 +1378,7 @@ const createStyles = (
       marginBottom: Theme.spacing.sm,
     },
     roleBadge: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       justifyContent: "center",
       gap: Theme.spacing.xs,
@@ -1404,7 +1404,7 @@ const createStyles = (
       marginTop: Theme.spacing.lg,
     },
     statsCard: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       justifyContent: "space-around",
       alignItems: "center",
       paddingVertical: Theme.spacing.lg,
@@ -1432,6 +1432,7 @@ const createStyles = (
       fontSize: Theme.fontSize.xs,
       color: colors.textSecondary,
       fontWeight: Theme.fontWeight.medium,
+      textAlign: isRTL ? "right" : "left",
     },
     statDivider: {
       width: 1,
@@ -1449,7 +1450,9 @@ const createStyles = (
       textTransform: "uppercase",
       letterSpacing: 1,
       marginBottom: Theme.spacing.sm,
-      marginLeft: Theme.spacing.xs,
+      marginLeft: isRTL ? 0 : Theme.spacing.xs,
+      marginRight: isRTL ? Theme.spacing.xs : 0,
+      textAlign: isRTL ? "right" : "left",
     },
     menuCard: {
       backgroundColor: colors.surface,
@@ -1458,7 +1461,7 @@ const createStyles = (
       ...Theme.shadows[isDark ? "dark" : "light"].sm,
     },
     menuItem: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       padding: Theme.spacing.md,
     },
@@ -1474,7 +1477,8 @@ const createStyles = (
       backgroundColor: colors.primary + "10",
       alignItems: "center",
       justifyContent: "center",
-      marginRight: Theme.spacing.md,
+      marginRight: isRTL ? 0 : Theme.spacing.md,
+      marginLeft: isRTL ? Theme.spacing.md : 0,
     },
     menuIconContainerDanger: {
       backgroundColor: colors.error + "10",
@@ -1494,9 +1498,10 @@ const createStyles = (
       fontSize: Theme.fontSize.xs,
       color: colors.textSecondary,
       marginTop: 2,
+      textAlign: isRTL ? "right" : "left",
     },
     menuItemRight: {
-      flexDirection: "row",
+      flexDirection: isRTL ? "row-reverse" : "row",
       alignItems: "center",
       gap: Theme.spacing.sm,
     },

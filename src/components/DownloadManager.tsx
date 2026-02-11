@@ -12,6 +12,7 @@ import {
     View,
 } from 'react-native';
 import Theme from '../../constants/theme';
+import { useLocalization } from '../context/LocalizationContext';
 import { useTheme } from '../context/ThemeContext';
 
 interface Download {
@@ -55,7 +56,8 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
     onClearAll,
 }) => {
     const { colors, isDark } = useTheme();
-    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL } = useLocalization();
+    const styles = React.useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     const completedDownloads = downloads.filter(d => d.status === 'completed');
     const activeDownloads = downloads.filter(d => d.status === 'downloading' || d.status === 'pending');
@@ -233,10 +235,10 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                 <View style={styles.emptyIconContainer}>
                     <Ionicons name="cloud-download-outline" size={64} color={colors.textTertiary} />
                 </View>
-                <Text style={styles.emptyTitle}>No Downloads</Text>
+                <Text style={styles.emptyTitle}>{t.noDownloadsYet}</Text>
                 <Text style={styles.emptyText}>
-                    Download videos to watch offline.{'\n'}
-                    Look for the download icon on video lessons.
+                    {t.downloadOfflineHint}{"\n"}
+                    {t.goToCourseDownload}
                 </Text>
             </View>
         );
@@ -250,7 +252,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
             {/* Active Downloads */}
             {activeDownloads.length > 0 && (
                 <View style={styles.section}>
-                    {renderSectionHeader('Downloading', activeDownloads.length)}
+                    {renderSectionHeader(t.downloading, activeDownloads.length)}
                     <FlatList
                         data={activeDownloads}
                         renderItem={renderDownloadItem}
@@ -263,7 +265,7 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
             {/* Failed Downloads */}
             {failedDownloads.length > 0 && (
                 <View style={styles.section}>
-                    {renderSectionHeader('Failed', failedDownloads.length)}
+                    {renderSectionHeader(t.failed, failedDownloads.length)}
                     <FlatList
                         data={failedDownloads}
                         renderItem={renderDownloadItem}
@@ -277,10 +279,10 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
             {completedDownloads.length > 0 && (
                 <View style={styles.section}>
                     <View style={styles.sectionHeaderRow}>
-                        {renderSectionHeader('Downloaded', completedDownloads.length)}
+                        {renderSectionHeader(t.downloadedContent, completedDownloads.length)}
                         {onClearAll && completedDownloads.length > 1 && (
                             <TouchableOpacity style={styles.clearButton} onPress={onClearAll}>
-                                <Text style={styles.clearButtonText}>Clear All</Text>
+                                <Text style={styles.clearButtonText}>{t.clearAllAction}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -299,7 +301,8 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
 // Storage Info Component
 const StorageInfo: React.FC = () => {
     const { colors, isDark } = useTheme();
-    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL } = useLocalization();
+    const styles = React.useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     const [storageInfo, setStorageInfo] = useState<{ used: number; free: number } | null>(null);
 
@@ -322,13 +325,13 @@ const StorageInfo: React.FC = () => {
         <View style={styles.storageContainer}>
             <View style={styles.storageHeader}>
                 <Ionicons name="folder-open-outline" size={20} color={colors.textSecondary} />
-                <Text style={styles.storageTitle}>Storage</Text>
+                <Text style={styles.storageTitle}>{t.storageLabel}</Text>
             </View>
             <View style={styles.storageBar}>
                 <View style={[styles.storageUsed, { width: '15%' }]} />
             </View>
             <Text style={styles.storageText}>
-                {formatBytes(storageInfo.free)} available
+                {t.storageAvailable.replace('{size}', formatBytes(storageInfo.free))}
             </Text>
         </View>
     );
@@ -357,7 +360,8 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
     showLabel = false,
 }) => {
     const { colors, isDark } = useTheme();
-    const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+    const { t, isRTL } = useLocalization();
+    const styles = React.useMemo(() => createStyles(colors, isDark, isRTL), [colors, isDark, isRTL]);
 
     const iconSize = size === 'small' ? 18 : size === 'medium' ? 24 : 32;
     const progressAnim = React.useRef(new Animated.Value(0)).current;
@@ -373,11 +377,11 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
     const handlePress = () => {
         if (isDownloaded) {
             Alert.alert(
-                'Remove Download',
-                'Remove this video from your device?',
+                t.removeDownloadTitle,
+                t.removeLessonMessage,
                 [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Remove', style: 'destructive', onPress: onDelete },
+                    { text: t.cancel, style: 'cancel' },
+                    { text: t.delete, style: 'destructive', onPress: onDelete },
                 ]
             );
         } else if (!isDownloading) {
@@ -408,7 +412,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
                         {Math.round(progress * 100)}%
                     </Text>
                 </View>
-                {showLabel && <Text style={styles.downloadLabel}>Downloading...</Text>}
+                {showLabel && <Text style={styles.downloadLabel}>{t.downloadingLabel}</Text>}
             </View>
         );
     }
@@ -431,14 +435,14 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
             </View>
             {showLabel && (
                 <Text style={[styles.downloadLabel, isDownloaded && styles.downloadLabelCompleted]}>
-                    {isDownloaded ? 'Downloaded' : 'Download'}
+                    {isDownloaded ? t.downloadedLabel : t.downloadLabel}
                 </Text>
             )}
         </TouchableOpacity>
     );
 };
 
-const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
+const createStyles = (colors: typeof Theme.colors.light, isDark: boolean, isRTL: boolean) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -462,6 +466,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
         marginBottom: Theme.spacing.sm,
+        textAlign: isRTL ? 'right' : 'left',
     },
     emptyText: {
         fontSize: Theme.fontSize.base,
@@ -477,7 +482,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     storageHeader: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: Theme.spacing.sm,
         marginBottom: Theme.spacing.sm,
@@ -486,6 +491,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontSize: Theme.fontSize.base,
         fontWeight: Theme.fontWeight.semibold,
         color: colors.text,
+        textAlign: isRTL ? 'right' : 'left',
     },
     storageBar: {
         height: 8,
@@ -502,17 +508,18 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
     storageText: {
         fontSize: Theme.fontSize.sm,
         color: colors.textSecondary,
+        textAlign: isRTL ? 'right' : 'left',
     },
     section: {
         marginBottom: Theme.spacing.lg,
     },
     sectionHeaderRow: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     sectionHeader: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: Theme.spacing.sm,
         marginBottom: Theme.spacing.md,
@@ -522,6 +529,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontSize: Theme.fontSize.lg,
         fontWeight: Theme.fontWeight.bold,
         color: colors.text,
+        textAlign: isRTL ? 'right' : 'left',
     },
     badge: {
         backgroundColor: colors.primary + '20',
@@ -550,7 +558,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         ...Theme.shadows[isDark ? 'dark' : 'light'].sm,
     },
     downloadContent: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         padding: Theme.spacing.md,
     },
@@ -560,7 +568,8 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         borderRadius: Theme.borderRadius.lg,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: Theme.spacing.md,
+        marginRight: isRTL ? 0 : Theme.spacing.md,
+        marginLeft: isRTL ? Theme.spacing.md : 0,
     },
     downloadInfo: {
         flex: 1,
@@ -570,10 +579,12 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         fontWeight: Theme.fontWeight.semibold,
         color: colors.text,
         marginBottom: 2,
+        textAlign: isRTL ? 'right' : 'left',
     },
     downloadCourse: {
         fontSize: Theme.fontSize.sm,
         color: colors.textSecondary,
+        textAlign: isRTL ? 'right' : 'left',
     },
     progressContainer: {
         marginTop: Theme.spacing.sm,
@@ -605,7 +616,7 @@ const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => Sty
         marginTop: Theme.spacing.xs,
     },
     downloadActions: {
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: Theme.spacing.xs,
     },

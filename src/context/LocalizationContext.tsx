@@ -112,14 +112,12 @@ interface Translations {
     notStarted: string;
     enrollIn: string;
     allCoursesStarted: string;
-    noCourses: string;
     noCompletedCourses: string;
     noCoursesInProgress: string;
     enrollInCourses: string;
     tryDifferentFilter: string;
     loadingCourses: string;
     myCourses: string;
-    all: string;
     courseDetails: string;
     courseContent: string;
     aboutCourse: string;
@@ -150,6 +148,138 @@ interface Translations {
     timeTaken: string;
     timeRemaining: string;
     questionOf: string;
+    quizNotAvailable: string;
+    quizNoQuestions: string;
+    congratulations: string;
+    keepTrying: string;
+    quizPassedMessage: string;
+    questionReview: string;
+    yourAnswer: string;
+    noAnswer: string;
+    correctAnswerLabel: string;
+    retryQuiz: string;
+    selectAllThatApply: string;
+    trueLabel: string;
+    falseLabel: string;
+    typeYourAnswer: string;
+    checkAnswer: string;
+    correctExclamation: string;
+    correctLabel: string;
+    incorrect: string;
+    missed: string;
+    answeredLabel: string;
+    finishQuiz: string;
+
+    // Course Player
+    loadingCourse: string;
+    failedLoadCourseContent: string;
+    unableLoadCourse: string;
+    courseNotFound: string;
+    goBack: string;
+    offlineMode: string;
+    downloadingCourse: string;
+    preparing: string;
+    removeDownloadMessage: string;
+    remove: string;
+    removed: string;
+    courseRemoved: string;
+    removeCourseFailed: string;
+    failedDownloadCourse: string;
+    courseOfflineReady: string;
+    downloadError: string;
+    download: string;
+    downloadLessonTitle: string;
+    downloadLessonPrompt: string;
+    downloadLessonDetails: string;
+    noContentTitle: string;
+    noDownloadableContent: string;
+    files: string;
+    mb: string;
+    lessonLabel: string;
+    knowledgeCheck: string;
+    quizPromptDescription: string;
+    questionsLabel: string;
+    toPass: string;
+    interactiveQuiz: string;
+    readingMaterial: string;
+    lessonContent: string;
+    aboutLesson: string;
+    watchVideoAbove: string;
+    downloaded: string;
+    downloadVideo: string;
+    downloadAll: string;
+    downloadLessonContent: string;
+    noContent: string;
+    file: string;
+    downloadFile: string;
+    tapToDownload: string;
+    question: string;
+    takeQuiz: string;
+    previous: string;
+    complete: string;
+    courseCompletedTitle: string;
+    courseCompletedMessage: string;
+    stayHere: string;
+    goToDashboard: string;
+    chapterLabel: string;
+    lessonsCompleted: string;
+    pdf: string;
+    loadingPdf: string;
+    loadingPdfViewer: string;
+    pdfErrorTitle: string;
+    pdfLoadError: string;
+    pdfDownloaded: string;
+    pdfRenderError: string;
+    pdfRenderUnavailable: string;
+    pdfAvailableOffline: string;
+    pdfAvailableTitle: string;
+    noPdfLoaded: string;
+    downloadPdfFirst: string;
+    openInExternalApp: string;
+    openInBrowser: string;
+    openInBrowserPrompt: string;
+    couldNotOpenBrowser: string;
+    fileDownloadFailed: string;
+    fileDownloadNetworkError: string;
+    fileDownloadSslError: string;
+    fileDownloadNotFound: string;
+    fileDownloadAccessDenied: string;
+    fileSaved: string;
+    fileReady: string;
+    fileAvailableAt: string;
+    downloadPdf: string;
+    downloadPrompt: string;
+    unableToProcessFile: string;
+    share: string;
+    shareOpen: string;
+    open: string;
+    later: string;
+    view: string;
+    viewNow: string;
+    reDownload: string;
+    alreadyDownloaded: string;
+    invalidVideo: string;
+    videoPlaybackUnavailable: string;
+    loadingVideo: string;
+    videoUnavailable: string;
+    page: string;
+    of: string;
+    saved: string;
+    youScored: string;
+    needToPass: string;
+    pleaseTryAgain: string;
+    quizNotPassed: string;
+    needToPassQuiz: string;
+    beforeNextLesson: string;
+    failedDownloadLesson: string;
+    failedSaveQuiz: string;
+    testYourKnowledge: string;
+    sampleQuestion: string;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    sampleExplanation: string;
     
     // Leaderboard
     leaderboard: string;
@@ -198,6 +328,93 @@ interface Translations {
     passwordsNotMatch: string;
     passwordUpdated: string;
     passwordMinLength: string;
+    saveChanges: string;
+    updatePassword: string;
+    studentLabel: string;
+    emailAddressLabel: string;
+    enterEmailPassword: string;
+    accountCreatedTitle: string;
+    accountCreatedMessage: string;
+    networkErrorMessage: string;
+    invalidLoginMessage: string;
+    userAlreadyRegisteredMessage: string;
+    signUpFailedTitle: string;
+    loginFailedTitle: string;
+    signUpToGetStarted: string;
+    signInToAccessCourses: string;
+    fullNamePlaceholder: string;
+    emailPlaceholder: string;
+    passwordPlaceholder: string;
+    createPasswordPlaceholder: string;
+    creatingAccount: string;
+    signingIn: string;
+    alreadyHaveAccount: string;
+    dontHaveAccount: string;
+    adminLabel: string;
+    settingsTitle: string;
+    adminPreferences: string;
+    accountSectionTitle: string;
+    preferencesSectionTitle: string;
+    aboutSectionTitle: string;
+    administratorLabel: string;
+    adminDashboardTitle: string;
+    adminDashboardSubtitle: string;
+    quickStatsTitle: string;
+    totalStudentsLabel: string;
+    activeEnrollmentsLabel: string;
+    totalCoursesLabel: string;
+    completedEnrollmentsLabel: string;
+    adminLoadingDashboard: string;
+    studentImpersonationTitle: string;
+    studentImpersonationSubtitle: string;
+    studentImpersonationInfoTitle: string;
+    studentImpersonationInfoText: string;
+    viewAsStudentTitle: string;
+    viewAsStudentMessage: string;
+    viewAsLabel: string;
+    noStudentsFound: string;
+    searchForStudents: string;
+    enterAtLeastChars: string;
+    searchPlaceholder: string;
+    adminAppName: string;
+    adminMobileFooter: string;
+    comingSoonTitle: string;
+    comingSoonDescription: string;
+    expectedLabel: string;
+    getNotifiedWhenReady: string;
+    earlyAccess: string;
+    gotIt: string;
+    failedLoadDiplomaDetails: string;
+    diplomaNotFound: string;
+    contactInstructorTitle: string;
+    contactInstructorMessage: string;
+    failedLoadCourse: string;
+    removeDownloadTitle: string;
+    removedTitle: string;
+    courseRemovedMessage: string;
+    failedRemoveCourse: string;
+    preparingDownload: string;
+    requestEnrollment: string;
+    downloadingLabel: string;
+    downloadedLabel: string;
+    downloadLabel: string;
+    storageAvailable: string;
+    videoUnavailableTitle: string;
+    videoLoadErrorMessage: string;
+    storageLabel: string;
+    loadingCertificates: string;
+    certificatesEarned: string;
+    completeCoursesToEarnCertificates: string;
+    noCertificatesYet: string;
+    viewMyCourses: string;
+    certificateSavedTitle: string;
+    certificateSavedMessage: string;
+    shareAction: string;
+    sharingNotAvailable: string;
+    failedLoadCertificates: string;
+    failedShareCertificate: string;
+    failedDownloadCertificate: string;
+    certificateTitle: string;
     
     // Legal & Privacy
     privacyPolicy: string;
@@ -339,7 +556,6 @@ interface Translations {
     diplomaOutline: string;
     courseOutline: string;
     enrollmentRequired: string;
-    continueLearning: string;
     contactAdminEnrollment: string;
     enrollmentInquiry: string;
     inquirySubtitle: string;
@@ -497,14 +713,12 @@ const en: Translations = {
     notStarted: 'Not Started',
     enrollIn: 'Enroll In',
     allCoursesStarted: 'All courses started!',
-    noCourses: 'No courses yet',
     noCompletedCourses: 'No completed courses',
     noCoursesInProgress: 'No courses in progress',
     enrollInCourses: 'Enroll in courses to start learning',
     tryDifferentFilter: 'Try selecting a different filter',
     loadingCourses: 'Loading courses...',
     myCourses: 'My Courses',
-    all: 'All',
     courseDetails: 'Course Details',
     courseContent: 'Course Content',
     aboutCourse: 'About This Course',
@@ -535,6 +749,138 @@ const en: Translations = {
     timeTaken: 'Time Taken',
     timeRemaining: 'Time Remaining',
     questionOf: 'Question {current} of {total}',
+    quizNotAvailable: 'Quiz Not Available',
+    quizNoQuestions: "This quiz doesn't have any questions yet. Please check back later.",
+    congratulations: 'Congratulations!',
+    keepTrying: 'Keep Trying!',
+    quizPassedMessage: 'You have passed this quiz.',
+    questionReview: 'Question Review',
+    yourAnswer: 'Your answer',
+    noAnswer: 'No answer',
+    correctAnswerLabel: 'Correct answer',
+    retryQuiz: 'Retry Quiz',
+    selectAllThatApply: 'Select all that apply',
+    trueLabel: 'True',
+    falseLabel: 'False',
+    typeYourAnswer: 'Type your answer here...',
+    checkAnswer: 'Check Answer',
+    correctExclamation: 'Correct!',
+    correctLabel: 'Correct',
+    incorrect: 'Incorrect',
+    missed: 'Missed',
+    answeredLabel: 'answered',
+    finishQuiz: 'Finish Quiz',
+
+    // Course Player
+    loadingCourse: 'Loading course...',
+    failedLoadCourseContent: 'Failed to load course content',
+    unableLoadCourse: 'Unable to Load Course',
+    courseNotFound: 'Course not found',
+    goBack: 'Go Back',
+    offlineMode: 'Offline Mode',
+    downloadingCourse: 'Downloading Course...',
+    preparing: 'Preparing...',
+    removeDownloadMessage: 'This will remove the downloaded course and all its content from your device. You can download it again later.',
+    remove: 'Remove',
+    removed: 'Removed',
+    courseRemoved: 'Course has been removed from offline storage.',
+    removeCourseFailed: 'Failed to remove course. Please try again.',
+    failedDownloadCourse: 'Failed to download course. Please try again.',
+    courseOfflineReady: 'Course is now available offline! You can access it from the Downloads tab.',
+    downloadError: 'Download Error',
+    download: 'Download',
+    downloadLessonTitle: 'Download Lesson',
+    downloadLessonPrompt: 'Download',
+    downloadLessonDetails: 'for offline viewing? This will download all content including videos, PDFs, and other files.',
+    noContentTitle: 'No Content',
+    noDownloadableContent: 'This lesson has no downloadable content.',
+    files: 'files',
+    mb: 'MB',
+    lessonLabel: 'Lesson',
+    knowledgeCheck: 'Knowledge Check',
+    quizPromptDescription: 'Test your understanding of the material covered in this section.',
+    questionsLabel: 'Questions',
+    toPass: 'to pass',
+    interactiveQuiz: 'Interactive Quiz',
+    readingMaterial: 'Reading Material',
+    lessonContent: 'Lesson Content',
+    aboutLesson: 'About this lesson',
+    watchVideoAbove: 'Watch the video above to learn about this topic.',
+    downloaded: 'Downloaded',
+    downloadVideo: 'Download Video',
+    downloadAll: 'Download All',
+    downloadLessonContent: 'Download Lesson Content',
+    noContent: 'No content',
+    file: 'file',
+    downloadFile: 'Download File',
+    tapToDownload: 'Tap to download',
+    question: 'Question',
+    takeQuiz: 'Take Quiz',
+    previous: 'Previous',
+    complete: 'Complete',
+    courseCompletedTitle: 'Course Completed! 🎉',
+    courseCompletedMessage: 'Congratulations! You have completed this course.',
+    stayHere: 'Stay Here',
+    goToDashboard: 'Go to Dashboard',
+    chapterLabel: 'Chapter',
+    lessonsCompleted: 'lessons completed',
+    pdf: 'PDF',
+    loadingPdf: 'Loading PDF...',
+    loadingPdfViewer: 'Loading PDF viewer...',
+    pdfErrorTitle: 'PDF Error',
+    pdfLoadError: 'Could not load the PDF file. Try sharing it to another app.',
+    pdfDownloaded: 'PDF downloaded successfully.',
+    pdfRenderError: 'Could not render PDF. Try sharing it to another app.',
+    pdfRenderUnavailable: 'Unable to render PDF in-app.',
+    pdfAvailableOffline: 'The PDF is downloaded and available offline.',
+    pdfAvailableTitle: 'PDF Available',
+    noPdfLoaded: 'No PDF loaded',
+    downloadPdfFirst: 'Download a PDF first to view it offline',
+    openInExternalApp: 'Open in External App',
+    openInBrowser: 'Open in Browser',
+    openInBrowserPrompt: 'Would you like to open this file in your browser instead?',
+    couldNotOpenBrowser: 'Could not open browser',
+    fileDownloadFailed: 'Could not download file.',
+    fileDownloadNetworkError: 'Network error. The file server may be unavailable.',
+    fileDownloadSslError: 'SSL certificate error.',
+    fileDownloadNotFound: 'File not found on the server.',
+    fileDownloadAccessDenied: 'Access denied.',
+    fileSaved: 'File saved:',
+    fileReady: 'File Ready',
+    fileAvailableAt: 'File is available at:',
+    downloadPdf: 'Download PDF',
+    downloadPrompt: 'Download',
+    unableToProcessFile: 'Unable to process file',
+    share: 'Share',
+    shareOpen: 'Share/Open',
+    open: 'Open',
+    later: 'Later',
+    view: 'View',
+    viewNow: 'View Now',
+    reDownload: 'Re-download',
+    alreadyDownloaded: 'is already downloaded.',
+    invalidVideo: 'Invalid video',
+    videoPlaybackUnavailable: 'This video cannot be played in the app.',
+    loadingVideo: 'Loading video...',
+    videoUnavailable: 'Video Unavailable',
+    page: 'Page',
+    of: 'of',
+    saved: 'Saved',
+    youScored: 'You scored',
+    needToPass: 'You need',
+    pleaseTryAgain: 'Please try again!',
+    quizNotPassed: 'Quiz Not Passed',
+    needToPassQuiz: 'You need to pass this quiz with at least',
+    beforeNextLesson: 'before moving to the next lesson.',
+    failedDownloadLesson: 'Failed to download lesson',
+    failedSaveQuiz: 'Failed to save quiz results. Please try again.',
+    testYourKnowledge: 'Test your knowledge',
+    sampleQuestion: 'Sample question for this lesson',
+    optionA: 'Option A',
+    optionB: 'Option B',
+    optionC: 'Option C',
+    optionD: 'Option D',
+    sampleExplanation: 'This is the explanation.',
     
     // Leaderboard
     leaderboard: 'Leaderboard',
@@ -583,6 +929,93 @@ const en: Translations = {
     passwordsNotMatch: 'Passwords do not match',
     passwordUpdated: 'Password updated successfully',
     passwordMinLength: 'Password must be at least 6 characters',
+    saveChanges: 'Save Changes',
+    updatePassword: 'Update Password',
+    studentLabel: 'Student',
+    emailAddressLabel: 'Email Address',
+    enterEmailPassword: 'Please enter both email and password',
+    accountCreatedTitle: 'Account Created',
+    accountCreatedMessage: 'Your account has been created! Please wait for admin approval before you can access courses.',
+    networkErrorMessage: 'Network error: Please check your connection.',
+    invalidLoginMessage: 'Invalid email or password. Please try again.',
+    userAlreadyRegisteredMessage: 'This email is already registered. Please sign in instead.',
+    signUpFailedTitle: 'Sign Up Failed',
+    loginFailedTitle: 'Login Failed',
+    signUpToGetStarted: 'Sign up to get started',
+    signInToAccessCourses: 'Sign in to access your courses',
+    fullNamePlaceholder: 'Enter your full name',
+    emailPlaceholder: 'you@example.com',
+    passwordPlaceholder: 'Enter your password',
+    createPasswordPlaceholder: 'Create a password (min. 6 characters)',
+    creatingAccount: 'Creating Account...',
+    signingIn: 'Signing In...',
+    alreadyHaveAccount: 'Already have an account? ',
+    dontHaveAccount: "Don't have an account? ",
+    adminLabel: 'Admin',
+    settingsTitle: 'Settings',
+    adminPreferences: 'Admin preferences',
+    accountSectionTitle: 'Account',
+    preferencesSectionTitle: 'Preferences',
+    aboutSectionTitle: 'About',
+    administratorLabel: 'Administrator',
+    adminDashboardTitle: 'Admin Dashboard',
+    adminDashboardSubtitle: 'Admin Dashboard • Mobile View',
+    quickStatsTitle: 'Quick Stats',
+    totalStudentsLabel: 'Total Students',
+    activeEnrollmentsLabel: 'Active Enrollments',
+    totalCoursesLabel: 'Total Courses',
+    completedEnrollmentsLabel: 'Completed',
+    adminLoadingDashboard: 'Loading dashboard...',
+    studentImpersonationTitle: 'Student Impersonation',
+    studentImpersonationSubtitle: 'Search and view app as any student',
+    studentImpersonationInfoTitle: 'How to use',
+    studentImpersonationInfoText: 'Search for a student by name or email, then tap "View as" to see the app exactly as they see it. All data will be shown from their perspective.',
+    viewAsStudentTitle: 'View as Student',
+    viewAsStudentMessage: 'You will now see the app exactly as {name} sees it.\n\nThis is for support purposes only.',
+    viewAsLabel: 'View as',
+    noStudentsFound: 'No students found',
+    searchForStudents: 'Search for students',
+    enterAtLeastChars: 'Enter at least 2 characters',
+    searchPlaceholder: 'Search by email or name...',
+    adminAppName: 'ISE LMS Admin',
+    adminMobileFooter: 'Admin Mobile View • ISE Learning Management System',
+    comingSoonTitle: 'Coming Soon',
+    comingSoonDescription: "We're working hard to bring you this feature. Stay tuned for updates!",
+    expectedLabel: 'Expected',
+    getNotifiedWhenReady: "Get notified when it's ready",
+    earlyAccess: 'Early access for active users',
+    gotIt: 'Got it!',
+    failedLoadDiplomaDetails: 'Failed to load diploma details.',
+    diplomaNotFound: 'Diploma not found.',
+    contactInstructorTitle: 'Contact Instructor',
+    contactInstructorMessage: 'Please contact your instructor or administrator to enroll in this diploma program.',
+    failedLoadCourse: 'Failed to load course.',
+    removeDownloadTitle: 'Remove Download',
+    removedTitle: 'Removed',
+    courseRemovedMessage: 'Course has been removed from offline storage.',
+    failedRemoveCourse: 'Failed to remove course. Please try again.',
+    preparingDownload: 'Preparing...',
+    requestEnrollment: 'Request Enrollment',
+    downloadingLabel: 'Downloading...',
+    downloadedLabel: 'Downloaded',
+    downloadLabel: 'Download',
+    storageAvailable: '{size} available',
+    videoUnavailableTitle: 'Video Unavailable',
+    videoLoadErrorMessage: 'Unable to load video. Please check your connection and try again.',
+    storageLabel: 'Storage',
+    loadingCertificates: 'Loading certificates...',
+    certificatesEarned: '{count} certificates earned',
+    completeCoursesToEarnCertificates: 'Complete courses to earn certificates',
+    noCertificatesYet: 'No Certificates Yet',
+    viewMyCourses: 'View My Courses',
+    certificateSavedTitle: 'Certificate Saved',
+    certificateSavedMessage: 'Certificate saved as {fileName}',
+    shareAction: 'Share',
+    sharingNotAvailable: 'Sharing not available',
+    failedLoadCertificates: 'Failed to load certificates.',
+    failedShareCertificate: 'Failed to share certificate.',
+    failedDownloadCertificate: 'Failed to download certificate.',
+    certificateTitle: 'Certificate',
     
     // Legal & Privacy
     privacyPolicy: 'Privacy Policy',
@@ -724,7 +1157,6 @@ const en: Translations = {
     diplomaOutline: 'Diploma Outline',
     courseOutline: 'Course Outline',
     enrollmentRequired: 'Enrollment required',
-    continueLearning: 'Continue Learning',
     contactAdminEnrollment: 'Contact your administrator for enrollment',
     enrollmentInquiry: 'Enrollment Inquiry',
     inquirySubtitle: 'Fill out the form below and we will contact you via WhatsApp.',
@@ -882,14 +1314,12 @@ const ar: Translations = {
     notStarted: 'لم يبدأ',
     enrollIn: 'التسجيل في',
     allCoursesStarted: 'تم بدء جميع الدورات!',
-    noCourses: 'لا توجد دورات بعد',
     noCompletedCourses: 'لا توجد دورات مكتملة',
     noCoursesInProgress: 'لا توجد دورات قيد التقدم',
     enrollInCourses: 'سجل في الدورات لبدء التعلم',
     tryDifferentFilter: 'جرب تحديد مرشح مختلف',
     loadingCourses: 'جاري تحميل الدورات...',
     myCourses: 'دوراتي',
-    all: 'الكل',
     courseDetails: 'تفاصيل الدورة',
     courseContent: 'محتوى الدورة',
     aboutCourse: 'عن هذه الدورة',
@@ -920,6 +1350,138 @@ const ar: Translations = {
     timeTaken: 'الوقت المستغرق',
     timeRemaining: 'الوقت المتبقي',
     questionOf: 'السؤال {current} من {total}',
+    quizNotAvailable: 'الاختبار غير متاح',
+    quizNoQuestions: 'لا يحتوي هذا الاختبار على أسئلة بعد. يرجى العودة لاحقًا.',
+    congratulations: 'تهانينا!',
+    keepTrying: 'واصل المحاولة!',
+    quizPassedMessage: 'لقد اجتزت هذا الاختبار.',
+    questionReview: 'مراجعة الأسئلة',
+    yourAnswer: 'إجابتك',
+    noAnswer: 'لا توجد إجابة',
+    correctAnswerLabel: 'الإجابة الصحيحة',
+    retryQuiz: 'إعادة الاختبار',
+    selectAllThatApply: 'اختر كل ما ينطبق',
+    trueLabel: 'صحيح',
+    falseLabel: 'خطأ',
+    typeYourAnswer: 'اكتب إجابتك هنا...',
+    checkAnswer: 'تحقق من الإجابة',
+    correctExclamation: 'صحيح!',
+    correctLabel: 'صحيح',
+    incorrect: 'غير صحيح',
+    missed: 'فاتتك',
+    answeredLabel: 'تمت الإجابة',
+    finishQuiz: 'إنهاء الاختبار',
+
+    // Course Player
+    loadingCourse: 'جارٍ تحميل الدورة...',
+    failedLoadCourseContent: 'تعذر تحميل محتوى الدورة',
+    unableLoadCourse: 'تعذر تحميل الدورة',
+    courseNotFound: 'الدورة غير موجودة',
+    goBack: 'عودة',
+    offlineMode: 'وضع عدم الاتصال',
+    downloadingCourse: 'جارٍ تنزيل الدورة...',
+    preparing: 'جارٍ التحضير...',
+    removeDownloadMessage: 'سيؤدي ذلك إلى إزالة الدورة المحملة وكل محتواها من جهازك. يمكنك تنزيلها مرة أخرى لاحقًا.',
+    remove: 'إزالة',
+    removed: 'تمت الإزالة',
+    courseRemoved: 'تمت إزالة الدورة من التخزين دون اتصال.',
+    removeCourseFailed: 'تعذر إزالة الدورة. يرجى المحاولة مرة أخرى.',
+    failedDownloadCourse: 'فشل تنزيل الدورة. يرجى المحاولة مرة أخرى.',
+    courseOfflineReady: 'أصبحت الدورة متاحة دون اتصال. يمكنك الوصول إليها من تبويب التنزيلات.',
+    downloadError: 'خطأ في التنزيل',
+    download: 'تنزيل',
+    downloadLessonTitle: 'تنزيل الدرس',
+    downloadLessonPrompt: 'تنزيل',
+    downloadLessonDetails: 'للمشاهدة دون اتصال؟ سيتم تنزيل جميع المحتويات بما في ذلك الفيديوهات وملفات PDF والملفات الأخرى.',
+    noContentTitle: 'لا يوجد محتوى',
+    noDownloadableContent: 'هذا الدرس لا يحتوي على محتوى قابل للتنزيل.',
+    files: 'ملفات',
+    mb: 'ميجابايت',
+    lessonLabel: 'الدرس',
+    knowledgeCheck: 'اختبار معرفة',
+    quizPromptDescription: 'اختبر فهمك للمادة التي تمت تغطيتها في هذا القسم.',
+    questionsLabel: 'أسئلة',
+    toPass: 'للنجاح',
+    interactiveQuiz: 'اختبار تفاعلي',
+    readingMaterial: 'مادة للقراءة',
+    lessonContent: 'محتوى الدرس',
+    aboutLesson: 'حول هذا الدرس',
+    watchVideoAbove: 'شاهد الفيديو أعلاه للتعرف على هذا الموضوع.',
+    downloaded: 'تم التنزيل',
+    downloadVideo: 'تنزيل الفيديو',
+    downloadAll: 'تنزيل الكل',
+    downloadLessonContent: 'تنزيل محتوى الدرس',
+    noContent: 'لا يوجد محتوى',
+    file: 'ملف',
+    downloadFile: 'تنزيل الملف',
+    tapToDownload: 'اضغط للتنزيل',
+    question: 'سؤال',
+    takeQuiz: 'ابدأ الاختبار',
+    previous: 'السابق',
+    complete: 'إكمال',
+    courseCompletedTitle: 'اكتملت الدورة! 🎉',
+    courseCompletedMessage: 'تهانينا! لقد أكملت هذه الدورة.',
+    stayHere: 'البقاء هنا',
+    goToDashboard: 'العودة إلى لوحة التحكم',
+    chapterLabel: 'الفصل',
+    lessonsCompleted: 'دروس مكتملة',
+    pdf: 'PDF',
+    loadingPdf: 'جارٍ تحميل ملف PDF...',
+    loadingPdfViewer: 'جارٍ تحميل عارض PDF...',
+    pdfErrorTitle: 'خطأ في ملف PDF',
+    pdfLoadError: 'تعذر تحميل ملف PDF. جرّب مشاركته مع تطبيق آخر.',
+    pdfDownloaded: 'تم تنزيل ملف PDF بنجاح.',
+    pdfRenderError: 'تعذر عرض PDF. جرّب مشاركته مع تطبيق آخر.',
+    pdfRenderUnavailable: 'تعذر عرض PDF داخل التطبيق.',
+    pdfAvailableOffline: 'تم تنزيل ملف PDF وهو متاح دون اتصال.',
+    pdfAvailableTitle: 'PDF متاح',
+    noPdfLoaded: 'لا يوجد ملف PDF محمّل',
+    downloadPdfFirst: 'نزّل ملف PDF أولًا لعرضه دون اتصال',
+    openInExternalApp: 'فتح في تطبيق خارجي',
+    openInBrowser: 'فتح في المتصفح',
+    openInBrowserPrompt: 'هل ترغب في فتح هذا الملف في المتصفح بدلاً من ذلك؟',
+    couldNotOpenBrowser: 'تعذر فتح المتصفح',
+    fileDownloadFailed: 'تعذر تنزيل الملف.',
+    fileDownloadNetworkError: 'خطأ في الشبكة. قد يكون خادم الملفات غير متاح.',
+    fileDownloadSslError: 'خطأ في شهادة SSL.',
+    fileDownloadNotFound: 'الملف غير موجود على الخادم.',
+    fileDownloadAccessDenied: 'تم رفض الوصول.',
+    fileSaved: 'تم حفظ الملف:',
+    fileReady: 'الملف جاهز',
+    fileAvailableAt: 'الملف متاح في:',
+    downloadPdf: 'تنزيل PDF',
+    downloadPrompt: 'تنزيل',
+    unableToProcessFile: 'تعذر معالجة الملف',
+    share: 'مشاركة',
+    shareOpen: 'مشاركة/فتح',
+    open: 'فتح',
+    later: 'لاحقًا',
+    view: 'عرض',
+    viewNow: 'عرض الآن',
+    reDownload: 'إعادة التنزيل',
+    alreadyDownloaded: 'تم تنزيله بالفعل.',
+    invalidVideo: 'فيديو غير صالح',
+    videoPlaybackUnavailable: 'لا يمكن تشغيل هذا الفيديو داخل التطبيق.',
+    loadingVideo: 'جارٍ تحميل الفيديو...',
+    videoUnavailable: 'الفيديو غير متاح',
+    page: 'الصفحة',
+    of: 'من',
+    saved: 'محفوظ',
+    youScored: 'درجتك',
+    needToPass: 'تحتاج إلى',
+    pleaseTryAgain: 'يرجى المحاولة مرة أخرى!',
+    quizNotPassed: 'لم يتم اجتياز الاختبار',
+    needToPassQuiz: 'يجب أن تجتاز هذا الاختبار بنسبة لا تقل عن',
+    beforeNextLesson: 'قبل الانتقال إلى الدرس التالي.',
+    failedDownloadLesson: 'فشل تنزيل الدرس',
+    failedSaveQuiz: 'تعذر حفظ نتائج الاختبار. يرجى المحاولة مرة أخرى.',
+    testYourKnowledge: 'اختبر معلوماتك',
+    sampleQuestion: 'سؤال نموذجي لهذا الدرس',
+    optionA: 'الخيار أ',
+    optionB: 'الخيار ب',
+    optionC: 'الخيار ج',
+    optionD: 'الخيار د',
+    sampleExplanation: 'هذا هو الشرح.',
     
     // Leaderboard
     leaderboard: 'لوحة المتصدرين',
@@ -968,6 +1530,93 @@ const ar: Translations = {
     passwordsNotMatch: 'كلمات المرور غير متطابقة',
     passwordUpdated: 'تم تحديث كلمة المرور بنجاح',
     passwordMinLength: 'يجب أن تكون كلمة المرور 6 أحرف على الأقل',
+    saveChanges: 'حفظ التغييرات',
+    updatePassword: 'تحديث كلمة المرور',
+    studentLabel: 'طالب',
+    emailAddressLabel: 'البريد الإلكتروني',
+    enterEmailPassword: 'يرجى إدخال البريد الإلكتروني وكلمة المرور',
+    accountCreatedTitle: 'تم إنشاء الحساب',
+    accountCreatedMessage: 'تم إنشاء حسابك! يرجى انتظار موافقة الإدارة قبل الوصول إلى الدورات.',
+    networkErrorMessage: 'خطأ في الشبكة: يرجى التحقق من الاتصال.',
+    invalidLoginMessage: 'بريد إلكتروني أو كلمة مرور غير صحيحة. حاول مرة أخرى.',
+    userAlreadyRegisteredMessage: 'هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.',
+    signUpFailedTitle: 'فشل إنشاء الحساب',
+    loginFailedTitle: 'فشل تسجيل الدخول',
+    signUpToGetStarted: 'سجّل للبدء',
+    signInToAccessCourses: 'سجّل الدخول للوصول إلى دوراتك',
+    fullNamePlaceholder: 'أدخل اسمك الكامل',
+    emailPlaceholder: 'you@example.com',
+    passwordPlaceholder: 'أدخل كلمة المرور',
+    createPasswordPlaceholder: 'أنشئ كلمة مرور (6 أحرف على الأقل)',
+    creatingAccount: 'جارٍ إنشاء الحساب...',
+    signingIn: 'جارٍ تسجيل الدخول...',
+    alreadyHaveAccount: 'لديك حساب بالفعل؟ ',
+    dontHaveAccount: 'ليس لديك حساب؟ ',
+    adminLabel: 'مشرف',
+    settingsTitle: 'الإعدادات',
+    adminPreferences: 'تفضيلات المشرف',
+    accountSectionTitle: 'الحساب',
+    preferencesSectionTitle: 'التفضيلات',
+    aboutSectionTitle: 'حول',
+    administratorLabel: 'مدير النظام',
+    adminDashboardTitle: 'لوحة تحكم المشرف',
+    adminDashboardSubtitle: 'لوحة تحكم المشرف • عرض الهاتف',
+    quickStatsTitle: 'إحصائيات سريعة',
+    totalStudentsLabel: 'إجمالي الطلاب',
+    activeEnrollmentsLabel: 'التسجيلات النشطة',
+    totalCoursesLabel: 'إجمالي الدورات',
+    completedEnrollmentsLabel: 'مكتمل',
+    adminLoadingDashboard: 'جارٍ تحميل لوحة التحكم...',
+    studentImpersonationTitle: 'انتحال حساب الطالب',
+    studentImpersonationSubtitle: 'ابحث واعرض التطبيق كأي طالب',
+    studentImpersonationInfoTitle: 'كيفية الاستخدام',
+    studentImpersonationInfoText: 'ابحث عن طالب بالاسم أو البريد الإلكتروني، ثم اضغط "عرض كـ" لرؤية التطبيق كما يراه. ستظهر جميع البيانات من منظوره.',
+    viewAsStudentTitle: 'عرض كطالب',
+    viewAsStudentMessage: 'سترى الآن التطبيق كما يراه {name}.\n\nهذا لأغراض الدعم فقط.',
+    viewAsLabel: 'عرض كـ',
+    noStudentsFound: 'لا يوجد طلاب',
+    searchForStudents: 'ابحث عن الطلاب',
+    enterAtLeastChars: 'أدخل حرفين على الأقل',
+    searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني...',
+    adminAppName: 'لوحة إدارة ISE LMS',
+    adminMobileFooter: 'عرض المشرف على الهاتف • نظام إدارة التعلم ISE',
+    comingSoonTitle: 'قريباً',
+    comingSoonDescription: 'نعمل بجد لتوفير هذه الميزة. ترقب التحديثات!',
+    expectedLabel: 'متوقع',
+    getNotifiedWhenReady: 'احصل على إشعار عند الجاهزية',
+    earlyAccess: 'وصول مبكر للمستخدمين النشطين',
+    gotIt: 'حسناً',
+    failedLoadDiplomaDetails: 'فشل تحميل تفاصيل الدبلوم.',
+    diplomaNotFound: 'الدبلوم غير موجود.',
+    contactInstructorTitle: 'تواصل مع المدرب',
+    contactInstructorMessage: 'يرجى التواصل مع المدرب أو الإدارة للتسجيل في هذا الدبلوم.',
+    failedLoadCourse: 'فشل تحميل الدورة.',
+    removeDownloadTitle: 'إزالة التنزيل',
+    removedTitle: 'تمت الإزالة',
+    courseRemovedMessage: 'تمت إزالة الدورة من التخزين دون اتصال.',
+    failedRemoveCourse: 'فشل إزالة الدورة. حاول مرة أخرى.',
+    preparingDownload: 'جارٍ التحضير...',
+    requestEnrollment: 'طلب التسجيل',
+    downloadingLabel: 'جارٍ التنزيل...',
+    downloadedLabel: 'تم التنزيل',
+    downloadLabel: 'تنزيل',
+    storageAvailable: '{size} متاحة',
+    videoUnavailableTitle: 'الفيديو غير متاح',
+    videoLoadErrorMessage: 'تعذر تحميل الفيديو. يرجى التحقق من الاتصال والمحاولة مرة أخرى.',
+    storageLabel: 'التخزين',
+    loadingCertificates: 'جارٍ تحميل الشهادات...',
+    certificatesEarned: 'تم الحصول على {count} شهادة',
+    completeCoursesToEarnCertificates: 'أكمل الدورات للحصول على الشهادات',
+    noCertificatesYet: 'لا توجد شهادات بعد',
+    viewMyCourses: 'عرض دوراتي',
+    certificateSavedTitle: 'تم حفظ الشهادة',
+    certificateSavedMessage: 'تم حفظ الشهادة باسم {fileName}',
+    shareAction: 'مشاركة',
+    sharingNotAvailable: 'المشاركة غير متاحة',
+    failedLoadCertificates: 'فشل تحميل الشهادات.',
+    failedShareCertificate: 'فشل مشاركة الشهادة.',
+    failedDownloadCertificate: 'فشل تنزيل الشهادة.',
+    certificateTitle: 'الشهادة',
     
     // Legal & Privacy
     privacyPolicy: 'سياسة الخصوصية',
@@ -1109,7 +1758,6 @@ const ar: Translations = {
     diplomaOutline: 'مخطط الدبلوم',
     courseOutline: 'مخطط الدورات',
     enrollmentRequired: 'يتطلب التسجيل',
-    continueLearning: 'تابع التعلم',
     contactAdminEnrollment: 'تواصل مع الإدارة للتسجيل',
     enrollmentInquiry: 'استفسار التسجيل',
     inquirySubtitle: 'املأ النموذج أدناه وسنتواصل معك عبر واتساب.',
