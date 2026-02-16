@@ -95,6 +95,27 @@ export const createTicket = async (
       throw new Error(error.message || 'Failed to create ticket');
     }
 
+    // Send email notification (fire and forget)
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://bdi-lms.vercel.app';
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (token) {
+        fetch(`${API_URL}/api/notify-ticket`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ subject, description, priority }),
+        }).catch((e) => console.error('Email notification failed:', e));
+      }
+    } catch (e) {
+      // Log but don't block ticket creation
+      console.error('Failed to send ticket notification email:', e);
+    }
+
     return data as SupportTicket;
   } catch (error: any) {
     console.error('createTicket error:', error);
@@ -132,7 +153,7 @@ export const sendTicketMessage = async (
     // Update ticket status to 'open' if it was closed/resolved (user is replying)
     await supabase
       .from('support_tickets')
-      .update({ 
+      .update({
         status: 'open',
         updated_at: new Date().toISOString(),
       })
