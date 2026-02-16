@@ -51,7 +51,7 @@ export function ProfilePhotoUpload({
   const [progress, setProgress] = useState(0);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
 
-  const displayUrl = localPreview || (value ? getAvatarUrl(value, name, size * 2) : null);
+  const displayUrl = localPreview || getAvatarUrl(value, name, size * 2);
   const initials = name
     ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : '?';
@@ -137,9 +137,7 @@ export function ProfilePhotoUpload({
               { width: size, height: size, borderRadius: size / 2 },
             ]}
           >
-            <Text style={[styles.initials, { fontSize: size * 0.35 }]}>
-              {initials}
-            </Text>
+            <Ionicons name="person" size={size * 0.5} color={colors.primary} />
           </View>
         )}
 

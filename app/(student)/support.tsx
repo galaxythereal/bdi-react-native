@@ -70,7 +70,7 @@ const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles 
 
     const priorityLabel = {
         low: t.priorityLow,
-        medium: t.priorityNormal,
+        normal: t.priorityNormal,
         high: t.priorityHigh,
         urgent: t.priorityUrgent,
     }[ticket.priority] || ticket.priority.toUpperCase();
@@ -147,7 +147,7 @@ export default function SupportScreen() {
     const [newTicket, setNewTicket] = useState({
         subject: '',
         description: '',
-        priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+        priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
     });
     const [creatingTicket, setCreatingTicket] = useState(false);
 
@@ -234,7 +234,7 @@ export default function SupportScreen() {
         try {
             await createTicket(newTicket.subject, newTicket.description, newTicket.priority);
             setShowCreateModal(false);
-            setNewTicket({ subject: '', description: '', priority: 'medium' });
+            setNewTicket({ subject: '', description: '', priority: 'normal' });
             Alert.alert(t.success, t.ticketSubmitted);
             loadData();
         } catch (error: any) {
@@ -376,7 +376,7 @@ export default function SupportScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView 
+                    <ScrollView
                         style={styles.modalContent}
                         scrollEnabled={true}
                         scrollEventThrottle={16}
@@ -397,25 +397,25 @@ export default function SupportScreen() {
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>{t.ticketPriority}</Text>
                             <View style={styles.priorityOptions}>
-                                {(['low', 'medium', 'high', 'urgent'] as const).map((priority) => (
+                                {(['low', 'normal', 'high', 'urgent'] as const).map((priority) => (
                                     <TouchableOpacity
                                         key={priority}
                                         style={[
                                             styles.priorityOption,
-                                            newTicket.priority === priority && styles.priorityOptionActive,
                                             { borderColor: getPriorityColor(priority) },
+                                            newTicket.priority === priority && { backgroundColor: getPriorityColor(priority) },
                                         ]}
                                         onPress={() => setNewTicket(prev => ({ ...prev, priority }))}
                                     >
                                         <Text style={[
                                             styles.priorityOptionText,
-                                            newTicket.priority === priority && { color: getPriorityColor(priority) },
+                                            { color: newTicket.priority === priority ? '#FFFFFF' : getPriorityColor(priority) },
                                         ]}>
                                             {(
                                                 priority === 'low' ? t.priorityLow :
-                                                priority === 'medium' ? t.priorityNormal :
-                                                priority === 'high' ? t.priorityHigh :
-                                                t.priorityUrgent
+                                                    priority === 'normal' ? t.priorityNormal :
+                                                        priority === 'high' ? t.priorityHigh :
+                                                            t.priorityUrgent
                                             )}
                                         </Text>
                                     </TouchableOpacity>

@@ -68,8 +68,8 @@ export const fetchTicketMessages = async (ticketId: string): Promise<TicketMessa
 
 export const createTicket = async (
   subject: string,
-  description: string,
-  priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'
+  message: string,
+  priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal'
 ): Promise<SupportTicket> => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -83,7 +83,7 @@ export const createTicket = async (
       .insert({
         user_id: user.id,
         subject,
-        description,
+        message,
         priority,
         status: 'open',
       })
@@ -108,7 +108,7 @@ export const createTicket = async (
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ subject, description, priority }),
+          body: JSON.stringify({ subject, description: message, priority }),
         }).catch((e) => console.error('Email notification failed:', e));
       }
     } catch (e) {
@@ -181,6 +181,7 @@ export const getPriorityColor = (priority: string): string => {
   switch (priority) {
     case 'urgent': return '#EF4444'; // Red
     case 'high': return '#F97316'; // Orange
+    case 'normal':
     case 'medium': return '#EAB308'; // Yellow
     case 'low': return '#22C55E'; // Green
     default: return '#6B7280';

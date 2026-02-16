@@ -265,9 +265,9 @@ export default function DashboardScreen() {
   const avgProgress =
     totalCourses > 0
       ? Math.round(
-          enrollments.reduce((acc, e) => acc + (e.progress || 0), 0) /
-            totalCourses,
-        )
+        enrollments.reduce((acc, e) => acc + (e.progress || 0), 0) /
+        totalCourses,
+      )
       : 0;
   const completedCourses = enrollments.filter((e) => e.progress >= 100).length;
   const inProgressCourses = enrollments.filter(
@@ -533,7 +533,7 @@ export default function DashboardScreen() {
                       colors={
                         isLive
                           ? ["#EF4444", "#DC2626"]
-                          : [colors.primary, "#7C3AED"]
+                          : [colors.primary, "#5e1616"]
                       }
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
@@ -568,12 +568,12 @@ export default function DashboardScreen() {
                                 : isToday
                                   ? `${t.today}, ${formatTime(sessionDate, { hour: "numeric", minute: "2-digit" })}`
                                   : formatDate(sessionDate, {
-                                      weekday: "short",
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                    })}
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}
                             </Text>
                           </View>
                           {session.duration_minutes && (
@@ -874,9 +874,9 @@ export default function DashboardScreen() {
                             colors={
                               isEnrolled
                                 ? [
-                                    Theme.colors.light.primary,
-                                    Theme.colors.light.primaryLight,
-                                  ]
+                                  Theme.colors.light.primary,
+                                  Theme.colors.light.primaryLight,
+                                ]
                                 : ["#9CA3AF", "#6B7280"]
                             }
                             style={styles.diplomaThumbnail}

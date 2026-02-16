@@ -3,21 +3,21 @@ import * as Linking from "expo-linking";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    Animated,
-    Modal,
+  Alert,
+  Animated,
+  Modal,
   Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import Theme from "../../constants/theme";
 import { Card } from "../../src/components/Card";
@@ -137,9 +137,9 @@ export default function ProfileScreen() {
       const totalProgress =
         enrollments.length > 0
           ? Math.round(
-              enrollments.reduce((acc, e) => acc + (e.progress || 0), 0) /
-                enrollments.length,
-            )
+            enrollments.reduce((acc, e) => acc + (e.progress || 0), 0) /
+            enrollments.length,
+          )
           : 0;
 
       setStats({
@@ -519,9 +519,12 @@ export default function ProfileScreen() {
             <Text style={[styles.userName, { color: colors.text }]}>
               {getUserName()}
             </Text>
-            <Text style={[styles.email, { color: colors.textSecondary }]}>
-              {session?.user.email}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, opacity: 0.9 }}>
+              <Ionicons name="mail-outline" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={[styles.email, { color: '#FFFFFF' }]}>
+                {session?.user.email}
+              </Text>
+            </View>
 
             <View
               style={[styles.roleBadge, { backgroundColor: colors.surface }]}
