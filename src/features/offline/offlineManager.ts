@@ -3,6 +3,7 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 
 // ============================================================================
 // CONSTANTS
@@ -64,6 +65,11 @@ export interface OfflineLesson {
     video_url: string | null;
     video_local?: string | null;
     video_provider?: 'youtube' | 'vimeo' | 'wistia' | 'direct';
+
+    audio_url?: string | null;
+    audio_local?: string | null;
+    pdf_url?: string | null;
+    pdf_local?: string | null;
 
     content_html: string | null;
 
@@ -147,51 +153,83 @@ export const initializeOfflineStorage = async (): Promise<void> => {
 };
 
 // ============================================================================
-// NETWORK STATUS
+// NETWORK STATUS (powered by @react-native-community/netinfo)
 // ============================================================================
 
 let isOnline = true;
+let networkUnsubscribe: (() => void) | null = null;
+let onNetworkChangeCallbacks: ((online: boolean) => void)[] = [];
 
 /**
- * Start monitoring network status (simplified - use fetch to check)
+ * Start monitoring network status using NetInfo
  */
 export const startNetworkMonitoring = (): void => {
-    // Check periodically
-    const checkNetwork = async () => {
-        isOnline = await checkIsOnline();
-    };
-    checkNetwork();
-    // Check every 30 seconds in background (could be improved with actual NetInfo package)
-    setInterval(checkNetwork, 30000);
+    if (networkUnsubscribe) return; // Already monitoring
+
+    // Subscribe to network changes
+    networkUnsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+        const wasOnline = isOnline;
+        isOnline = (state.isConnected ?? false) && (state.isInternetReachable ?? true);
+
+        // Notify listeners on change
+        if (wasOnline !== isOnline) {
+            console.log(`Network status changed: ${isOnline ? 'online' : 'offline'}`);
+            onNetworkChangeCallbacks.forEach(cb => {
+                try { cb(isOnline); } catch (e) { console.warn('Network callback error:', e); }
+            });
+        }
+    });
+
+    // Also fetch initial state
+    NetInfo.fetch().then((state) => {
+        isOnline = (state.isConnected ?? false) && (state.isInternetReachable ?? true);
+    });
 };
 
 /**
  * Stop monitoring network status
  */
 export const stopNetworkMonitoring = (): void => {
-    // No-op in simplified version
+    if (networkUnsubscribe) {
+        networkUnsubscribe();
+        networkUnsubscribe = null;
+    }
 };
 
 /**
- * Check if device is currently online using a simple fetch test
+ * Register a callback for network status changes
+ */
+export const onNetworkChange = (callback: (online: boolean) => void): (() => void) => {
+    onNetworkChangeCallbacks.push(callback);
+    return () => {
+        onNetworkChangeCallbacks = onNetworkChangeCallbacks.filter(cb => cb !== callback);
+    };
+};
+
+/**
+ * Check if device is currently online using NetInfo
  */
 export const checkIsOnline = async (): Promise<boolean> => {
     try {
-        // Try to fetch a small resource to verify connectivity
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const response = await fetch('https://www.google.com/generate_204', {
-            method: 'HEAD',
-            signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-        isOnline = response.ok || response.status === 204;
+        const state = await NetInfo.fetch();
+        isOnline = (state.isConnected ?? false) && (state.isInternetReachable ?? true);
         return isOnline;
     } catch {
-        isOnline = false;
-        return false;
+        // Fallback: try a simple fetch
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const response = await fetch('https://www.google.com/generate_204', {
+                method: 'HEAD',
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            isOnline = response.ok || response.status === 204;
+            return isOnline;
+        } catch {
+            isOnline = false;
+            return false;
+        }
     }
 };
 
@@ -224,28 +262,45 @@ export const saveCourseOffline = async (
             downloadedAt: new Date().toISOString(),
             totalSize: 0,
             enrollmentProgress,
-            modules: (course.modules || []).map((mod: any) => ({
+            // Support both 'chapters' (CourseDetail) and 'modules' (legacy) field names
+            modules: (course.chapters || course.modules || []).map((mod: any) => ({
                 id: mod.id,
                 title: mod.title,
                 order_index: mod.order_index,
-                lessons: (mod.lessons || []).map((lesson: any) => ({
-                    id: lesson.id,
-                    title: lesson.title,
-                    slug: lesson.slug,
-                    content_type: lesson.content_type,
-                    order_index: lesson.order_index,
-                    is_preview: lesson.is_preview,
-                    video_url: lesson.video_url,
-                    video_provider: lesson.video_provider,
-                    content_html: lesson.content_html,
-                    quiz_data: lesson.quiz_data,
-                    description: lesson.description,
-                    duration: lesson.duration,
-                    blocks: lesson.blocks,
-                    downloadStatus: 'not_downloaded',
-                    downloadProgress: 0,
-                    fileSize: 0,
-                })),
+                lessons: (mod.lessons || []).map((lesson: any) => {
+                    // Map block data, normalizing block_type → type for offline storage
+                    const offlineBlocks = (lesson.blocks || []).map((block: any) => ({
+                        id: block.id,
+                        type: block.block_type || block.type, // normalize: DB uses block_type
+                        title: block.title,
+                        order_index: block.order_index,
+                        content: block.content,
+                        localUri: block.localUri, // preserve if already set
+                    }));
+
+                    return {
+                        id: lesson.id,
+                        title: lesson.title,
+                        title_ar: lesson.title_ar,
+                        description_ar: lesson.description_ar,
+                        slug: lesson.slug,
+                        content_type: lesson.content_type,
+                        order_index: lesson.order_index,
+                        is_preview: lesson.is_preview,
+                        video_url: lesson.video_url,
+                        video_provider: lesson.video_provider,
+                        content_html: lesson.content_html,
+                        quiz_data: lesson.quiz_data,
+                        description: lesson.description,
+                        duration: lesson.duration,
+                        audio_url: lesson.audio_url,
+                        pdf_url: lesson.pdf_url,
+                        blocks: offlineBlocks,
+                        downloadStatus: 'not_downloaded' as const,
+                        downloadProgress: 0,
+                        fileSize: 0,
+                    };
+                }),
             })),
         };
 
@@ -336,6 +391,16 @@ export const removeCourseOffline = async (courseId: string): Promise<void> => {
                     if (lesson.video_local) {
                         try {
                             await FileSystem.deleteAsync(lesson.video_local, { idempotent: true });
+                        } catch { }
+                    }
+                    if ((lesson as any).audio_local) {
+                        try {
+                            await FileSystem.deleteAsync((lesson as any).audio_local, { idempotent: true });
+                        } catch { }
+                    }
+                    if ((lesson as any).pdf_local) {
+                        try {
+                            await FileSystem.deleteAsync((lesson as any).pdf_local, { idempotent: true });
                         } catch { }
                     }
                     // Delete block files
@@ -521,6 +586,26 @@ export const downloadLesson = async (
             });
         }
 
+        // Main audio (lesson-level)
+        if (lesson.audio_url) {
+            const ext = getExtensionFromUrl(lesson.audio_url, 'mp3');
+            downloadItems.push({
+                type: 'audio',
+                url: lesson.audio_url,
+                filename: `${lessonId}_main_audio.${ext}`,
+            });
+        }
+
+        // Main PDF (lesson-level)
+        if (lesson.pdf_url) {
+            const ext = getExtensionFromUrl(lesson.pdf_url, 'pdf');
+            downloadItems.push({
+                type: 'pdf',
+                url: lesson.pdf_url,
+                filename: `${lessonId}_main_pdf.${ext}`,
+            });
+        }
+
         // Blocks content
         if (lesson.blocks) {
             lesson.blocks.forEach((block, index) => {
@@ -601,6 +686,16 @@ export const downloadLesson = async (
                 // Store the main video local path (not block videos)
                 if (item.type === 'video' && item.blockIndex === undefined) {
                     await updateLessonLocalVideo(courseId, lessonId, result.uri);
+                }
+
+                // Store the main audio local path
+                if (item.type === 'audio' && item.blockIndex === undefined) {
+                    await updateLessonLocalAudio(courseId, lessonId, result.uri);
+                }
+
+                // Store the main PDF local path
+                if (item.type === 'pdf' && item.blockIndex === undefined) {
+                    await updateLessonLocalPdf(courseId, lessonId, result.uri);
                 }
 
                 // Store block local URIs
@@ -696,6 +791,54 @@ const updateLessonLocalVideo = async (
 };
 
 /**
+ * Update lesson local audio path
+ */
+const updateLessonLocalAudio = async (
+    courseId: string,
+    lessonId: string,
+    localUri: string
+): Promise<void> => {
+    const courses = await getOfflineCourses();
+    const courseIndex = courses.findIndex(c => c.id === courseId);
+
+    if (courseIndex < 0) return;
+
+    for (const module of courses[courseIndex].modules) {
+        const lesson = module.lessons.find(l => l.id === lessonId);
+        if (lesson) {
+            (lesson as any).audio_local = localUri;
+            break;
+        }
+    }
+
+    await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(courses));
+};
+
+/**
+ * Update lesson local PDF path
+ */
+const updateLessonLocalPdf = async (
+    courseId: string,
+    lessonId: string,
+    localUri: string
+): Promise<void> => {
+    const courses = await getOfflineCourses();
+    const courseIndex = courses.findIndex(c => c.id === courseId);
+
+    if (courseIndex < 0) return;
+
+    for (const module of courses[courseIndex].modules) {
+        const lesson = module.lessons.find(l => l.id === lessonId);
+        if (lesson) {
+            (lesson as any).pdf_local = localUri;
+            break;
+        }
+    }
+
+    await AsyncStorage.setItem(OFFLINE_COURSES_KEY, JSON.stringify(courses));
+};
+
+/**
  * Update block local URI
  */
 const updateBlockLocalUri = async (
@@ -756,9 +899,9 @@ export const downloadCourseForOffline = async (
     };
 
     try {
-        // Flatten all lessons
+        // Flatten all lessons (support both 'chapters' and 'modules')
         const allLessons: { moduleIndex: number; lesson: any }[] = [];
-        (course.modules || []).forEach((module: any, moduleIndex: number) => {
+        (course.chapters || course.modules || []).forEach((module: any, moduleIndex: number) => {
             (module.lessons || []).forEach((lesson: any) => {
                 allLessons.push({ moduleIndex, lesson });
             });
@@ -1200,6 +1343,7 @@ export default {
     stopNetworkMonitoring,
     checkIsOnline,
     getIsOnline,
+    onNetworkChange,
 
     // Courses
     saveCourseOffline,

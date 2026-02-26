@@ -70,7 +70,7 @@ const TicketCard: React.FC<TicketCardProps> = ({ ticket, index, onPress, styles 
 
     const priorityLabel = {
         low: t.priorityLow,
-        normal: t.priorityNormal,
+        medium: t.priorityNormal,
         high: t.priorityHigh,
         urgent: t.priorityUrgent,
     }[ticket.priority] || ticket.priority.toUpperCase();
@@ -147,7 +147,7 @@ export default function SupportScreen() {
     const [newTicket, setNewTicket] = useState({
         subject: '',
         description: '',
-        priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+        priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
     });
     const [creatingTicket, setCreatingTicket] = useState(false);
 
@@ -234,7 +234,7 @@ export default function SupportScreen() {
         try {
             await createTicket(newTicket.subject, newTicket.description, newTicket.priority);
             setShowCreateModal(false);
-            setNewTicket({ subject: '', description: '', priority: 'normal' });
+            setNewTicket({ subject: '', description: '', priority: 'medium' });
             Alert.alert(t.success, t.ticketSubmitted);
             loadData();
         } catch (error: any) {
@@ -376,7 +376,7 @@ export default function SupportScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView
+                    <ScrollView 
                         style={styles.modalContent}
                         scrollEnabled={true}
                         scrollEventThrottle={16}
@@ -397,25 +397,25 @@ export default function SupportScreen() {
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>{t.ticketPriority}</Text>
                             <View style={styles.priorityOptions}>
-                                {(['low', 'normal', 'high', 'urgent'] as const).map((priority) => (
+                                {(['low', 'medium', 'high', 'urgent'] as const).map((priority) => (
                                     <TouchableOpacity
                                         key={priority}
                                         style={[
                                             styles.priorityOption,
+                                            newTicket.priority === priority && styles.priorityOptionActive,
                                             { borderColor: getPriorityColor(priority) },
-                                            newTicket.priority === priority && { backgroundColor: getPriorityColor(priority) },
                                         ]}
                                         onPress={() => setNewTicket(prev => ({ ...prev, priority }))}
                                     >
                                         <Text style={[
                                             styles.priorityOptionText,
-                                            { color: newTicket.priority === priority ? '#FFFFFF' : getPriorityColor(priority) },
+                                            newTicket.priority === priority && { color: getPriorityColor(priority) },
                                         ]}>
                                             {(
                                                 priority === 'low' ? t.priorityLow :
-                                                    priority === 'normal' ? t.priorityNormal :
-                                                        priority === 'high' ? t.priorityHigh :
-                                                            t.priorityUrgent
+                                                priority === 'medium' ? t.priorityNormal :
+                                                priority === 'high' ? t.priorityHigh :
+                                                t.priorityUrgent
                                             )}
                                         </Text>
                                     </TouchableOpacity>
@@ -452,6 +452,7 @@ export default function SupportScreen() {
                         <TouchableOpacity
                             style={styles.detailCloseButton}
                             onPress={() => setShowTicketDetail(false)}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         >
                             <Ionicons name="close" size={24} color={colors.text} />
                         </TouchableOpacity>
@@ -831,7 +832,6 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean, isRTL:
         detailCloseButton: {
             padding: Theme.spacing.sm,
             marginRight: 4,
-            hitSlop: { top: 12, bottom: 12, left: 12, right: 12 },
         },
         detailHeaderContent: {
             flexDirection: isRTL ? 'row-reverse' : 'row',

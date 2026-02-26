@@ -81,6 +81,7 @@ export default function ProfileScreen() {
   // Form states
   const [fullName, setFullName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -160,7 +161,7 @@ export default function ProfileScreen() {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url")
+          .select("full_name, avatar_url, student_id")
           .eq("id", user.id)
           .single();
         if (profile?.full_name) {
@@ -168,6 +169,9 @@ export default function ProfileScreen() {
         }
         if (profile?.avatar_url) {
           setAvatarUrl(profile.avatar_url);
+        }
+        if (profile?.student_id) {
+          setStudentId(profile.student_id);
         }
       }
     } catch (error) {
@@ -525,6 +529,14 @@ export default function ProfileScreen() {
                 {session?.user.email}
               </Text>
             </View>
+            {studentId && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3, opacity: 0.8 }}>
+                <Ionicons name="id-card-outline" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={[styles.email, { color: '#FFFFFF', fontSize: 13 }]}>
+                  {studentId}
+                </Text>
+              </View>
+            )}
 
             <View
               style={[styles.roleBadge, { backgroundColor: colors.surface }]}

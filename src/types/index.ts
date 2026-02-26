@@ -153,7 +153,8 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   phone: string | null;
-  role: "student" | "admin" | "instructor" | "support";
+  student_id: string | null;
+  role: "student" | "admin" | "instructor" | "support" | "support_manager";
   status: "pending" | "active" | "suspended" | "inactive";
   whatsapp_number: string | null;
   created_at: string;

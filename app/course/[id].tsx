@@ -36,7 +36,7 @@ import RenderHtml from "react-native-render-html";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import Theme from "../../constants/theme";
-import { AudioPlayer } from "../../src/components/AudioPlayer";
+import { AudioPlayer, AudioPlayerHandle } from "../../src/components/AudioPlayer";
 import {
     QuizComponent,
     QuizData,
@@ -44,6 +44,7 @@ import {
 } from "../../src/components/QuizComponent";
 import { useLocalization } from "../../src/context/LocalizationContext";
 import { useTheme } from "../../src/context/ThemeContext";
+import { useNetwork } from "../../src/hooks/useNetwork";
 import {
     fetchCourseContentWithOfflineSupport,
     updateEnrollmentProgress,
@@ -56,7 +57,6 @@ import {
     isLessonDownloaded,
 } from "../../src/features/offline/downloadManager";
 import {
-    checkIsOnline,
     CourseDownloadProgress,
     downloadCourseForOffline,
     getOfflineCourse,
@@ -914,7 +914,7 @@ export default function CoursePlayerScreen() {
     >(new Map());
 
     // Offline course download state
-    const [isOnline, setIsOnline] = useState(true);
+    const { isOnline } = useNetwork();
     const [isCourseDownloaded, setIsCourseDownloaded] = useState(false);
     const [isCourseDownloading, setIsCourseDownloading] = useState(false);
     const [courseDownloadProgress, setCourseDownloadProgress] = useState(0);
@@ -955,7 +955,7 @@ export default function CoursePlayerScreen() {
     // Refs
     const videoRef = useRef<Video>(null);
     const webViewRef = useRef<WebView>(null);
-    const audioPlayerRef = useRef<any>(null);
+    const audioPlayerRef = useRef<AudioPlayerHandle>(null);
     const controlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const skipIndicatorTimeout = useRef<ReturnType<typeof setTimeout> | null>(
@@ -968,6 +968,23 @@ export default function CoursePlayerScreen() {
 
     // Current lesson
     const currentLesson = allLessons[currentIndex] || null;
+
+    /**
+     * Resolve block content URL: prefer localUri (offline) over content.url (online).
+     * transformOfflineCourse already substitutes localUri → content.url,
+     * but this provides a safety net for any edge cases.
+     */
+    const getBlockUrl = (block: any): string | null => {
+        return block?.localUri || block?.content?.url || null;
+    };
+
+    /**
+     * Check if a block URL is a local file (for offline playback)
+     */
+    const isLocalFile = (url: string | null): boolean => {
+        if (!url) return false;
+        return url.startsWith('file://') || url.startsWith('/');
+    };
 
     // Save progress and last lesson position when viewing a lesson
     useEffect(() => {
@@ -1011,6 +1028,14 @@ export default function CoursePlayerScreen() {
                     try {
                         await videoRef.current.stopAsync();
                         await videoRef.current.unloadAsync();
+                    } catch (e) {
+                        // Ignore errors during cleanup
+                    }
+                }
+                // Stop audio player when leaving screen
+                if (audioPlayerRef.current?.stop) {
+                    try {
+                        await audioPlayerRef.current.stop();
                     } catch (e) {
                         // Ignore errors during cleanup
                     }
@@ -1067,42 +1092,43 @@ export default function CoursePlayerScreen() {
                 // Ignore WebView errors
             }
         }
+
+        // Stop audio player
+        if (audioPlayerRef.current) {
+            try {
+                await audioPlayerRef.current.stop();
+            } catch (e) {
+                // Ignore audio errors
+            }
+        }
     };
 
-    // Check online status and if course is downloaded, sync when online
+    // Check if course is downloaded and sync when coming back online
     useEffect(() => {
-        let wasOffline = !isOnline;
-
-        const checkOfflineStatus = async () => {
-            const online = await checkIsOnline();
-
-            // If we just came online, sync offline data
-            if (online && wasOffline) {
-                console.log("Back online - syncing offline data...");
-                try {
-                    const result = await syncOfflineData();
-                    if (result.synced > 0) {
-                        console.log(`Synced ${result.synced} items`);
-                    }
-                } catch (e) {
-                    console.warn("Sync failed:", e);
-                }
-            }
-
-            wasOffline = !online;
-            setIsOnline(online);
-
+        const checkCourseDownloaded = async () => {
             if (id) {
                 const offlineCourse = await getOfflineCourse(id);
                 setIsCourseDownloaded(!!offlineCourse);
             }
         };
-
-        checkOfflineStatus();
-        // Recheck periodically
-        const interval = setInterval(checkOfflineStatus, 30000);
-        return () => clearInterval(interval);
+        checkCourseDownloaded();
     }, [id]);
+
+    // Sync offline data when coming back online
+    const wasOfflineRef = useRef(!isOnline);
+    useEffect(() => {
+        if (isOnline && wasOfflineRef.current) {
+            console.log("Back online - syncing offline data...");
+            syncOfflineData()
+                .then((result) => {
+                    if (result.synced > 0) {
+                        console.log(`Synced ${result.synced} items`);
+                    }
+                })
+                .catch((e) => console.warn("Sync failed:", e));
+        }
+        wasOfflineRef.current = !isOnline;
+    }, [isOnline]);
 
     // Note: stopAllMedia is now called directly in selectLesson with proper debouncing
     // This prevents race conditions when switching lessons rapidly
@@ -1510,6 +1536,26 @@ export default function CoursePlayerScreen() {
     // Handle file download (for file blocks - PDFs, documents, etc.)
     const handleFileDownload = async (url: string, filename: string) => {
         try {
+            // If URL is a local file path (offline mode), open directly
+            if (url.startsWith('file://') || url.startsWith('/')) {
+                const localPath = url.startsWith('file://') ? url : `file://${url}`;
+                const isPdf = filename.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('.pdf');
+                if (isPdf) {
+                    openPdfViewer(localPath, url, filename);
+                } else {
+                    const canShare = await isAvailableAsync();
+                    if (canShare) {
+                        await shareAsync(localPath, {
+                            mimeType: 'application/octet-stream',
+                            dialogTitle: `Open ${filename}`,
+                        });
+                    } else {
+                        Alert.alert('File Available', 'File is available offline.');
+                    }
+                }
+                return;
+            }
+
             // Sanitize filename
             const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
             const isPdf =
@@ -2071,10 +2117,6 @@ export default function CoursePlayerScreen() {
             const settings = await getCourseSettings(id);
             const passed = result.score >= settings.min_passing_score;
 
-            // Get enrollment ID from current course enrollment
-            // For now, we'll just update progress if passed - the DB will handle lesson completion
-            // The lesson_progress table tracks per-lesson completion and the RPC function unlocks next lessons
-
             // Update enrollment progress if passed
             if (passed) {
                 const completedLessons = currentIndex + 1;
@@ -2082,8 +2124,7 @@ export default function CoursePlayerScreen() {
             }
 
             // Save quiz attempt for offline sync if offline
-            const online = await checkIsOnline();
-            if (!online) {
+            if (!isOnline) {
                 try {
                     const { saveQuizAttemptOffline } =
                         await import("../../src/features/offline/offlineManager");
@@ -2103,21 +2144,18 @@ export default function CoursePlayerScreen() {
                 }
             }
 
-            // Show feedback to user
-            if (!passed) {
-                Alert.alert(
-                    "Quiz Not Passed",
-                    `You scored ${result.score}%. You need ${settings.min_passing_score}% to pass and continue to the next lesson. Please try again!`,
-                    [{ text: "OK" }],
-                );
-            }
+            // Close the quiz screen after a brief delay to show results
+            setTimeout(() => {
+                setShowQuiz(false);
+                // Auto-advance to next lesson if there is one
+                if (currentIndex < allLessons.length - 1) {
+                    setTimeout(() => navigateLesson("next"), 300);
+                }
+            }, 2000);
+
         } catch (error) {
             console.error("Error handling quiz completion:", error);
-            Alert.alert("Error", "Failed to save quiz results. Please try again.");
         }
-
-        // Don't auto-close - let user see results and click Continue
-        // The quiz component shows results and has a Continue button that calls onCancel
     };
 
     // Loading state
@@ -2162,12 +2200,12 @@ export default function CoursePlayerScreen() {
         );
     }
 
-    // Handle quiz cancel/continue - close quiz and optionally navigate
+    // Handle quiz cancel/continue - close quiz and navigate to next
     const handleQuizCancel = () => {
         setShowQuiz(false);
-        // Navigate to next lesson after closing quiz results
+        // Navigate to next lesson after closing quiz
         if (currentIndex < allLessons.length - 1) {
-            setTimeout(() => navigateLesson("next"), 500);
+            setTimeout(() => navigateLesson("next"), 300);
         }
     };
 
@@ -2282,7 +2320,7 @@ export default function CoursePlayerScreen() {
                 renderItem={({ item: chapter, index: moduleIndex }) => (
                     <View style={styles.moduleSection}>
                         <View style={styles.moduleSectionHeader}>
-                            <Text style={styles.moduleSectionNumber}>Chapter {moduleIndex + 1}</Text>
+                            <Text style={styles.moduleSectionNumber}>Course {moduleIndex + 1}</Text>
                             <Text style={styles.moduleSectionTitle}>{chapter.title}</Text>
                         </View>
                         {(chapter.lessons || []).map((lesson: Lesson) => {
@@ -2325,14 +2363,7 @@ export default function CoursePlayerScreen() {
                                             )}
                                         </View>
                                     </View>
-                                    {!dState?.isDownloaded && !dState?.isDownloading && (
-                                        <TouchableOpacity
-                                            style={styles.sidebarDownloadBtn}
-                                            onPress={(e) => { e.stopPropagation(); handleFullLessonDownload(lesson.id); }}
-                                        >
-                                            <Ionicons name="cloud-download-outline" size={18} color={colors.textSecondary} />
-                                        </TouchableOpacity>
-                                    )}
+
                                 </TouchableOpacity>
                             );
                         })}
@@ -2968,6 +2999,19 @@ export default function CoursePlayerScreen() {
                                 )
                             ) : null}
                         </View>
+                    ) : currentLesson?.content_type === "audio" ? (
+                        /* Audio lesson - minimal header with just back button */
+                        <View style={[styles.audioMinimalHeader, { paddingTop: insets.top }]}>
+                            <TouchableOpacity
+                                style={styles.backButtonAlt}
+                                onPress={async () => {
+                                    await stopAllMedia(true);
+                                    router.back();
+                                }}
+                            >
+                                <Ionicons name="arrow-back" size={24} color={colors.text} />
+                            </TouchableOpacity>
+                        </View>
                     ) : (
                         /* Non-video header area (quiz, text, etc.) */
                         <View style={[styles.nonVideoHeader, { paddingTop: insets.top }]}>
@@ -3013,8 +3057,13 @@ export default function CoursePlayerScreen() {
                         {/* Offline indicator */}
                         {!isOnline && (
                             <View style={styles.offlineIndicator}>
-                                <Ionicons name="cloud-offline" size={16} color={colors.warning} />
-                                <Text style={styles.offlineIndicatorText}>Offline Mode</Text>
+                                <Ionicons name="cloud-offline" size={16} color={isCourseDownloaded ? colors.primary : colors.warning} />
+                                <Text style={styles.offlineIndicatorText}>
+                                    {isCourseDownloaded ? "Offline Mode • Course Available" : "Offline Mode • Course Not Downloaded"}
+                                </Text>
+                                {isCourseDownloaded && (
+                                    <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginLeft: 4 }} />
+                                )}
                             </View>
                         )}
 
@@ -3113,62 +3162,83 @@ export default function CoursePlayerScreen() {
                                 <View style={styles.quizPrompt}>
                                     <View style={styles.quizCard}>
                                         <View style={styles.quizIcon}>
-                                            <Ionicons name="school" size={48} color={colors.primary} />
+                                            <Ionicons name="school" size={48} color={isOnline ? colors.primary : colors.textSecondary} />
                                         </View>
                                         <Text style={styles.quizTitle}>
                                             {currentLesson.quiz_data?.title || "Knowledge Check"}
                                         </Text>
-                                        <Text style={styles.quizDescription}>
-                                            {currentLesson.quiz_data?.description ||
-                                                "Test your understanding of the material covered in this section."}
-                                        </Text>
-
-                                        <View style={styles.quizStats}>
-                                            <View style={styles.quizStatItem}>
-                                                <Ionicons
-                                                    name="help-circle-outline"
-                                                    size={20}
-                                                    color={colors.textSecondary}
-                                                />
-                                                <Text style={styles.quizStatText}>
-                                                    {currentLesson.quiz_data?.questions?.length || 0}{" "}
-                                                    Questions
-                                                </Text>
-                                            </View>
-                                            {currentLesson.quiz_data?.time_limit && (
-                                                <View style={styles.quizStatItem}>
-                                                    <Ionicons
-                                                        name="time-outline"
-                                                        size={20}
-                                                        color={colors.textSecondary}
-                                                    />
-                                                    <Text style={styles.quizStatText}>
-                                                        {currentLesson.quiz_data.time_limit} min
+                                        {!isOnline ? (
+                                            <>
+                                                <View style={{
+                                                    backgroundColor: colors.warning || '#FFA500',
+                                                    paddingHorizontal: 12,
+                                                    paddingVertical: 4,
+                                                    borderRadius: 12,
+                                                    marginBottom: 12,
+                                                }}>
+                                                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>
+                                                        Online Only
                                                     </Text>
                                                 </View>
-                                            )}
-                                            <View style={styles.quizStatItem}>
-                                                <Ionicons
-                                                    name="ribbon-outline"
-                                                    size={20}
-                                                    color={colors.textSecondary}
-                                                />
-                                                <Text style={styles.quizStatText}>
-                                                    {currentLesson.quiz_data?.passing_score || 70}% to pass
+                                                <Text style={[styles.quizDescription, { color: colors.textSecondary }]}>
+                                                    Quizzes require an internet connection. Please connect to the internet to take this quiz.
                                                 </Text>
-                                            </View>
-                                        </View>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Text style={styles.quizDescription}>
+                                                    {currentLesson.quiz_data?.description ||
+                                                        "Test your understanding of the material covered in this section."}
+                                                </Text>
 
-                                        <TouchableOpacity
-                                            style={styles.startQuizButton}
-                                            onPress={() => {
-                                                if (currentLesson) prepareQuiz(currentLesson);
-                                                setShowQuiz(true);
-                                            }}
-                                        >
-                                            <Text style={styles.startQuizButtonText}>Start Quiz</Text>
-                                            <Ionicons name="arrow-forward" size={20} color="#fff" />
-                                        </TouchableOpacity>
+                                                <View style={styles.quizStats}>
+                                                    <View style={styles.quizStatItem}>
+                                                        <Ionicons
+                                                            name="help-circle-outline"
+                                                            size={20}
+                                                            color={colors.textSecondary}
+                                                        />
+                                                        <Text style={styles.quizStatText}>
+                                                            {currentLesson.quiz_data?.questions?.length || 0}{" "}
+                                                            Questions
+                                                        </Text>
+                                                    </View>
+                                                    {currentLesson.quiz_data?.time_limit && (
+                                                        <View style={styles.quizStatItem}>
+                                                            <Ionicons
+                                                                name="time-outline"
+                                                                size={20}
+                                                                color={colors.textSecondary}
+                                                            />
+                                                            <Text style={styles.quizStatText}>
+                                                                {currentLesson.quiz_data.time_limit} min
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                    <View style={styles.quizStatItem}>
+                                                        <Ionicons
+                                                            name="ribbon-outline"
+                                                            size={20}
+                                                            color={colors.textSecondary}
+                                                        />
+                                                        <Text style={styles.quizStatText}>
+                                                            {currentLesson.quiz_data?.passing_score || 70}% to pass
+                                                        </Text>
+                                                    </View>
+                                                </View>
+
+                                                <TouchableOpacity
+                                                    style={styles.startQuizButton}
+                                                    onPress={() => {
+                                                        if (currentLesson) prepareQuiz(currentLesson);
+                                                        setShowQuiz(true);
+                                                    }}
+                                                >
+                                                    <Text style={styles.startQuizButtonText}>Start Quiz</Text>
+                                                    <Ionicons name="arrow-forward" size={20} color="#fff" />
+                                                </TouchableOpacity>
+                                            </>
+                                        )}
                                     </View>
                                 </View>
                             )}
@@ -3249,60 +3319,13 @@ export default function CoursePlayerScreen() {
                                                 )}
                                             </TouchableOpacity>
 
-                                            {/* Download All Content button */}
-                                            {currentLesson.blocks && currentLesson.blocks.length > 0 && (
-                                                <TouchableOpacity
-                                                    style={styles.actionButton}
-                                                    onPress={() => handleFullLessonDownload(currentLesson.id)}
-                                                    disabled={downloadState?.isDownloading}
-                                                >
-                                                    <Ionicons
-                                                        name="download-outline"
-                                                        size={20}
-                                                        color={colors.primary}
-                                                    />
-                                                    <Text style={styles.actionButtonText}>Download All</Text>
-                                                </TouchableOpacity>
-                                            )}
+
                                         </View>
                                     )}
                                 </View>
                             )}
 
-                            {/* Download section for non-video lessons */}
-                            {currentLesson &&
-                                currentLesson.content_type !== "video" &&
-                                currentLesson.blocks &&
-                                currentLesson.blocks.length > 0 && (
-                                    <View style={styles.downloadSection}>
-                                        <TouchableOpacity
-                                            style={styles.downloadAllButton}
-                                            onPress={() => handleFullLessonDownload(currentLesson.id)}
-                                            disabled={downloadState?.isDownloading}
-                                        >
-                                            {downloadState?.isDownloading ? (
-                                                <>
-                                                    <ActivityIndicator size="small" color="#fff" />
-                                                    <Text style={styles.downloadAllButtonText}>
-                                                        Downloading...{" "}
-                                                        {Math.round((downloadState.progress || 0) * 100)}%
-                                                    </Text>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Ionicons
-                                                        name="cloud-download-outline"
-                                                        size={22}
-                                                        color="#fff"
-                                                    />
-                                                    <Text style={styles.downloadAllButtonText}>
-                                                        Download Lesson Content
-                                                    </Text>
-                                                </>
-                                            )}
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
+
 
                             {/* Blocks display for complex lessons */}
                             {currentLesson?.blocks && currentLesson.blocks.length > 0 && (
@@ -3360,50 +3383,75 @@ export default function CoursePlayerScreen() {
                                                         </View>
                                                     )}
 
-                                                {block.block_type === "video" && block.content?.url && (
+                                                {block.block_type === "video" && getBlockUrl(block) && (
                                                     <View style={styles.additionalVideoBlock}>
                                                         <Text style={styles.blockTitle}>
                                                             {block.title || "Video"}
                                                         </Text>
-                                                        {block.content?.provider === "youtube" ? (
-                                                            // YouTube block with HTML + baseUrl approach
-                                                            <View style={styles.embeddedVideoContainer}>
-                                                                <WebView
-                                                                    source={{
-                                                                        html: generateYouTubePlayerHTML(
-                                                                            getYouTubeVideoId(block.content.url) || "",
-                                                                        ),
-                                                                        baseUrl: "https://www.youtube.com",
-                                                                    }}
-                                                                    style={styles.embeddedVideo}
-                                                                    originWhitelist={["*"]}
-                                                                    allowsFullscreenVideo={true}
-                                                                    allowsInlineMediaPlayback={true}
-                                                                    mediaPlaybackRequiresUserAction={false}
-                                                                    javaScriptEnabled={true}
-                                                                    domStorageEnabled={true}
-                                                                    scrollEnabled={false}
-                                                                />
-                                                            </View>
+                                                        {/* If local file or direct provider, use native Video */}
+                                                        {isLocalFile(getBlockUrl(block)) || block.content?.provider === "direct" || !block.content?.provider ? (
+                                                            <Video
+                                                                source={{ uri: getBlockUrl(block)! }}
+                                                                style={styles.blockVideo}
+                                                                resizeMode={ResizeMode.CONTAIN}
+                                                                useNativeControls={true}
+                                                                onError={(error) => {
+                                                                    console.warn("Block video error:", error);
+                                                                }}
+                                                            />
+                                                        ) : block.content?.provider === "youtube" ? (
+                                                            // YouTube block - only available online
+                                                            !isOnline ? (
+                                                                <View style={[styles.embeddedVideoContainer, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }]}>
+                                                                    <Ionicons name="cloud-offline-outline" size={32} color={colors.textSecondary} />
+                                                                    <Text style={{ color: colors.textSecondary, marginTop: 8 }}>YouTube videos require internet</Text>
+                                                                </View>
+                                                            ) : (
+                                                                <View style={styles.embeddedVideoContainer}>
+                                                                    <WebView
+                                                                        source={{
+                                                                            html: generateYouTubePlayerHTML(
+                                                                                getYouTubeVideoId(block.content.url) || "",
+                                                                            ),
+                                                                            baseUrl: "https://www.youtube.com",
+                                                                        }}
+                                                                        style={styles.embeddedVideo}
+                                                                        originWhitelist={["*"]}
+                                                                        allowsFullscreenVideo={true}
+                                                                        allowsInlineMediaPlayback={true}
+                                                                        mediaPlaybackRequiresUserAction={false}
+                                                                        javaScriptEnabled={true}
+                                                                        domStorageEnabled={true}
+                                                                        scrollEnabled={false}
+                                                                    />
+                                                                </View>
+                                                            )
                                                         ) : isEmbeddedVideo(block.content?.provider) ? (
-                                                            <View style={styles.embeddedVideoContainer}>
-                                                                <WebView
-                                                                    source={{
-                                                                        uri:
-                                                                            getEmbedUrl(
-                                                                                block.content.url,
-                                                                                block.content.provider || "direct",
-                                                                            ) || "",
-                                                                    }}
-                                                                    style={styles.embeddedVideo}
-                                                                    allowsFullscreenVideo={true}
-                                                                    allowsInlineMediaPlayback={true}
-                                                                    javaScriptEnabled={true}
-                                                                />
-                                                            </View>
+                                                            !isOnline ? (
+                                                                <View style={[styles.embeddedVideoContainer, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }]}>
+                                                                    <Ionicons name="cloud-offline-outline" size={32} color={colors.textSecondary} />
+                                                                    <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Embedded videos require internet</Text>
+                                                                </View>
+                                                            ) : (
+                                                                <View style={styles.embeddedVideoContainer}>
+                                                                    <WebView
+                                                                        source={{
+                                                                            uri:
+                                                                                getEmbedUrl(
+                                                                                    block.content.url,
+                                                                                    block.content.provider || "direct",
+                                                                                ) || "",
+                                                                        }}
+                                                                        style={styles.embeddedVideo}
+                                                                        allowsFullscreenVideo={true}
+                                                                        allowsInlineMediaPlayback={true}
+                                                                        javaScriptEnabled={true}
+                                                                    />
+                                                                </View>
+                                                            )
                                                         ) : (
                                                             <Video
-                                                                source={{ uri: block.content.url }}
+                                                                source={{ uri: getBlockUrl(block)! }}
                                                                 style={styles.blockVideo}
                                                                 resizeMode={ResizeMode.CONTAIN}
                                                                 useNativeControls={true}
@@ -3415,13 +3463,13 @@ export default function CoursePlayerScreen() {
                                                     </View>
                                                 )}
 
-                                                {block.block_type === "image" && block.content?.url && (
+                                                {block.block_type === "image" && getBlockUrl(block) && (
                                                     <View style={styles.imageBlock}>
                                                         {block.title && (
                                                             <Text style={styles.blockTitle}>{block.title}</Text>
                                                         )}
                                                         <Image
-                                                            source={{ uri: block.content.url }}
+                                                            source={{ uri: getBlockUrl(block)! }}
                                                             style={styles.blockImage}
                                                             resizeMode="contain"
                                                         />
@@ -3433,18 +3481,18 @@ export default function CoursePlayerScreen() {
                                                     </View>
                                                 )}
 
-                                                {block.block_type === "file" && block.content?.url && (
+                                                {block.block_type === "file" && getBlockUrl(block) && (
                                                     <TouchableOpacity
                                                         style={styles.fileBlock}
                                                         onPress={() =>
                                                             handleFileDownload(
-                                                                block.content.url,
+                                                                getBlockUrl(block)!,
                                                                 block.content.filename || block.title || "file",
                                                             )
                                                         }
                                                     >
                                                         <Ionicons
-                                                            name="document-attach"
+                                                            name={isLocalFile(getBlockUrl(block)) ? "document" : "document-attach"}
                                                             size={24}
                                                             color={colors.primary}
                                                         />
@@ -3454,24 +3502,27 @@ export default function CoursePlayerScreen() {
                                                                     block.title ||
                                                                     "Download File"}
                                                             </Text>
-                                                            <Text style={styles.fileAction}>Tap to download</Text>
+                                                            <Text style={styles.fileAction}>
+                                                                {isLocalFile(getBlockUrl(block)) ? "Available offline • Tap to open" : "Tap to download"}
+                                                            </Text>
                                                         </View>
                                                         <Ionicons
-                                                            name="cloud-download-outline"
+                                                            name={isLocalFile(getBlockUrl(block)) ? "checkmark-circle" : "cloud-download-outline"}
                                                             size={20}
-                                                            color={colors.textSecondary}
+                                                            color={isLocalFile(getBlockUrl(block)) ? colors.primary : colors.textSecondary}
                                                         />
                                                     </TouchableOpacity>
                                                 )}
 
                                                 {/* Audio block with custom player */}
-                                                {block.block_type === "audio" && block.content?.url && (
+                                                {block.block_type === "audio" && getBlockUrl(block) && (
                                                     <View style={styles.audioBlock}>
                                                         <Text style={styles.blockTitle}>
                                                             {block.title || "Audio"}
                                                         </Text>
                                                         <AudioPlayer
-                                                            uri={block.content.url}
+                                                            ref={audioPlayerRef}
+                                                            uri={getBlockUrl(block)!}
                                                             title={block.title || "Audio"}
                                                         />
                                                     </View>
@@ -3487,20 +3538,41 @@ export default function CoursePlayerScreen() {
                                                                 <Ionicons
                                                                     name="school"
                                                                     size={24}
-                                                                    color={colors.primary}
+                                                                    color={isOnline ? colors.primary : colors.textSecondary}
                                                                 />
                                                                 <Text style={styles.inlineQuizTitle}>
                                                                     {block.title || "Quiz"}
                                                                 </Text>
+                                                                {!isOnline && (
+                                                                    <View style={{
+                                                                        backgroundColor: colors.warning || '#FFA500',
+                                                                        paddingHorizontal: 8,
+                                                                        paddingVertical: 2,
+                                                                        borderRadius: 8,
+                                                                        marginLeft: 'auto',
+                                                                    }}>
+                                                                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '600' }}>
+                                                                            Online Only
+                                                                        </Text>
+                                                                    </View>
+                                                                )}
                                                             </View>
-                                                            <Text style={styles.inlineQuizDesc}>
-                                                                {block.content?.questions?.length || 0} questions
-                                                            </Text>
+                                                            {!isOnline ? (
+                                                                <Text style={[styles.inlineQuizDesc, { color: colors.textSecondary }]}>
+                                                                    Quizzes require an internet connection. Connect to the internet to take this quiz.
+                                                                </Text>
+                                                            ) : (
+                                                                <Text style={styles.inlineQuizDesc}>
+                                                                    {block.content?.questions?.length || 0} questions
+                                                                </Text>
+                                                            )}
                                                             <TouchableOpacity
                                                                 style={[
                                                                     styles.inlineQuizButton,
                                                                     { flexDirection: "row", gap: 8 },
+                                                                    !isOnline && { opacity: 0.5 },
                                                                 ]}
+                                                                disabled={!isOnline}
                                                                 onPress={() => {
                                                                     // Prepare quiz data from this block
                                                                     const quizContent = block.content || {};
@@ -3726,7 +3798,7 @@ export default function CoursePlayerScreen() {
                                     <View style={styles.moduleSection}>
                                         <View style={styles.moduleSectionHeader}>
                                             <Text style={styles.moduleSectionNumber}>
-                                                Chapter {moduleIndex + 1}
+                                                Course {moduleIndex + 1}
                                             </Text>
                                             <Text style={styles.moduleSectionTitle}>
                                                 {chapter.title}
@@ -3818,22 +3890,7 @@ export default function CoursePlayerScreen() {
                                                                     )}
                                                             </View>
                                                         </View>
-                                                        {/* Download button for individual lesson */}
-                                                        {!dState?.isDownloaded && !dState?.isDownloading && (
-                                                            <TouchableOpacity
-                                                                style={styles.sidebarDownloadBtn}
-                                                                onPress={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleFullLessonDownload(lesson.id);
-                                                                }}
-                                                            >
-                                                                <Ionicons
-                                                                    name="cloud-download-outline"
-                                                                    size={18}
-                                                                    color={colors.textSecondary}
-                                                                />
-                                                            </TouchableOpacity>
-                                                        )}
+
                                                     </TouchableOpacity>
                                                 );
                                             },
@@ -4792,6 +4849,11 @@ function createStyles(colors: typeof Theme.colors.light, isDark: boolean) {
         },
 
         // Non-video header (for quiz, text content)
+        audioMinimalHeader: {
+            paddingHorizontal: Theme.spacing.lg,
+            paddingBottom: Theme.spacing.sm,
+            backgroundColor: colors.background,
+        },
         nonVideoHeader: {
             backgroundColor: "#1a1a2e",
             paddingBottom: Theme.spacing.xl + 20,

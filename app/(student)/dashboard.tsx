@@ -28,9 +28,9 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { useLocalization } from "../../src/context/LocalizationContext";
 import { useNotifications } from "../../src/context/NotificationContext";
 import { useTheme } from "../../src/context/ThemeContext";
-import { useLocalization } from "../../src/context/LocalizationContext";
 import { useAuth } from "../../src/features/auth/AuthContext";
 import { fetchMyEnrollments } from "../../src/features/courses/courseService";
 import {
@@ -985,6 +985,16 @@ export default function DashboardScreen() {
           )}
         </Animated.View>
       </ScrollView>
+
+      {/* Floating Contact Support Button */}
+      <TouchableOpacity
+        style={styles.floatingSupport}
+        onPress={() => router.push("/(student)/support")}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="headset" size={20} color="#fff" />
+        <Text style={styles.floatingSupportText}>{t.contactSupport || 'Support'}</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -1322,6 +1332,28 @@ const createStyles = (
       color: colors.text,
       marginBottom: 2,
     },
+    // Floating Support Button
+    floatingSupport: {
+      position: "absolute",
+      bottom: 24,
+      right: Theme.spacing.lg,
+      flexDirection: isRTL ? "row-reverse" : "row",
+      alignItems: "center",
+      gap: Theme.spacing.xs,
+      backgroundColor: colors.primary,
+      paddingHorizontal: Theme.spacing.md,
+      paddingVertical: Theme.spacing.sm + 2,
+      borderRadius: Theme.borderRadius.round,
+      ...Theme.shadows[isDark ? "dark" : "light"].lg,
+      zIndex: 100,
+      elevation: 8,
+    },
+    floatingSupportText: {
+      color: "#fff",
+      fontSize: Theme.fontSize.sm,
+      fontWeight: Theme.fontWeight.bold,
+    },
+
     motivationText: {
       fontSize: Theme.fontSize.sm,
       color: colors.textSecondary,

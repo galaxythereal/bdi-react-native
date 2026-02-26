@@ -8,7 +8,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 
@@ -138,7 +138,18 @@ async function getAuthToken(): Promise<string | null> {
  */
 export async function requestMediaPermission(): Promise<boolean> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  return status === 'granted';
+  if (status !== 'granted') {
+    Alert.alert(
+      'Photo Library Permission Required',
+      'Please enable photo library access in your device settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -146,7 +157,19 @@ export async function requestMediaPermission(): Promise<boolean> {
  */
 export async function requestCameraPermission(): Promise<boolean> {
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
-  return status === 'granted';
+  if (status !== 'granted') {
+    // On some devices, we need to guide the user to settings
+    Alert.alert(
+      'Camera Permission Required',
+      'Please enable camera access in your device settings to take a photo.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -159,7 +182,7 @@ export async function pickImage(options?: {
 }): Promise<ImagePicker.ImagePickerAsset | null> {
   const hasPermission = await requestMediaPermission();
   if (!hasPermission) {
-    throw new Error('Media library permission not granted');
+    return null; // Permission dialog already shown by requestMediaPermission
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({
@@ -186,21 +209,45 @@ export async function takePhoto(options?: {
 }): Promise<ImagePicker.ImagePickerAsset | null> {
   const hasPermission = await requestCameraPermission();
   if (!hasPermission) {
-    throw new Error('Camera permission not granted');
+    return null; // Permission dialog already shown by requestCameraPermission
   }
 
-  const result = await ImagePicker.launchCameraAsync({
-    mediaTypes: ['images'],
-    allowsEditing: options?.allowsEditing ?? true,
-    aspect: options?.aspect ?? [1, 1],
-    quality: options?.quality ?? 0.8,
-  });
+  try {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: options?.allowsEditing ?? true,
+      aspect: options?.aspect ?? [1, 1],
+      quality: options?.quality ?? 0.8,
+    });
 
-  if (result.canceled || !result.assets[0]) {
+    if (result.canceled || !result.assets[0]) {
+      return null;
+    }
+
+    return result.assets[0];
+  } catch (error: any) {
+    console.error('Camera launch error:', error);
+    // Some devices fail on launchCameraAsync - fallback to gallery
+    Alert.alert(
+      'Camera Not Available',
+      'Unable to open camera on this device. Would you like to choose from your photo library instead?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Choose from Library',
+          onPress: async () => {
+            try {
+              const asset = await pickImage(options);
+              // Can't return from here directly, but the user can retry
+            } catch (e) {
+              // ignore
+            }
+          },
+        },
+      ]
+    );
     return null;
   }
-
-  return result.assets[0];
 }
 
 /**

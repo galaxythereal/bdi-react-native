@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { Audio, AVPlaybackStatus } from 'expo-av';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
 import {
     ActivityIndicator,
     Animated,
@@ -22,16 +22,21 @@ interface AudioPlayerProps {
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({
+export interface AudioPlayerHandle {
+    stop: () => Promise<void>;
+}
+
+export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(({
     uri,
     title,
     onComplete,
-}) => {
+}, ref) => {
     const { colors, isDark } = useTheme();
     const { t } = useLocalization();
     const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
     const [sound, setSound] = useState<Audio.Sound | null>(null);
+    const soundRef = useRef<Audio.Sound | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [duration, setDuration] = useState(0);
@@ -42,11 +47,26 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
     const progressAnim = useRef(new Animated.Value(0)).current;
 
+    // Expose stop method to parent via ref
+    useImperativeHandle(ref, () => ({
+        stop: async () => {
+            if (soundRef.current) {
+                try {
+                    await soundRef.current.stopAsync();
+                    await soundRef.current.unloadAsync();
+                } catch (e) {
+                    // Ignore errors during cleanup
+                }
+            }
+        },
+    }));
+
     useEffect(() => {
         loadAudio();
         return () => {
-            if (sound) {
-                sound.unloadAsync();
+            // Use ref to avoid stale closure
+            if (soundRef.current) {
+                soundRef.current.unloadAsync();
             }
         };
     }, [uri]);
@@ -80,6 +100,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             );
 
             setSound(newSound);
+            soundRef.current = newSound;
             setIsLoading(false);
         } catch (err: any) {
             console.error('Error loading audio:', err);
@@ -301,7 +322,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             </View>
         </View>
     );
-};
+});
 
 const createStyles = (colors: typeof Theme.colors.light, isDark: boolean) => StyleSheet.create({
     container: {

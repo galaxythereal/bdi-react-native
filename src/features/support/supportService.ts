@@ -68,8 +68,8 @@ export const fetchTicketMessages = async (ticketId: string): Promise<TicketMessa
 
 export const createTicket = async (
   subject: string,
-  message: string,
-  priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal'
+  description: string,
+  priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'
 ): Promise<SupportTicket> => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -83,7 +83,7 @@ export const createTicket = async (
       .insert({
         user_id: user.id,
         subject,
-        message,
+        description,
         priority,
         status: 'open',
       })
@@ -97,25 +97,17 @@ export const createTicket = async (
 
     // Send email notification (fire and forget)
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://bdi-lms.vercel.app';
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (token) {
-        fetch(`${API_URL}/api/notify-ticket`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ subject, description: message, priority }),
-        }).catch((e) => console.error('Email notification failed:', e));
-      }
+      // Dynamically import to avoid circular deps if any
+      const { sendTicketNotification } = await import('../../../../bdi-lms/lib/email');
+      sendTicketNotification({
+        subject,
+        description,
+        userEmail: user.email || '',
+      });
     } catch (e) {
       // Log but don't block ticket creation
       console.error('Failed to send ticket notification email:', e);
     }
-
     return data as SupportTicket;
   } catch (error: any) {
     console.error('createTicket error:', error);
@@ -138,7 +130,7 @@ export const sendTicketMessage = async (
       .from('ticket_messages')
       .insert({
         ticket_id: ticketId,
-        user_id: user.id,
+        sender_id: user.id,
         message,
         is_internal: false,
       })
@@ -153,7 +145,7 @@ export const sendTicketMessage = async (
     // Update ticket status to 'open' if it was closed/resolved (user is replying)
     await supabase
       .from('support_tickets')
-      .update({
+      .update({ 
         status: 'open',
         updated_at: new Date().toISOString(),
       })
@@ -181,7 +173,6 @@ export const getPriorityColor = (priority: string): string => {
   switch (priority) {
     case 'urgent': return '#EF4444'; // Red
     case 'high': return '#F97316'; // Orange
-    case 'normal':
     case 'medium': return '#EAB308'; // Yellow
     case 'low': return '#22C55E'; // Green
     default: return '#6B7280';

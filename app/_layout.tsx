@@ -11,6 +11,7 @@ import { LocalizationProvider, useLocalization } from '../src/context/Localizati
 import { NotificationProvider } from '../src/context/NotificationContext';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthContext';
+import { initializeOfflineStorage, startNetworkMonitoring } from '../src/features/offline/offlineManager';
 import { setupBackgroundMessageHandler } from '../src/services/pushNotifications';
 
 // Initialize Firebase background message handler (must be top-level)
@@ -100,6 +101,14 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
+
+  // Initialize offline storage and network monitoring on app start
+  useEffect(() => {
+    initializeOfflineStorage().catch((e) =>
+      console.warn('Failed to initialize offline storage:', e)
+    );
+    startNetworkMonitoring();
+  }, []);
 
   if (!loaded && !error) {
     // Ideally this should use a theme color, but context might not be ready if it's inside ThemeProvider

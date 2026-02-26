@@ -64,24 +64,24 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
     const renderActions = (
         progress: Animated.AnimatedInterpolation<number>,
-        dragX: Animated.AnimatedInterpolation<number>
+        _dragX: Animated.AnimatedInterpolation<number>
     ) => {
-        const translateX = dragX.interpolate({
-            inputRange: isRTL ? [0, 160] : [-160, 0],
-            outputRange: isRTL ? [160, 0] : [0, 160],
+        const scale = progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.8, 1],
             extrapolate: 'clamp',
         });
 
         const opacity = progress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1],
+            inputRange: [0, 0.5, 1],
+            outputRange: [0, 0.5, 1],
         });
 
         return (
             <Animated.View
                 style={[
                     styles.rightActions,
-                    { transform: [{ translateX }], opacity }
+                    { transform: [{ scale }], opacity }
                 ]}
             >
                 {!notification.read && (
@@ -131,9 +131,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                 ref={swipeableRef}
                 renderRightActions={!isRTL ? renderActions : undefined}
                 renderLeftActions={isRTL ? renderActions : undefined}
-                friction={2}
-                rightThreshold={40}
+                friction={1.5}
+                rightThreshold={30}
+                leftThreshold={30}
                 overshootRight={false}
+                overshootLeft={false}
             >
                 <TouchableOpacity
                     activeOpacity={0.7}
@@ -177,7 +179,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                             >
                                 {getLocalizedText(notification.title, notification.title_ar)}
                             </Text>
-                            <Text style={[styles.time, { color: colors.textTertiary, textAlign: isRTL ? 'left' : 'right' }]}> 
+                            <Text style={[styles.time, { color: colors.textTertiary, textAlign: isRTL ? 'left' : 'right' }]}>
                                 {timeAgo}
                             </Text>
                         </View>

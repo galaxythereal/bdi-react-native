@@ -223,6 +223,8 @@ function getCorrectAnswer(q: any): number | number[] | string {
 
 /**
  * Transform offline course to CourseDetail
+ * Maps local file URIs from offline storage into the block content
+ * so the course viewer can use local files instead of remote URLs.
  */
 function transformOfflineCourse(offlineCourse: any): CourseDetail {
   return {
@@ -240,13 +242,46 @@ function transformOfflineCourse(offlineCourse: any): CourseDetail {
       title: ch.title,
       title_ar: ch.title_ar,
       order_index: ch.order_index,
-      lessons: (ch.lessons || []).map((lesson: any) => ({
-        ...lesson,
-        title_ar: lesson.title_ar,
-        description_ar: lesson.description_ar,
-        video_url: lesson.video_local || lesson.video_url,
-        video_provider: (lesson.video_local ? 'direct' : lesson.video_provider) as 'youtube' | 'vimeo' | 'wistia' | 'direct',
-      })),
+      lessons: (ch.lessons || []).map((lesson: any) => {
+        // Resolve main content local URIs
+        const videoUrl = lesson.video_local || lesson.video_url;
+        const videoProvider = lesson.video_local ? 'direct' : lesson.video_provider;
+        const audioUrl = lesson.audio_local || lesson.audio_url;
+        const pdfUrl = lesson.pdf_local || lesson.pdf_url;
+
+        // Map blocks with offline URI substitution
+        const mappedBlocks = (lesson.blocks || []).map((block: any) => {
+          const blockType = block.block_type || block.type; // normalize field name
+          const content = block.content ? { ...block.content } : {};
+
+          // If this block has a locally downloaded file, substitute the URL
+          if (block.localUri) {
+            if (content.url) {
+              content.url = block.localUri;
+            }
+            // For video blocks with local URI, force provider to 'direct'
+            if (blockType === 'video') {
+              content.provider = 'direct';
+            }
+          }
+
+          return {
+            ...block,
+            block_type: blockType, // ensure block_type is set for the course viewer
+            content,
+            localUri: block.localUri, // preserve for reference
+          };
+        });
+
+        return {
+          ...lesson,
+          video_url: videoUrl,
+          video_provider: (videoProvider || 'direct') as 'youtube' | 'vimeo' | 'wistia' | 'direct',
+          audio_url: audioUrl,
+          pdf_url: pdfUrl,
+          blocks: mappedBlocks,
+        };
+      }),
     })),
   };
 }
